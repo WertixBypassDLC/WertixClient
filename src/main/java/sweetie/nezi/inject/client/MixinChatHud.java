@@ -42,7 +42,7 @@ public class MixinChatHud {
                     sender = temp;
                 }
             }
-            widget.addNotif(sender + " просит о спеке!");
+            widget.addNotif(sender + " просит спек!");
         }
     }
 }
