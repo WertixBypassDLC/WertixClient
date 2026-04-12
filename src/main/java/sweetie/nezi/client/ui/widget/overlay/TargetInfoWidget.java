@@ -16,7 +16,9 @@ import sweetie.nezi.api.utils.other.ReplaceUtil;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.ScissorUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
+import sweetie.nezi.client.features.modules.combat.AimAssistModule;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
+import sweetie.nezi.client.features.modules.combat.TriggerBotModule;
 import sweetie.nezi.client.features.modules.render.InterfaceModule;
 import sweetie.nezi.client.ui.widget.Widget;
 
@@ -286,8 +288,21 @@ public class TargetInfoWidget extends Widget {
             if (aura != null && aura.isEnabled() && aura.target != null) return aura.target;
         } catch (Exception ignored) {}
 
+        try {
+            TriggerBotModule trigger = TriggerBotModule.getInstance();
+            if (trigger != null && trigger.isEnabled()) {
+                // TriggerBot sets AuraModule.target for esp/widget compatibility
+                AuraModule aura = AuraModule.getInstance();
+                if (aura != null && aura.target != null) return aura.target;
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            AimAssistModule aim = AimAssistModule.getInstance();
+            if (aim != null && aim.isEnabled() && aim.getTarget() != null) return aim.getTarget();
+        } catch (Exception ignored) {}
+
         if (mc.targetedEntity instanceof LivingEntity le) return le;
         return null;
     }
 }
-

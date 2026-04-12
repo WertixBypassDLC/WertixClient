@@ -416,9 +416,9 @@ public class AuctionHelperModule extends Module {
         float scaledContainerX = containerX / scaleMultiplier;
         float scaledContainerY = containerY / scaleMultiplier;
 
-        float x = scaledContainerX + 178f; // To the right of the container
-        float y = scaledContainerY;
         float w = 180f;
+        float x = scaledContainerX - w - 8f; // To the left of the container, aligned
+        float y = scaledContainerY;
 
         float padding = 8f;
         int limit = Math.min(6, records.size());

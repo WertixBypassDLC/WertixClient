@@ -46,35 +46,35 @@ public class UIColors {
 
     public Color blur() { return blur(255); }
     public Color blur(int alpha) {
-        return getColor(themedSurface(currentTheme().getBlurColor(), 0.08f, 0.88f, 244), alpha);
+        return getColor(themedSurface(currentTheme().getBlurColor(), 0.12f, 0.94f, 244), alpha);
     }
 
     public Color widgetBlur() { return widgetBlur(255); }
     public Color widgetBlur(int alpha) {
-        return getColor(themedSurface(currentTheme().getWidgetBlurColor(), 0.08f, 0.90f, 242), alpha);
+        return getColor(themedSurface(currentTheme().getWidgetBlurColor(), 0.12f, 0.96f, 242), alpha);
     }
 
     public Color backgroundBlur() { return backgroundBlur(255); }
     public Color backgroundBlur(int alpha) {
-        return getColor(themedSurface(currentTheme().getBackgroundBlurColor(), 0.06f, 0.92f, 238), alpha);
+        return getColor(themedSurface(currentTheme().getBackgroundBlurColor(), 0.10f, 0.95f, 238), alpha);
     }
 
     public Color panel() { return panel(255); }
     public Color panel(int alpha) {
         Color base = ColorUtil.interpolate(currentTheme().getWidgetBlurColor(), currentTheme().getBlurColor(), 0.35f);
-        return getColor(themedSurface(base, 0.10f, 0.95f, 218), alpha);
+        return getColor(themedSurface(base, 0.15f, 0.97f, 218), alpha);
     }
 
     public Color panelSoft() { return panelSoft(255); }
     public Color panelSoft(int alpha) {
         Color base = ColorUtil.interpolate(currentTheme().getBackgroundBlurColor(), currentTheme().getWidgetBlurColor(), 0.30f);
-        return getColor(themedSurface(base, 0.10f, 0.94f, 206), alpha);
+        return getColor(themedSurface(base, 0.15f, 0.96f, 206), alpha);
     }
 
     public Color card() { return card(255); }
     public Color card(int alpha) {
         Color base = ColorUtil.interpolate(currentTheme().getBlurColor(), currentTheme().getBackgroundBlurColor(), 0.40f);
-        return getColor(themedSurface(base, 0.12f, 0.95f, 214), alpha);
+        return getColor(themedSurface(base, 0.18f, 0.97f, 214), alpha);
     }
 
     public Color cardSecondary() { return cardSecondary(255); }

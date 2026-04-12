@@ -34,6 +34,10 @@ public class Draggable implements QuickImports {
     private final String name;
     private final Module module;
 
+    /** Last-known screen dimensions — used to remap position on resize. */
+    private float lastScreenWidth;
+    private float lastScreenHeight;
+
     public Draggable(Module module, String name, float initialXVal, float initialYVal) {
         this.module = module;
         this.name = name;
@@ -42,8 +46,30 @@ public class Draggable implements QuickImports {
         this.initialXVal = initialXVal;
         this.initialYVal = initialYVal;
 
+        // Initialise last-known screen size
+        if (mc != null && mc.getWindow() != null) {
+            lastScreenWidth = mc.getWindow().getScaledWidth();
+            lastScreenHeight = mc.getWindow().getScaledHeight();
+        }
+
         WindowResizeEvent.getInstance().subscribe(new Listener<>(-1, event -> {
-            if (dragging) clampToScreen();
+            float newW = mc.getWindow().getScaledWidth();
+            float newH = mc.getWindow().getScaledHeight();
+
+            if (lastScreenWidth > 0 && lastScreenHeight > 0 && newW > 0 && newH > 0
+                    && (Math.abs(lastScreenWidth - newW) > 0.5f || Math.abs(lastScreenHeight - newH) > 0.5f)) {
+                // Proportional remapping: keep the same relative screen position
+                float ratioX = newW / lastScreenWidth;
+                float ratioY = newH / lastScreenHeight;
+                x = roundToHalf(x * ratioX);
+                y = roundToHalf(y * ratioY);
+                clampToScreen();
+            } else if (dragging) {
+                clampToScreen();
+            }
+
+            lastScreenWidth = newW;
+            lastScreenHeight = newH;
         }));
     }
 

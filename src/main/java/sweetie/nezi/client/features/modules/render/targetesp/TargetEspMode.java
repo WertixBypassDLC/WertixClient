@@ -29,14 +29,16 @@ public abstract class TargetEspMode implements QuickImports {
         LivingEntity aimTarget = AimAssistModule.getInstance().isEnabled() ? AimAssistModule.getInstance().getTarget() : null;
         LivingEntity auraTarget = aura().target;
         LivingEntity triggerTarget = TriggerBotModule.getInstance().isEnabled() ? aura().target : null;
+
+        // Also try to get the target directly from AimAssist when no aura/trigger target
         LivingEntity previousTarget = currentTarget;
 
-        if (aimTarget != null) {
-            currentTarget = aimTarget;
-        } else if (auraTarget != null) {
+        if (auraTarget != null) {
             currentTarget = auraTarget;
         } else if (triggerTarget != null) {
             currentTarget = triggerTarget;
+        } else if (aimTarget != null) {
+            currentTarget = aimTarget;
         } else if (!reason()) {
             currentTarget = null;
         }

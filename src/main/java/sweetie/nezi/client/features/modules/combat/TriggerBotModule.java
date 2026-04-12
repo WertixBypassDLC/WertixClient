@@ -40,12 +40,16 @@ public class TriggerBotModule extends Module {
     private final BooleanSetting shieldBreak = new BooleanSetting("Shield Break").value(true);
     private final BooleanSetting noAttackIfEat = new BooleanSetting("No attack if eat").value(false);
 
+    private final BooleanSetting players = new BooleanSetting("Players").value(true);
+    private final BooleanSetting attackInvisibles = new BooleanSetting("Attack Invisibles").value(false).setVisible(players::getValue);
+    private final BooleanSetting attackNaked = new BooleanSetting("Attack Naked").value(false).setVisible(players::getValue);
+
     private final ClickScheduler clickScheduler = new ClickScheduler();
     private final TimerUtil attackTimer = new TimerUtil();
     private long nextDelay = 0L;
 
     public TriggerBotModule() {
-        addSettings(distance, onlyCrits, smartCrits, shieldBreak, noAttackIfEat);
+        addSettings(distance, onlyCrits, smartCrits, shieldBreak, noAttackIfEat, players, attackInvisibles, attackNaked);
     }
 
     @Override
@@ -115,7 +119,26 @@ public class TriggerBotModule extends Module {
 
     private boolean shouldAttack(LivingEntity target) {
         if (FriendManager.getInstance().contains(target.getName().getString())) return false;
-        if (target instanceof PlayerEntity player && TargetManager.isStationaryNumericNamePlayer(player)) return false;
+        
+        if (target instanceof PlayerEntity player) {
+            if (!players.getValue()) return false;
+            if (TargetManager.isStationaryNumericNamePlayer(player)) return false;
+            
+            if (player.isInvisible() && !attackInvisibles.getValue()) {
+                return false;
+            }
+            if (!attackNaked.getValue()) {
+                boolean hasArmor = false;
+                for (net.minecraft.item.ItemStack armorItem : player.getArmorItems()) {
+                    if (!armorItem.isEmpty()) {
+                        hasArmor = true;
+                        break;
+                    }
+                }
+                if (!hasArmor) return false;
+            }
+        }
+        
         if (noAttackIfEat.getValue() && PlayerUtil.isEating()) return false;
 
         net.minecraft.item.Item mainHand = mc.player.getMainHandStack().getItem();

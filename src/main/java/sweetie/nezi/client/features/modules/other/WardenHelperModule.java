@@ -151,6 +151,13 @@ public class WardenHelperModule extends Module {
             } catch (NumberFormatException ignored) {}
         }
 
+        // Remove timers that have been at 00:00 for more than 40 seconds
+        trackedTimers.entrySet().removeIf(entry -> {
+            TimerData data = entry.getValue();
+            long zeroTime = data.lastSeenRealTime + data.totalSeconds * 1000L;
+            return System.currentTimeMillis() > zeroTime + 40_000L;
+        });
+
         ensureExpiredUndergroundTimers();
 
         BlockESPModule blockESP = BlockESPModule.getInstance();
@@ -167,6 +174,11 @@ public class WardenHelperModule extends Module {
         if (!shouldRenderUnderground(data.pos)) return;
         if (!shouldRenderAtCurrentDistance(data.pos)) return;
         if (!ProjectionUtil.isInFrontOfCamera(data.pos.x, data.pos.y + 0.5, data.pos.z)) return;
+
+        int secs = data.getClientCountedSeconds();
+        double distSq = mc.player.getPos().squaredDistanceTo(data.pos);
+        if (distSq > 30.0 * 30.0 && secs >= 60) return;
+
         MatrixStack ms = context.getMatrices();
 
         Vector2f projected = ProjectionUtil.project(data.pos.x, data.pos.y + 0.5, data.pos.z);
@@ -175,7 +187,6 @@ public class WardenHelperModule extends Module {
         float px = projected.x;
         float py = projected.y;
 
-        int secs = data.getClientCountedSeconds();
         boolean expired = secs <= 0;
 
         String timeText = data.getDisplayTime();
@@ -237,14 +248,13 @@ public class WardenHelperModule extends Module {
         if (mc.player == null || mc.player.getY() >= UNDERGROUND_RENDER_Y) return;
 
         BlockPos playerPos = mc.player.getBlockPos();
-        int horizontalRange = 18;
-        int verticalRange = 6;
+        int range = 10; // Only check within 10 blocks for implicit 00:00
 
-        for (int dx = -horizontalRange; dx <= horizontalRange; dx++) {
-            for (int dy = -verticalRange; dy <= verticalRange; dy++) {
-                for (int dz = -horizontalRange; dz <= horizontalRange; dz++) {
+        for (int dx = -range; dx <= range; dx++) {
+            for (int dy = -range; dy <= range; dy++) {
+                for (int dz = -range; dz <= range; dz++) {
                     BlockPos pos = playerPos.add(dx, dy, dz);
-                    if (mc.player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > TRACK_DISTANCE_SQ) continue;
+                    if (mc.player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 100.0) continue;
                     if (!isTimerContainer(mc.world.getBlockState(pos))) continue;
                     if (!shouldRenderUnderground(pos)) continue;
                     if (getTrackedSecondsNear(pos) != Integer.MIN_VALUE) continue;
@@ -310,10 +320,12 @@ public class WardenHelperModule extends Module {
 
         int seconds = getTrackedSecondsNear(pos);
         if (seconds == Integer.MIN_VALUE) {
-            if (!isEnabled() || !isAnarchyServer() || !hasBeenOnAnarchyFor(30_000L) || mc.player == null || mc.player.getY() >= UNDERGROUND_RENDER_Y) {
-                return null;
-            }
-            seconds = 0;
+            return null;
+        }
+
+        double distSq = mc.player.getPos().squaredDistanceTo(Vec3d.ofCenter(pos));
+        if (distSq > 30.0 * 30.0 && seconds >= 60) {
+            return null;
         }
 
         return withAlpha(getAnimatedTimerColor(seconds), 210);
@@ -329,10 +341,12 @@ public class WardenHelperModule extends Module {
 
         int seconds = getTrackedSecondsNear(pos);
         if (seconds == Integer.MIN_VALUE) {
-            if (!isEnabled() || !isAnarchyServer() || !hasBeenOnAnarchyFor(30_000L) || mc.player == null || mc.player.getY() >= UNDERGROUND_RENDER_Y) {
-                return null;
-            }
-            seconds = 0;
+            return null;
+        }
+
+        double distSq = mc.player.getPos().squaredDistanceTo(Vec3d.ofCenter(pos));
+        if (distSq > 30.0 * 30.0 && seconds >= 60) {
+            return null;
         }
 
         seconds = Math.max(0, seconds);

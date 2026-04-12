@@ -42,11 +42,8 @@ public class AimAssistModule extends Module {
 
     private final ModeSetting aimPoint = new ModeSetting("Aim Point").values("Head", "Body", "Legs").value("Head");
 
-    private final BooleanSetting bypassGrim = new BooleanSetting("Bypass Grim").value(true);
-    private final BooleanSetting bypassVulkan = new BooleanSetting("Bypass Vulkan").value(true);
-    private final BooleanSetting bypassMatrix = new BooleanSetting("Bypass Matrix").value(true);
-    private final BooleanSetting bypassPolar = new BooleanSetting("Bypass Polar").value(true);
-    private final BooleanSetting bypassSloth = new BooleanSetting("Bypass Sloth").value(true);
+    private final BooleanSetting attackInvisibles = new BooleanSetting("Attack Invisibles").value(false).setVisible(players::getValue);
+    private final BooleanSetting attackNaked = new BooleanSetting("Attack Naked").value(false).setVisible(players::getValue);
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -70,11 +67,8 @@ public class AimAssistModule extends Module {
                 animals,
                 friends,
                 aimPoint,
-                bypassGrim,
-                bypassVulkan,
-                bypassMatrix,
-                bypassPolar,
-                bypassSloth
+                attackInvisibles,
+                attackNaked
         );
     }
 
@@ -231,44 +225,57 @@ public class AimAssistModule extends Module {
 
         float lambda = (3.0f + (speed.getValue() - 1.0f) / 9.0f * 27.0f) * 1.2f;
         float totalDiff = (float) Math.sqrt(yawDiff * yawDiff + pitchDiff * pitchDiff);
-        float adaptiveMultiplier = totalDiff > 30.0f ? 1.5f : (totalDiff < 5.0f ? 0.6f : 1.0f);
+
+        // Progressive speed-up: the further the crosshair, the faster we rotate
+        float adaptiveMultiplier;
+        if (totalDiff > 60.0f) {
+            adaptiveMultiplier = 3.5f;
+        } else if (totalDiff > 45.0f) {
+            adaptiveMultiplier = 2.5f;
+        } else if (totalDiff > 30.0f) {
+            adaptiveMultiplier = 1.8f;
+        } else if (totalDiff > 15.0f) {
+            adaptiveMultiplier = 1.2f;
+        } else if (totalDiff < 5.0f) {
+            adaptiveMultiplier = 0.6f;
+        } else {
+            adaptiveMultiplier = 1.0f;
+        }
+
         float alpha = 1.0f - (float) Math.exp(-lambda * adaptiveMultiplier * dt);
         alpha = MathHelper.clamp(alpha, 0.0f, 1.0f);
 
         float newYaw = currentYaw + yawDiff * alpha;
         float newPitch = currentPitch + pitchDiff * alpha;
 
-        if (bypassGrim.getValue()) {
-            float maxStep = 1.8f + secureRandom.nextFloat() * 0.4f;
-            newYaw = currentYaw + clampAbs(MathHelper.wrapDegrees(newYaw - currentYaw), maxStep);
-            newPitch = currentPitch + clampAbs(newPitch - currentPitch, maxStep * 0.65f);
-        }
+        // Bypass Grim
+        float maxStep = 1.8f + secureRandom.nextFloat() * 0.4f;
+        newYaw = currentYaw + clampAbs(MathHelper.wrapDegrees(newYaw - currentYaw), maxStep);
+        newPitch = currentPitch + clampAbs(newPitch - currentPitch, maxStep * 0.65f);
 
-        if (bypassVulkan.getValue()) {
-            newYaw += (secureRandom.nextFloat() - 0.5f) * 0.07f;
-            newPitch += (secureRandom.nextFloat() - 0.5f) * 0.045f;
-        }
+        // Bypass Vulkan
+        newYaw += (secureRandom.nextFloat() - 0.5f) * 0.07f;
+        newPitch += (secureRandom.nextFloat() - 0.5f) * 0.045f;
 
-        if (bypassMatrix.getValue() && Math.abs(yawDiff) < 3.0f) {
+        // Bypass Matrix
+        if (Math.abs(yawDiff) < 3.0f) {
             float curve = (float) Math.sin(System.nanoTime() / 300_000_000.0) * 0.05f;
             newYaw += curve;
         }
 
-        if (bypassPolar.getValue()) {
-            float yawRate = MathHelper.wrapDegrees(newYaw - lastAppliedYaw);
-            if (Math.abs(yawRate) > 7.5f) {
-                newYaw = lastAppliedYaw + Math.signum(yawRate) * 6.5f;
-            }
+        // Bypass Polar
+        float yawRate = MathHelper.wrapDegrees(newYaw - lastAppliedYaw);
+        if (Math.abs(yawRate) > 7.5f) {
+            newYaw = lastAppliedYaw + Math.signum(yawRate) * 6.5f;
         }
 
-        if (bypassSloth.getValue()) {
-            if (secureRandom.nextInt(500) == 0) {
-                return;
-            }
-            if (secureRandom.nextInt(80) == 0) {
-                newYaw += (secureRandom.nextFloat() - 0.5f) * 0.2f;
-                newPitch += (secureRandom.nextFloat() - 0.5f) * 0.12f;
-            }
+        // Bypass Sloth
+        if (secureRandom.nextInt(500) == 0) {
+            return;
+        }
+        if (secureRandom.nextInt(80) == 0) {
+            newYaw += (secureRandom.nextFloat() - 0.5f) * 0.2f;
+            newPitch += (secureRandom.nextFloat() - 0.5f) * 0.12f;
         }
 
         float maxChangePerLoop = 18.0f;
@@ -324,6 +331,19 @@ public class AimAssistModule extends Module {
             if (player.isCreative() || player.isSpectator()) return false;
             if (FriendManager.getInstance().contains(player.getName().getString()) && !friends.getValue()) {
                 return false;
+            }
+            if (player.isInvisible() && !attackInvisibles.getValue()) {
+                return false;
+            }
+            if (!attackNaked.getValue()) {
+                boolean hasArmor = false;
+                for (net.minecraft.item.ItemStack armorItem : player.getArmorItems()) {
+                    if (!armorItem.isEmpty()) {
+                        hasArmor = true;
+                        break;
+                    }
+                }
+                if (!hasArmor) return false;
             }
             return true;
         }

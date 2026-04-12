@@ -58,7 +58,9 @@ public class KeybindsWidget extends ContainerWidget {
         animMap.entrySet().removeIf(entry -> !entry.getKey().isEnabled() && entry.getValue() < 0.01f);
 
         visibleModules.sort(Comparator.comparing(Module::getLocalizedName));
-        if (visibleModules.isEmpty()) {
+
+        boolean isChatPreview = mc.currentScreen instanceof ChatScreen && visibleModules.isEmpty();
+        if (visibleModules.isEmpty() && !isChatPreview) {
             return;
         }
 
@@ -76,8 +78,19 @@ public class KeybindsWidget extends ContainerWidget {
         float sqS = hdrH - scaled(3f);
         float nameKeyGap = scaled(12f);
 
+        // Example entries for chat preview mode
+        String exampleName = "Example";
+        String exampleKey = "R";
+
         float maxNameW = 0f;
         float maxKeyW = 0f;
+        if (isChatPreview) {
+            maxNameW = Fonts.PS_MEDIUM.getWidth(exampleName, fRow);
+            float keyWidth = Fonts.PS_MEDIUM.getWidth("[", fRow)
+                    + Fonts.PS_BOLD.getWidth(exampleKey, fRow)
+                    + Fonts.PS_MEDIUM.getWidth("]", fRow);
+            maxKeyW = keyWidth;
+        }
         for (Module module : visibleModules) {
             maxNameW = Math.max(maxNameW, Fonts.PS_MEDIUM.getWidth(module.getLocalizedName(), fRow));
             String key = KeyStorage.getBind(module.getBind());
@@ -94,6 +107,9 @@ public class KeybindsWidget extends ContainerWidget {
         float totalRows = 0f;
         for (Module module : visibleModules) {
             totalRows += (rowH + rowG) * animMap.getOrDefault(module, 0f);
+        }
+        if (isChatPreview) {
+            totalRows = rowH + rowG;
         }
 
         float targetH = hdrH + scaled(4f) + totalRows + p;
@@ -137,6 +153,28 @@ public class KeybindsWidget extends ContainerWidget {
                     midY - fRow / 2f + scaled(0.5f), fRow, widgetTextColor(alpha));
 
             currentY += (rowH + rowG) * anim;
+        }
+
+        // Render chat preview example entry
+        if (isChatPreview) {
+            int alpha = 180;
+            float midY = currentY + rowH / 2f;
+
+            float leftBracketWidth = Fonts.PS_MEDIUM.getWidth("[", fRow);
+            float rightBracketWidth = Fonts.PS_MEDIUM.getWidth("]", fRow);
+            float exKeyWidth = Fonts.PS_BOLD.getWidth(exampleKey, fRow);
+            float keyStartX = x + cardW - p - leftBracketWidth - exKeyWidth - rightBracketWidth;
+
+            Fonts.PS_MEDIUM.drawText(ms, exampleName,
+                    x + p, midY - fRow / 2f + scaled(0.5f),
+                    fRow, widgetTextColor(alpha));
+
+            Fonts.PS_MEDIUM.drawText(ms, "[", keyStartX,
+                    midY - fRow / 2f + scaled(0.5f), fRow, widgetTextColor(alpha));
+            Fonts.PS_BOLD.drawText(ms, exampleKey, keyStartX + leftBracketWidth,
+                    midY - fRow / 2f + scaled(0.5f), fRow, widgetTextColor(alpha));
+            Fonts.PS_MEDIUM.drawText(ms, "]", keyStartX + leftBracketWidth + exKeyWidth,
+                    midY - fRow / 2f + scaled(0.5f), fRow, widgetTextColor(alpha));
         }
 
         ms.pop();

@@ -8,11 +8,9 @@ import sweetie.nezi.api.module.setting.BooleanSetting;
 import sweetie.nezi.api.module.setting.ModeSetting;
 import sweetie.nezi.api.module.setting.SliderSetting;
 import sweetie.nezi.api.module.setting.MultiBooleanSetting;
-import sweetie.nezi.api.module.setting.RunSetting;
 import sweetie.nezi.api.system.language.ClientLanguage;
 import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.client.services.RenderService;
-import sweetie.nezi.client.ui.theme.ThemeEditor;
 import sweetie.nezi.client.ui.widget.WidgetManager;
 
 @ModuleRegister(name = "HUD", category = Category.RENDER)
@@ -24,9 +22,6 @@ public class InterfaceModule extends Module {
     private static final float OFFSET = 12f;
 
     public final MultiBooleanSetting widgets = new MultiBooleanSetting("Виджеты");
-    private final RunSetting themes = new RunSetting("Темы").value(() -> {
-        ThemeEditor.getInstance().setOpen(!ThemeEditor.getInstance().isOpen());
-    });
     public final ModeSetting language = new ModeSetting("Language")
             .values("Russian", "English")
             .value("Russian")
@@ -54,7 +49,7 @@ public class InterfaceModule extends Module {
                 })
                 .toList());
 
-        addSettings(widgets, themes, language, scale, widgetScale, hudParticles);
+        addSettings(widgets, language, scale, widgetScale, hudParticles);
     }
 
     @Override
