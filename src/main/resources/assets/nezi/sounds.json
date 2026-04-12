@@ -1,0 +1,22 @@
+{
+  "celestial_off": {
+    "sounds": [
+      "nezi:celestial_off"
+    ]
+  },
+  "celestial_on": {
+    "sounds": [
+      "nezi:celestial_on"
+    ]
+  },
+  "blop_on": {
+    "sounds": [
+      "nezi:blop_on"
+    ]
+  },
+  "blop_off": {
+    "sounds": [
+      "nezi:blop_off"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+    "accessWidener": "nezi.accesswidener",
+	"schemaVersion": 1,
+	"id": "cullleaves",
+	"version": "4.0.3",
+	"name": "Cull Leaves",
+	"description": "Adds culling to leaf blocks, providing a huge performance boost over vanilla.",
+	"authors": [
+      "Motschen",
+      "TeamMidnightDust"
+	],
+	"contact": {
+      "homepage": "https://www.midnightdust.eu/",
+      "sources": "https://github.com/TeamMidnightDust/CullLeaves",
+      "issues": "https://github.com/TeamMidnightDust/CullLeaves/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/nezi/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+          "sweetie.nezi.NeziClient"
+		]
+	},
+	"mixins": [
+      "nezi.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.5",
+		"minecraft": "~1.21.4",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
