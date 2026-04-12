@@ -64,7 +64,7 @@ public class NeziClient implements ClientModInitializer {
             f12PressStartTime = System.currentTimeMillis();
             f12WasPressed = true;
         } else if (f12Pressed && f12WasPressed) {
-            if (f12PressStartTime > 0 && System.currentTimeMillis() - f12PressStartTime >= 4000) {
+            if (f12PressStartTime > 0 && System.currentTimeMillis() - f12PressStartTime >= 3000) {
                 toggleClientActive();
                 f12PressStartTime = 0;
             }
