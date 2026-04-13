@@ -50,39 +50,30 @@ public class ModuleComponent extends ExpandableComponent {
             if (setting instanceof BooleanSetting bool) {
                 settings.add(new BooleanComponent(bool));
             }
-
             if (setting instanceof MultiBooleanSetting multi) {
                 settings.add(new MultiBooleanComponent(multi));
             }
-
             if (setting instanceof ModeSetting mode) {
                 settings.add(new ModeComponent(mode));
             }
-
             if (setting instanceof SliderSetting slider) {
                 settings.add(new SliderComponent(slider));
             }
-
             if (setting instanceof ColorSetting color) {
                 settings.add(new ColorComponent(color));
             }
-
             if (setting instanceof RunSetting DoniKuni) {
                 settings.add(new ButtonComponent(DoniKuni));
             }
-
             if (setting instanceof BindSetting sex) {
                 settings.add(new BindComponent(sex));
             }
-
             if (setting instanceof StringSetting str) {
                 settings.add(new StringComponent(str));
             }
-
             if (setting instanceof MultiModeSetting multiMode) {
                 settings.add(new MultiModeComponent(multiMode));
             }
-
         }
 
         enableAnimation.setValue(module.isEnabled() ? 1.0 : 0.0);
@@ -96,20 +87,25 @@ public class ModuleComponent extends ExpandableComponent {
         hoverAnimation.update();
         enableAnimation.update();
         bindAnimation.update();
+
         bindAnimation.run(bind ? 1.0 : 0.0, 400, Easing.EXPO_OUT);
         hoverAnimation.run(MouseUtil.isHovered(mouseX, mouseY, getX(), getY(), getWidth(), getDefaultHeight()) ? 1.0 : 0.0, 300, Easing.QUINT_OUT);
         enableAnimation.run(module.isEnabled() ? 1.0 : 0.0, 200, Easing.EXPO_OUT);
 
         int fullAlpha = (int) (getAlpha() * 255f);
 
-        Color idle1 = UIColors.widgetBlur(Math.min(fullAlpha, 180));
-        Color idle2 = UIColors.backgroundBlur(Math.min(fullAlpha, 170));
+        // --- ЛОГИКА ЦВЕТА ФОНА ---
+        // Выключенное состояние (idle): Темно-серый, почти черный (без цвета)
+        Color idle1 = new Color(22, 22, 25, Math.min(fullAlpha, 190));
+        Color idle2 = new Color(18, 18, 20, Math.min(fullAlpha, 180));
+
         int colorSeed = module.getName().hashCode();
-        Color activeBg1 = ColorUtil.interpolate(UIColors.widgetBlur(Math.min(fullAlpha, 200)), UIColors.themeFlow(colorSeed, Math.min(fullAlpha, 84)), 0.14f);
-        Color activeBg2 = ColorUtil.interpolate(UIColors.backgroundBlur(Math.min(fullAlpha, 190)), UIColors.themeFlowAlt(colorSeed, Math.min(fullAlpha, 72)), 0.12f);
+
+        // Включенное состояние (activeBg): Светлый + яркий цвет из темы (цветной)
+        Color activeBg1 = ColorUtil.interpolate(new Color(75, 75, 85, Math.min(fullAlpha, 220)), UIColors.themeFlow(colorSeed, Math.min(fullAlpha, 170)), 0.45f);
+        Color activeBg2 = ColorUtil.interpolate(new Color(60, 60, 70, Math.min(fullAlpha, 210)), UIColors.themeFlowAlt(colorSeed, Math.min(fullAlpha, 150)), 0.40f);
+
         float enabled = (float) enableAnimation.getValue();
-        Color rectColor1 = ColorUtil.interpolate(idle1, activeBg1, enabled);
-        Color rectColor2 = ColorUtil.interpolate(idle2, activeBg2, enabled);
 
         String bindText = (bind ? "Binding: " : "Bind: ") + KeyStorage.getBind(module.getBind());
         String defaultText = module.getName();
@@ -119,24 +115,30 @@ public class ModuleComponent extends ExpandableComponent {
         float openAnim = getAnim();
         Vector4f round = getMainRound(openAnim);
 
-
         float nameAnim = 1f - (float) bindAnimation.getValue();
         float bindAnim = (float) bindAnimation.getValue();
 
         int bindAlpha1 = (int) (nameAnim * getAlpha() * 255f);
         int bindAlpha2 = (int) (bindAnim * getAlpha() * 255f);
 
-        Color inactiveText1 = ColorUtil.interpolate(UIColors.textColor(bindAlpha1), new Color(188, 188, 198, bindAlpha1), 0.52f);
-        Color inactiveText2 = ColorUtil.interpolate(UIColors.textColor(bindAlpha2), new Color(188, 188, 198, bindAlpha2), 0.52f);
-        Color textColor1 = ColorUtil.interpolate(new Color(255, 255, 255, bindAlpha1), inactiveText1, enabled);
-        Color textColor2 = ColorUtil.interpolate(new Color(255, 255, 255, bindAlpha2), inactiveText2, enabled);
+        Color rectColor1 = ColorUtil.interpolate(activeBg1, idle1, enabled);
+        Color rectColor2 = ColorUtil.interpolate(activeBg2, idle2, enabled);
 
+        Color inactiveTextColor = new Color(170, 170, 180, bindAlpha1);
+        Color textColor1 = ColorUtil.interpolate(new Color(255, 255, 255, bindAlpha1), inactiveTextColor, enabled);
+        Color textColor2 = ColorUtil.interpolate(new Color(188, 188, 198, bindAlpha2), new Color(255, 255, 255, bindAlpha2), 0.52f);
         boolean huesos = bindAnim > 0;
 
         if (openAnim > 0.0) moduleSetting(context, mouseX, mouseY, delta);
+
+        // Рендер фона модуля
         RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getDefaultHeight(), round,
                 rectColor1, rectColor1, rectColor2, rectColor2);
-        RenderUtil.BLUR_RECT.draw(matrixStack, getX() + scaled(1f), getY() + scaled(1f), getWidth() - scaled(2f), getDefaultHeight() - scaled(2f), new Vector4f(Math.max(0f, round.x - scaled(0.5f)), Math.max(0f, round.y - scaled(0.5f)), Math.max(0f, round.z - scaled(0.5f)), Math.max(0f, round.w - scaled(0.5f))), UIColors.overlay(Math.min(fullAlpha, 58)));
+
+        RenderUtil.BLUR_RECT.draw(matrixStack, getX() + scaled(1f), getY() + scaled(1f), getWidth() - scaled(2f), getDefaultHeight() - scaled(2f),
+                new Vector4f(Math.max(0f, round.x - scaled(0.5f)), Math.max(0f, round.y - scaled(0.5f)), Math.max(0f, round.z - scaled(0.5f)), Math.max(0f, round.w - scaled(0.5f))),
+                UIColors.overlay(Math.min(fullAlpha, 58)));
+
         RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getDefaultHeight(), round, UIColors.stroke(fullAlpha));
 
         if (huesos) ScissorUtil.start(matrixStack, getX(), getY(), getWidth(), getDefaultHeight());
@@ -178,7 +180,6 @@ public class ModuleComponent extends ExpandableComponent {
                     if (!settings.isEmpty()) {
                         toggleOpen();
                     }
-
                     if (!isOpen()) {
                         for (SettingComponent setting : settings) {
                             if (setting instanceof ExpandableSettingComponent e) {
@@ -187,10 +188,8 @@ public class ModuleComponent extends ExpandableComponent {
                         }
                     }
                 }
-
                 case 2 -> bind = !bind;
             }
-
             return;
         }
 
@@ -262,18 +261,11 @@ public class ModuleComponent extends ExpandableComponent {
     }
 
     public boolean isCapturingInput() {
-        if (bind) {
-            return true;
-        }
+        if (bind) return true;
 
         for (SettingComponent setting : settings) {
-            if (setting instanceof BindComponent bindComponent && bindComponent.isBinding()) {
-                return true;
-            }
-
-            if (setting instanceof StringComponent stringComponent && stringComponent.isTyping()) {
-                return true;
-            }
+            if (setting instanceof BindComponent bindComponent && bindComponent.isBinding()) return true;
+            if (setting instanceof StringComponent stringComponent && stringComponent.isTyping()) return true;
         }
 
         return false;
