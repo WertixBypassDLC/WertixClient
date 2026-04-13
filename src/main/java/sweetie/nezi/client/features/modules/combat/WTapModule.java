@@ -1,18 +1,14 @@
 package sweetie.nezi.client.features.modules.combat;
 
 import lombok.Getter;
-import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import sweetie.nezi.api.event.EventListener;
 import sweetie.nezi.api.event.Listener;
 import sweetie.nezi.api.event.events.player.other.UpdateEvent;
-import sweetie.nezi.api.event.events.player.world.AttackEvent;
 import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
-import sweetie.nezi.api.module.setting.SliderSetting;
 import sweetie.nezi.api.utils.math.TimerUtil;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -20,64 +16,153 @@ import java.util.concurrent.ThreadLocalRandom;
 public class WTapModule extends Module {
     @Getter private static final WTapModule instance = new WTapModule();
 
-    private final SliderSetting minDelay = new SliderSetting("Min Delay (ms)").value(10f).range(5f, 50f).step(1f);
-    private final SliderSetting maxDelay = new SliderSetting("Max Delay (ms)").value(60f).range(20f, 120f).step(1f);
+    /**
+     * Фаза крит-цикла:
+     * IDLE        — ничего не происходит
+     * JUMP        — только что инициировали прыжок
+     * WAIT_FALL   — ждём, когда игрок оторвался от земли и начал падать
+     * READY       — игрок падает, крит гарантирован → вызываем attackCallback
+     */
+    private enum CritPhase { IDLE, JUMP, WAIT_FALL, READY }
 
-    private final TimerUtil stopTimer = new TimerUtil();
-    private boolean suppressing;
-    private long currentStopDuration;
+    private volatile CritPhase critPhase = CritPhase.IDLE;
+    private volatile Runnable attackCallback;
+    private final TimerUtil phaseTimer = new TimerUtil();
+
+    // Сколько тиков (мс) ждём перед проверкой падения после прыжка
+    private static final long JUMP_GRACE_MS = 80L;
+    // Максимальное время ожидания крита (защита от зависания)
+    private static final long CRIT_TIMEOUT_MS = 600L;
 
     public WTapModule() {
-        addSettings(minDelay, maxDelay);
+        setEnabled(true);
     }
 
     @Override
     public void onDisable() {
-        suppressing = false;
-        restoreKeys();
+        cancelCrit();
     }
 
+    /** Активен ли цикл WTap прямо сейчас */
     public boolean isSuppressing() {
-        return suppressing;
+        return critPhase != CritPhase.IDLE;
+    }
+
+    /**
+     * Вызывается из TriggerBot / Aura перед атакой.
+     * Вместо немедленной атаки — запускает цикл WTap:
+     *   1. Сбрасываем спринт (только через setPressed/setSprinting, без пакетов)
+     *   2. Прыгаем
+     *   3. Ждём падения
+     *   4. Вызываем attackCallback (сама атака)
+     *
+     * @param onCritReady — колбэк, который будет вызван в момент гарантированного крита
+     * @return true  — WTap принял запрос (атаку нужно отложить)
+     *         false — WTap не может принять (выключен / уже в процессе / не спринтует)
+     */
+    public boolean requestCritAttack(Runnable onCritReady) {
+        if (!isEnabled() || mc.player == null) return false;
+        // Если уже в процессе — не перебиваем
+        if (critPhase != CritPhase.IDLE) return true;
+        // Если игрок уже в воздухе и падает — крит и так будет, сразу атакуем
+        if (!mc.player.isOnGround() && mc.player.fallDistance > 0.0f) {
+            onCritReady.run();
+            return true;
+        }
+
+        attackCallback = onCritReady;
+        critPhase = CritPhase.JUMP;
+        phaseTimer.reset();
+
+        // Сразу глушим спринт (без пакетов)
+        suppressSprint();
+        // Инициируем прыжок через jump() — это легитный способ
+        mc.player.jump();
+
+        return true;
+    }
+
+    /**
+     * Старый метод для обратной совместимости с Aura/TriggerBot,
+     * которые не используют колбэк (они сами атакуют потом).
+     * Просто глушим спринт + прыгаем. Атака должна будет
+     * дождаться isSuppressing() == false.
+     */
+    public void requestReset() {
+        if (!isEnabled() || mc.player == null) return;
+        if (critPhase != CritPhase.IDLE) return;
+        critPhase = CritPhase.JUMP;
+        phaseTimer.reset();
+        suppressSprint();
+        mc.player.jump();
     }
 
     @Override
     public void onEvent() {
-        EventListener attackEvent = AttackEvent.getInstance().subscribe(new Listener<>(event -> {
-            if (mc.player == null || !mc.player.isSprinting()) return;
+        EventListener update = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
+            if (mc.player == null) return;
 
-            long lo = Math.max(5L, minDelay.getValue().longValue());
-            long hi = Math.max(lo + 1L, maxDelay.getValue().longValue());
-            currentStopDuration = ThreadLocalRandom.current().nextLong(lo, hi);
+            switch (critPhase) {
+                case IDLE -> { /* ничего */ }
 
-            mc.options.forwardKey.setPressed(false);
-            mc.player.setSprinting(false);
+                case JUMP -> {
+                    // Продолжаем глушить спринт пока не взлетели
+                    suppressSprint();
+                    // Подождём grace-период чтобы игрок точно оторвался от земли
+                    if (phaseTimer.finished(JUMP_GRACE_MS)) {
+                        critPhase = CritPhase.WAIT_FALL;
+                    }
+                    // Таймаут защиты
+                    if (phaseTimer.finished(CRIT_TIMEOUT_MS)) cancelCrit();
+                }
 
-            suppressing = true;
-            stopTimer.reset();
-        }));
+                case WAIT_FALL -> {
+                    // Продолжаем глушить спринт
+                    suppressSprint();
+                    // Ждём момента, когда игрок в воздухе и начинает падать (fallDistance растёт)
+                    boolean inAir    = !mc.player.isOnGround();
+                    boolean falling  = mc.player.fallDistance > 0.01f;
+                    boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
+                    boolean climbing = mc.player.isClimbing();
 
-        EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
-            if (!suppressing || mc.player == null) return;
+                    if (inAir && falling && !inLiquid && !climbing) {
+                        critPhase = CritPhase.READY;
+                    }
+                    // Таймаут защиты
+                    if (phaseTimer.finished(CRIT_TIMEOUT_MS)) cancelCrit();
+                }
 
-            if (stopTimer.finished(currentStopDuration)) {
-                suppressing = false;
-                restoreKeys();
-            } else {
-                mc.options.forwardKey.setPressed(false);
+                case READY -> {
+                    // Крит гарантирован! Вызываем атаку
+                    if (attackCallback != null) {
+                        attackCallback.run();
+                        attackCallback = null;
+                    }
+                    critPhase = CritPhase.IDLE;
+                    // Восстанавливаем клавишу движения
+                    restoreKey();
+                }
             }
         }));
-
-        addEvents(attackEvent, updateEvent);
+        addEvents(update);
     }
 
-    private void restoreKeys() {
+    /** Сбросить спринт без пакетов */
+    private void suppressSprint() {
+        if (mc.player == null) return;
+        mc.player.setSprinting(false);
+    }
+
+    private void cancelCrit() {
+        critPhase = CritPhase.IDLE;
+        attackCallback = null;
+        restoreKey();
+    }
+
+    private void restoreKey() {
         if (mc.player == null || mc.getWindow() == null) return;
-
-        long handle = mc.getWindow().getHandle();
-        int forwardKey = mc.options.forwardKey.getDefaultKey().getCode();
-
-        if (forwardKey > 0 && InputUtil.isKeyPressed(handle, forwardKey)) {
+        int keyCode = mc.options.forwardKey.getDefaultKey().getCode();
+        if (InputUtil.isKeyPressed(mc.getWindow().getHandle(), keyCode)) {
             mc.options.forwardKey.setPressed(true);
         }
     }

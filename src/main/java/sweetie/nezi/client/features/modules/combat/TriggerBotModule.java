@@ -4,7 +4,6 @@ import lombok.Getter;
 import net.minecraft.block.*;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -21,11 +20,9 @@ import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
 import sweetie.nezi.api.module.setting.BooleanSetting;
 import sweetie.nezi.api.module.setting.SliderSetting;
+import sweetie.nezi.api.module.setting.MultiBooleanSetting;
 import sweetie.nezi.api.system.configs.FriendManager;
-import sweetie.nezi.api.utils.combat.ClickScheduler;
-import sweetie.nezi.api.utils.combat.TargetManager;
 import sweetie.nezi.api.utils.player.PlayerUtil;
-import sweetie.nezi.client.features.modules.movement.SprintModule;
 import sweetie.nezi.api.utils.math.TimerUtil;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -34,13 +31,13 @@ import java.util.concurrent.ThreadLocalRandom;
 public class TriggerBotModule extends Module {
     @Getter private static final TriggerBotModule instance = new TriggerBotModule();
 
-    private final SliderSetting distance = new SliderSetting("Distance").value(3.0f).range(2.0f, 5.0f).step(0.05f);
-    private final BooleanSetting onlyCrits = new BooleanSetting("Only Crits").value(true);
-    private final BooleanSetting smartCrits = new BooleanSetting("Smart crits").value(true).setVisible(onlyCrits::getValue);
-    private final BooleanSetting shieldBreak = new BooleanSetting("Shield Break").value(true);
-    private final BooleanSetting noAttackIfEat = new BooleanSetting("No attack if eat").value(false);
+    private final SliderSetting distance       = new SliderSetting("Distance").value(3.1f).range(2.0f, 5.0f).step(0.05f);
+    private final BooleanSetting onlyCrits     = new BooleanSetting("Only Crits").value(true);
+    private final BooleanSetting smartCrits    = new BooleanSetting("Smart Crits").value(true).setVisible(onlyCrits::getValue);
+    private final BooleanSetting shieldBreak   = new BooleanSetting("Shield Break").value(true);
+    private final BooleanSetting noAttackIfEat = new BooleanSetting("No Attack If Eat").value(false);
 
-    private final sweetie.nezi.api.module.setting.MultiBooleanSetting targets = new sweetie.nezi.api.module.setting.MultiBooleanSetting("Targets").value(
+    private final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
             new BooleanSetting("Игроки").value(true),
             new BooleanSetting("Голые").value(true),
             new BooleanSetting("Мобы").value(false),
@@ -48,9 +45,11 @@ public class TriggerBotModule extends Module {
             new BooleanSetting("Жители").value(false)
     );
 
-    private final ClickScheduler clickScheduler = new ClickScheduler();
     private final TimerUtil attackTimer = new TimerUtil();
     private long nextDelay = 0L;
+
+    // Флаг: мы уже передали атаку WTap и ждём колбэка
+    private volatile boolean pendingWtapAttack = false;
 
     public TriggerBotModule() {
         addSettings(distance, onlyCrits, smartCrits, shieldBreak, noAttackIfEat, targets);
@@ -59,46 +58,44 @@ public class TriggerBotModule extends Module {
     @Override
     public void onDisable() {
         AuraModule.getInstance().target = null;
+        pendingWtapAttack = false;
     }
 
     @Override
     public void onEvent() {
         EventListener update = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
+            if (mc.player == null || mc.world == null) return;
+
             Entity target = getTarget();
 
             if (target instanceof LivingEntity livingTarget) {
                 AuraModule.getInstance().target = livingTarget;
 
+                // Если WTap уже обрабатывает атаку — не инициируем новую
+                if (pendingWtapAttack) return;
+
                 if (shouldAttack(livingTarget)) {
-                    attack(livingTarget);
+                    initiateAttack(livingTarget);
                 }
             } else {
                 AuraModule.getInstance().target = null;
             }
         }));
-
         addEvents(update);
     }
 
     private Entity getTarget() {
-        if (mc.player == null || mc.world == null) return null;
-
         float tickDelta = mc.getRenderTickCounter().getTickDelta(false);
-        double range = distance.getValue();
+        double range    = distance.getValue();
 
-        Vec3d cameraPos = mc.player.getCameraPosVec(tickDelta);
+        Vec3d cameraPos   = mc.player.getCameraPosVec(tickDelta);
         Vec3d rotationVec = mc.player.getRotationVec(1.0F);
-        Vec3d endPos = cameraPos.add(rotationVec.multiply(range));
+        Vec3d endPos      = cameraPos.add(rotationVec.multiply(range));
 
-        Box box = mc.player.getBoundingBox()
-                .stretch(rotationVec.multiply(range))
-                .expand(1.0D, 1.0D, 1.0D);
+        Box box = mc.player.getBoundingBox().stretch(rotationVec.multiply(range)).expand(1.0D);
 
         EntityHitResult entityHit = ProjectileUtil.raycast(
-                mc.player,
-                cameraPos,
-                endPos,
-                box,
+                mc.player, cameraPos, endPos, box,
                 (entity) -> !entity.isSpectator()
                         && entity.canHit()
                         && entity instanceof LivingEntity
@@ -106,130 +103,146 @@ public class TriggerBotModule extends Module {
                 range * range
         );
 
-        if (entityHit == null || entityHit.getEntity() == null) {
-            return null;
-        }
+        if (entityHit == null || entityHit.getEntity() == null) return null;
 
         if (hasBlockingCollision(cameraPos, endPos, cameraPos.squaredDistanceTo(entityHit.getPos()))) {
             return null;
         }
 
-        if (cameraPos.squaredDistanceTo(entityHit.getPos()) <= range * range) {
-            return entityHit.getEntity();
-        }
-
-        return null;
+        return entityHit.getEntity();
     }
 
     private boolean shouldAttack(LivingEntity target) {
         if (!new sweetie.nezi.api.utils.combat.TargetManager.EntityFilter(targets.getList()).isValid(target)) return false;
-        
         if (noAttackIfEat.getValue() && PlayerUtil.isEating()) return false;
 
+        // Проверка кулдауна между атаками
+        if (!attackTimer.finished(nextDelay)) return false;
+
+        // Проверка оружия и зарядки
         net.minecraft.item.Item mainHand = mc.player.getMainHandStack().getItem();
-        boolean isWeapon = mainHand instanceof net.minecraft.item.SwordItem ||
-                           mainHand instanceof net.minecraft.item.AxeItem ||
-                           mainHand instanceof net.minecraft.item.MaceItem ||
-                           mainHand instanceof net.minecraft.item.TridentItem;
-        
-        if (!isWeapon && !attackTimer.finished(nextDelay)) return false;
+        boolean isWeapon = mainHand instanceof net.minecraft.item.SwordItem
+                || mainHand instanceof net.minecraft.item.AxeItem
+                || mainHand instanceof net.minecraft.item.MaceItem
+                || mainHand instanceof net.minecraft.item.TridentItem;
 
-        float cooldownReq = 0.92f + ThreadLocalRandom.current().nextFloat() * 0.03f;
-        if (mc.player.getAttackCooldownProgress(0.68f) < cooldownReq) return false;
-
-        if (target.isBlocking() && shieldBreak.getValue()) return true;
-        if (!onlyCrits.getValue()) return true;
-
-        boolean ground = mc.player.isOnGround();
-        boolean jumping = mc.options.jumpKey.isPressed();
-
-        if (smartCrits.getValue() && ground && !jumping) return true;
-
-        boolean falling = mc.player.fallDistance > 0.0f;
-        boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
-        boolean climbing = mc.player.isClimbing();
-
-        return (!ground && falling) || inLiquid || climbing;
-    }
-
-    private void attack(LivingEntity target) {
-        boolean sprinting = mc.player.isSprinting();
-
-        if (SprintModule.getInstance().mode.is("Packet")) {
-            mc.player.networkHandler.sendPacket(
-                    new net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket(
-                            mc.player,
-                            net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket.Mode.STOP_SPRINTING
-                    )
-            );
+        if (!isWeapon) {
+            if (!attackTimer.finished(100L)) return false;
+        } else {
+            // Ждём полного кулдауна оружия (93-95%)
+            float cooldownReq = 0.93f + ThreadLocalRandom.current().nextFloat() * 0.02f;
+            if (mc.player.getAttackCooldownProgress(0.5f) < cooldownReq) return false;
         }
 
+        // Пробивание щита — атакуем сразу (крит по щиту всё равно считается)
+        if (target.isBlocking() && shieldBreak.getValue()) return true;
+
+        // Если крит не нужен — атакуем
+        if (!onlyCrits.getValue()) return true;
+
+        // === Логика крита ===
+        // Если WTap включён — он сам обеспечит крит через колбэк.
+        // Здесь мы только проверяем, можем ли вообще инициировать цикл WTap:
+        // игрок должен быть на земле (иначе WTap не прыгнет).
+        if (WTapModule.getInstance().isEnabled()) {
+            // Если игрок на земле — WTap подпрыгнет и даст крит
+            if (mc.player.isOnGround()) return true;
+            // Если уже в воздухе и падает — крит и без WTap
+            boolean falling  = mc.player.fallDistance > 0.05f;
+            boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
+            boolean climbing = mc.player.isClimbing();
+            return falling && !inLiquid && !climbing;
+        }
+
+        // WTap выключен — используем SmartCrits / обычный крит
+        if (smartCrits.getValue() && mc.player.isOnGround() && !mc.options.jumpKey.isPressed()) {
+            // SmartCrits: атакуем на земле — в ванилле это не крит, но мы разрешаем
+            // (оставляем как было в оригинале для совместимости)
+            return true;
+        }
+
+        boolean falling  = mc.player.fallDistance > 0.05f && !mc.player.isOnGround();
+        boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
+        boolean climbing = mc.player.isClimbing();
+        return falling && !inLiquid && !climbing;
+    }
+
+    /**
+     * Инициируем атаку:
+     * - Если WTap включён → передаём атаку ему как колбэк (атака будет в момент крита)
+     * - Если WTap выключен → атакуем напрямую
+     */
+    private void initiateAttack(LivingEntity target) {
+        if (WTapModule.getInstance().isEnabled()) {
+            // Если уже в воздухе и падает — атакуем немедленно без WTap цикла
+            boolean alreadyCrit = !mc.player.isOnGround()
+                    && mc.player.fallDistance > 0.05f
+                    && !mc.player.isTouchingWater()
+                    && !mc.player.isInLava()
+                    && !mc.player.isClimbing();
+
+            if (alreadyCrit) {
+                doAttack(target);
+                return;
+            }
+
+            // На земле — передаём WTap, он прыгнет и вернёт колбэк
+            pendingWtapAttack = true;
+            boolean accepted = WTapModule.getInstance().requestCritAttack(() -> {
+                pendingWtapAttack = false;
+                doAttack(target);
+            });
+            if (!accepted) {
+                pendingWtapAttack = false;
+                doAttack(target);
+            }
+        } else {
+            doAttack(target);
+        }
+    }
+
+    /** Выполняет саму атаку. Без пакетов спринта. */
+    private void doAttack(LivingEntity target) {
         mc.interactionManager.attackEntity(mc.player, target);
         mc.player.swingHand(Hand.MAIN_HAND);
 
-        if (SprintModule.getInstance().mode.is("Packet") && sprinting) {
-            mc.player.networkHandler.sendPacket(
-                    new net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket(
-                            mc.player,
-                            net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket.Mode.START_SPRINTING
-                    )
-            );
-        }
-
+        nextDelay = 50L + ThreadLocalRandom.current().nextLong(0, 30);
         attackTimer.reset();
-        nextDelay = ThreadLocalRandom.current().nextLong(50L, 101L);
-        clickScheduler.recalculate(500);
     }
 
     private boolean hasBlockingCollision(Vec3d start, Vec3d end, double targetDistanceSq) {
         Vec3d direction = end.subtract(start);
-        if (direction.lengthSquared() <= 1.0E-6D) {
-            return false;
-        }
+        if (direction.lengthSquared() <= 1.0E-6D) return false;
 
-        Vec3d currentStart = start;
-        Vec3d stepDirection = direction.normalize().multiply(0.05D);
+        Vec3d currentStart   = start;
+        Vec3d stepDirection  = direction.normalize().multiply(0.05D);
 
         for (int i = 0; i < 16; i++) {
             BlockHitResult blockHit = mc.world.raycast(new RaycastContext(
-                    currentStart,
-                    end,
-                    RaycastContext.ShapeType.COLLIDER,
-                    RaycastContext.FluidHandling.NONE,
-                    mc.player
+                    currentStart, end, RaycastContext.ShapeType.COLLIDER,
+                    RaycastContext.FluidHandling.NONE, mc.player
             ));
 
-            if (blockHit.getType() == HitResult.Type.MISS) {
-                return false;
-            }
+            if (blockHit.getType() == HitResult.Type.MISS) return false;
 
             double blockDistanceSq = start.squaredDistanceTo(blockHit.getPos());
-            if (blockDistanceSq >= targetDistanceSq) {
-                return false;
-            }
+            if (blockDistanceSq >= targetDistanceSq) return false;
 
-            BlockState state = mc.world.getBlockState(blockHit.getBlockPos());
-            if (canBypassTriggerBlock(state)) {
+            if (canBypassTriggerBlock(mc.world.getBlockState(blockHit.getBlockPos()))) {
                 currentStart = blockHit.getPos().add(stepDirection);
                 continue;
             }
-
             return true;
         }
-
         return false;
     }
 
     private boolean canBypassTriggerBlock(BlockState state) {
         Block block = state.getBlock();
-        return block instanceof StairsBlock
-                || block instanceof FenceBlock
-                || block instanceof FenceGateBlock
-                || block instanceof WallBlock
-                || block instanceof TrapdoorBlock
-                || block instanceof DoorBlock
-                || block instanceof LeavesBlock
-                || block instanceof PistonBlock
+        return block instanceof StairsBlock || block instanceof FenceBlock
+                || block instanceof FenceGateBlock || block instanceof WallBlock
+                || block instanceof TrapdoorBlock  || block instanceof DoorBlock
+                || block instanceof LeavesBlock    || block instanceof PistonBlock
                 || block instanceof PistonHeadBlock;
     }
 }

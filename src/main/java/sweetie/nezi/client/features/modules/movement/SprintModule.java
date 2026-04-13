@@ -28,27 +28,33 @@ public class SprintModule extends Module {
 
     @Override
     public void onEvent() {
-        EventListener sprintEvent = SprintEvent.getInstance().subscribe(new Listener<>(1, event -> {
-            if (shouldForceSprint()) {
-                event.setSprint(true);
-            } else if (WTapModule.getInstance().isEnabled() && WTapModule.getInstance().isSuppressing()) {
+        // Приоритет 0 — выполняется первым, до других подписчиков
+        EventListener sprintEvent = SprintEvent.getInstance().subscribe(new Listener<>(0, event -> {
+            if (isWTapSuppressing()) {
+                // WTap активен — строго блокируем спринт
                 event.setSprint(false);
+            } else if (shouldForceSprint()) {
+                event.setSprint(true);
             }
         }));
-
         addEvents(sprintEvent);
     }
 
+    /** WTap сейчас обрабатывает прыжок/крит */
+    private boolean isWTapSuppressing() {
+        return WTapModule.getInstance().isEnabled()
+                && WTapModule.getInstance().isSuppressing();
+    }
+
     public boolean shouldForceSprint() {
-        if (mc.player == null || mc.player.isSneaking() || mc.player.horizontalCollision) return false;
+        if (mc.player == null) return false;
+        if (mc.player.isSneaking()) return false;
+        if (mc.player.horizontalCollision) return false;
+        // Пока WTap прыгает — не трогаем спринт
+        if (isWTapSuppressing()) return false;
 
-        if (WTapModule.getInstance().isEnabled() && WTapModule.getInstance().isSuppressing()) {
-            return false;
-        }
-
-        AuraModule auraModule = AuraModule.getInstance();
-
-        boolean auraCheck = mode.is("Legit") && auraModule.target != null && auraModule.isEnabled();
+        AuraModule aura = AuraModule.getInstance();
+        boolean auraCheck = mode.is("Legit") && aura.isEnabled() && aura.target != null;
 
         return (mc.player.input.movementForward > 0 || auraCheck) && isActuallyMovingForward();
     }
@@ -56,21 +62,19 @@ public class SprintModule extends Module {
     public boolean isActuallyMovingForward() {
         if (mode.is("None") || mc.player == null) return false;
 
-        RotationManager rotationManager = RotationManager.getInstance();
-        RotationPlan plan = rotationManager.getCurrentRotationPlan();
+        RotationManager rm   = RotationManager.getInstance();
+        RotationPlan    plan = rm.getCurrentRotationPlan();
 
-        if (plan != null && (plan.provider() instanceof StrafeModule || plan.moveCorrection())) {
-            return false;
-        }
+        if (plan != null && (plan.provider() instanceof StrafeModule || plan.moveCorrection())) return false;
 
-        Rotation currentRotation = rotationManager.getCurrentRotation() != null
-                ? rotationManager.getCurrentRotation()
+        Rotation cur = rm.getCurrentRotation() != null
+                ? rm.getCurrentRotation()
                 : new Rotation(mc.player.getYaw(), mc.player.getPitch());
 
-        float deltaYaw = mc.player.getYaw() - currentRotation.getYaw();
-        float forward = mc.player.input.movementForward;
-        float sideways = mc.player.input.movementSideways;
+        float dy  = mc.player.getYaw() - cur.getYaw();
+        float fwd = mc.player.input.movementForward;
+        float sid = mc.player.input.movementSideways;
 
-        return forward * MathHelper.cos(deltaYaw * 0.017453292f) + sideways * MathHelper.sin(deltaYaw * 0.017453292f) > 1.0E-5f;
+        return fwd * MathHelper.cos(dy * 0.017453292f) + sid * MathHelper.sin(dy * 0.017453292f) > 1.0E-5f;
     }
 }
