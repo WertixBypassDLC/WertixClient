@@ -52,6 +52,11 @@ public class TargetEspGhost extends TargetEspMode {
         double time = (double) System.currentTimeMillis() / (500.0 / (double) (3f * spMul));
         int baseColor = TargetEspModule.getInstance().getCustomColor(red).getRGB();
 
+        float blend = getRetargetBlend();
+        float dx = (float) getTransitionDx();
+        float dy = (float) getTransitionDy();
+        float dz = (float) getTransitionDz();
+
         RenderSystem.enableBlend();
         RenderSystem.disableCull();
         RenderSystem.disableDepthTest();
@@ -69,22 +74,52 @@ public class TargetEspGhost extends TargetEspMode {
             float fade = 1.0f - k;
             float a = eased * fade * 0.9f;
 
-            float x1 = 0, y = 0, z1 = 0;
+            float normX = 0, normY = 0, normZ = 0;
 
             if ("Двойная спираль".equals(traj)) {
                 double tt = time - (double) j * (10.0 / count);
-                y = height * 0.55f + (float) Math.sin(tt) * 0.26f;
-                x1 = (float) Math.cos(tt) * radius;
-                z1 = (float) Math.sin(tt) * radius;
+                normY = height * 0.55f + (float) Math.sin(tt) * 0.26f;
+                normX = (float) Math.cos(tt) * radius;
+                normZ = (float) Math.sin(tt) * radius;
             } else if ("Орбита".equals(traj)) {
-                float angle = (float) (time * 1.5 + k * Math.PI * 2);
-                y = height / 2f + (float) Math.sin(time + k * Math.PI * 4) * 0.35f;
-                x1 = (float) Math.cos(angle) * radius * 1.2f;
-                z1 = (float) Math.sin(angle) * radius * 1.2f;
+                float r = radius * (0.8f + (float) Math.sin(j * 321.1) * 0.4f);
+                float angle = (float) (time * (1.5 + Math.sin(j * 123.4) * 0.5) + k * Math.PI * 2);
+                normY = height / 2f + (float) Math.sin(time * (1.0 + Math.cos(j) * 0.2) + k * Math.PI * 4) * 0.5f;
+                normX = (float) Math.cos(angle) * r * 1.2f;
+                normZ = (float) Math.sin(angle) * r * 1.2f;
             } else if ("Хаос".equals(traj)) {
-                x1 = (float) Math.sin(time * 1.3 + k * 10) * radius * 1.4f;
-                y = height / 2f + (float) Math.cos(time * 0.8 + k * 10) * height * 0.6f;
-                z1 = (float) Math.sin(time * 1.7 + k * 10) * radius * 1.4f;
+                normX = (float) Math.sin(time * 1.3 + k * 10) * radius * 1.4f;
+                normY = height / 2f + (float) Math.cos(time * 0.8 + k * 10) * height * 0.6f;
+                normZ = (float) Math.sin(time * 1.7 + k * 10) * radius * 1.4f;
+            }
+
+            // Упругое вытягивание при смене цели
+            if (blend > 0) {
+                float spread = (float) Math.pow(j / (float) count, 1.5);
+                normX += dx * blend * (1.0f - spread);
+                normY += dy * blend * (1.0f - spread);
+                normZ += dz * blend * (1.0f - spread);
+            }
+
+            float explodeRadius = radius * 3.0f;
+            float explodeX = (float) Math.cos(j * Math.PI * 2 / count) * explodeRadius;
+            float explodeZ = (float) Math.sin(j * Math.PI * 2 / count) * explodeRadius;
+            float explodeY = height + (float) Math.sin(j) * 1.5f;
+
+            float x1, y, z1;
+
+            if (eased < 0.5f) {
+                float t = eased * 2.0f;
+                t = 1.0f - (1.0f - t) * (1.0f - t);
+                x1 = MathHelper.lerp(t, 0, explodeX);
+                y = MathHelper.lerp(t, height, explodeY);
+                z1 = MathHelper.lerp(t, 0, explodeZ);
+            } else {
+                float t = (eased - 0.5f) * 2.0f;
+                t = t * t;
+                x1 = MathHelper.lerp(t, explodeX, normX);
+                y = MathHelper.lerp(t, explodeY, normY);
+                z1 = MathHelper.lerp(t, explodeZ, normZ);
             }
 
             float s = smoothSize.get() * (0.8f * fade + 0.2f) * eased;

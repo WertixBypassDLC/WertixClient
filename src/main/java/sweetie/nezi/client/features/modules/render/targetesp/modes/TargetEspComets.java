@@ -31,7 +31,8 @@ public class TargetEspComets extends TargetEspMode {
         prevGhostRotationAngle = ghostRotationAngle;
         prevGhostYRotationAngle = ghostYRotationAngle;
 
-        ghostRotationAngle += 8f;
+        float blend = getRetargetBlend();
+        ghostRotationAngle += 8f + (blend * 18f);
         ghostYRotationAngle += 8f;
     }
 
@@ -55,9 +56,12 @@ public class TargetEspComets extends TargetEspMode {
         double centerY = getTargetY() + currentTarget.getHeight() / 2;
         double centerZ = getTargetZ();
 
+        float blend = getRetargetBlend();
+
         for (int i = 0; i < 3; i++) {
             float angle = MathUtil.interpolate(prevGhostRotationAngle, ghostRotationAngle, event.partialTicks()) + (i * 180);
-            double radius = Math.max(currentTarget.getWidth() * dony, 0.28);
+
+            double radius = Math.max(currentTarget.getWidth() * dony, 0.28) + (blend * 1.5);
 
             double offsetX = Math.cos(Math.toRadians(angle)) * radius;
             double offsetZ = Math.sin(Math.toRadians(angle)) * radius;

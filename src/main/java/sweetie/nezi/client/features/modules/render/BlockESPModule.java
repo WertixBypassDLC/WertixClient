@@ -40,14 +40,14 @@ public class BlockESPModule extends Module {
 
     private static final Color DEFAULT_OUTLINE = new Color(214, 226, 242, 196);
 
-    private final MultiBooleanSetting blocks = new MultiBooleanSetting("Blocks").value(
-            new BooleanSetting("Chests").value(true),
-            new BooleanSetting("Barrels").value(true),
-            new BooleanSetting("Spawners").value(true),
-            new BooleanSetting("Hoppers").value(true),
-            new BooleanSetting("Shulkers").value(true)
+    private final MultiBooleanSetting blocks = new MultiBooleanSetting("Блоки").value(
+            new BooleanSetting("Сундуки").value(true),
+            new BooleanSetting("Бочки").value(true),
+            new BooleanSetting("Спавнера").value(true),
+            new BooleanSetting("Воронки").value(true),
+            new BooleanSetting("Шалкера").value(true)
     );
-    private final SliderSetting range = new SliderSetting("Range").value(32f).range(8f, 96f).step(1f);
+    private final SliderSetting range = new SliderSetting("Растояние").value(32f).range(8f, 96f).step(1f);
 
     private final Map<BlockPos, BlockState> renderBlocks = new HashMap<>();
     private long lastScanMs = 0L;
@@ -185,11 +185,11 @@ public class BlockESPModule extends Module {
 
     private boolean shouldRender(BlockState state) {
         Block block = state.getBlock();
-        return isChest(state) && blocks.isEnabled("Chests")
-                || block == Blocks.BARREL && blocks.isEnabled("Barrels")
-                || block == Blocks.SPAWNER && blocks.isEnabled("Spawners")
-                || block == Blocks.HOPPER && blocks.isEnabled("Hoppers")
-                || block instanceof ShulkerBoxBlock && blocks.isEnabled("Shulkers");
+        return isChest(state) && blocks.isEnabled("Сундуки")
+                || block == Blocks.BARREL && blocks.isEnabled("Бочки")
+                || block == Blocks.SPAWNER && blocks.isEnabled("Спавнера")
+                || block == Blocks.HOPPER && blocks.isEnabled("Воронки")
+                || block instanceof ShulkerBoxBlock && blocks.isEnabled("Шалкера");
     }
 
     private Color resolveColor(BlockPos pos, BlockState state) {
@@ -213,7 +213,7 @@ public class BlockESPModule extends Module {
     }
 
     public boolean rendersWardenContainers() {
-        return blocks.isEnabled("Chests") || blocks.isEnabled("Barrels");
+        return blocks.isEnabled("Сундуки") || blocks.isEnabled("Бочки");
     }
 
     public String getBlockId(BlockState state) {

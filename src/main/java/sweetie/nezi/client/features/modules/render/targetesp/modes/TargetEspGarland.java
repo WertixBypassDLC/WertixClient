@@ -41,12 +41,18 @@ public class TargetEspGarland extends TargetEspMode {
 
         float sp = smoothSpeed.get();
         float anim = alpha * sizeVal;
+        float appearance = alpha * alpha * (3.0f - 2.0f * alpha);
 
         float height = currentTarget.getHeight();
         float radius = currentTarget.getWidth() * 1.2f;
         float period = 4000f / Math.max(0.05f, sp);
         float time = (System.currentTimeMillis() % (long) period) / period;
         float offset = time * 360f;
+
+        float blend = getRetargetBlend();
+        float dx = (float) getTransitionDx();
+        float dy = (float) getTransitionDy();
+        float dz = (float) getTransitionDz();
 
         ms.push();
         ms.translate(getTargetX() - cameraPos.x, getTargetY() - cameraPos.y, getTargetZ() - cameraPos.z);
@@ -66,11 +72,23 @@ public class TargetEspGarland extends TargetEspMode {
         int spirals = 3;
         for (int i = 0; i <= lightsCount; i++) {
             float progress = (float) i / (float) lightsCount;
-            float angle = (float) Math.toRadians(offset + (progress * 360f * spirals));
-            float currentRadius = radius * (1.0f - (progress * 0.6f));
+            float angle = (float) Math.toRadians(offset + (progress * 360f * spirals * appearance));
+            float currentRadius = radius * (1.0f - (progress * 0.6f)) * appearance;
+
             float px = (float) Math.cos(angle) * currentRadius;
             float pz = (float) Math.sin(angle) * currentRadius;
-            float py = progress * height;
+            float targetY = progress * height;
+            float startY = -1.5f + targetY;
+            float py = startY + (targetY - startY) * appearance;
+
+            // Верхушка уже зацепилась за нового, низы тянутся (Лассо)
+            if (blend > 0) {
+                float pull = blend * (1.0f - progress);
+                px += dx * pull;
+                py += dy * pull;
+                pz += dz * pull;
+            }
+
             wire.vertex(pm, px, py, pz).color(wireColor);
         }
         BufferRenderer.drawWithGlobalProgram(wire.end());
@@ -82,11 +100,19 @@ public class TargetEspGarland extends TargetEspMode {
 
         for (int i = 0; i <= lightsCount; i++) {
             float progress = (float) i / (float) lightsCount;
-            float angle = (float) Math.toRadians(offset + (progress * 360f * spirals));
-            float currentRadius = radius * (1.0f - (progress * 0.6f));
+            float angle = (float) Math.toRadians(offset + (progress * 360f * spirals * appearance));
+            float currentRadius = radius * (1.0f - (progress * 0.6f)) * appearance;
+
             float px = (float) Math.cos(angle) * currentRadius;
             float pz = (float) Math.sin(angle) * currentRadius;
-            float py = progress * height;
+            float py = (-1.5f + (progress * height)) + ((progress * height) - (-1.5f + (progress * height))) * appearance;
+
+            if (blend > 0) {
+                float pull = blend * (1.0f - progress);
+                px += dx * pull;
+                py += dy * pull;
+                pz += dz * pull;
+            }
 
             float size = 0.15f * anim;
             float twinkle = (float) Math.sin(((System.currentTimeMillis() / 100.0) * sp) + i) * 0.2f + 0.8f;

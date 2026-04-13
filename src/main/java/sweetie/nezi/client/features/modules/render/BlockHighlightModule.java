@@ -25,8 +25,8 @@ import java.awt.*;
 public class BlockHighlightModule extends Module {
     @Getter private static final BlockHighlightModule instance = new BlockHighlightModule();
 
-    private final ColorSetting color = new ColorSetting("Color").value(new Color(236, 242, 252, 214));
-    private final SliderSetting lineWidth = new SliderSetting("Line width").value(1.4f).range(0.5f, 4f).step(0.1f);
+    private final ColorSetting color = new ColorSetting("Цвет").value(new Color(236, 242, 252, 214));
+    private final SliderSetting lineWidth = new SliderSetting("Толщина линий").value(1.4f).range(0.5f, 4f).step(0.1f);
 
     public BlockHighlightModule() {
         addSettings(color, lineWidth);

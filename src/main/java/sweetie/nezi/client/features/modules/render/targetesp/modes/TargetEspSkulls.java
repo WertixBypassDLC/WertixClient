@@ -25,49 +25,49 @@ public class TargetEspSkulls extends TargetEspMode {
     private static final Identifier GLOW_TEXTURE = FileUtil.getImage("particles/glow");
 
     private static final SkullBox[] SKULL_CORE = {
-            new SkullBox(-0.24f,  0.82f, -0.14f,  0.24f,  1.00f,  0.16f),
-            new SkullBox(-0.54f,  0.60f, -0.20f,  0.54f,  0.82f,  0.26f),
-            new SkullBox(-0.74f,  0.12f, -0.24f,  0.74f,  0.60f,  0.52f),
-            new SkullBox(-0.60f, -0.20f, -0.20f,  0.60f,  0.12f,  0.26f),
-            new SkullBox(-0.36f, -0.40f, -0.16f,  0.36f, -0.20f,  0.20f),
-            new SkullBox(-0.62f,  0.42f, -0.30f,  0.62f,  0.56f,  -0.16f),
-            new SkullBox(-0.72f,  0.00f, -0.18f, -0.56f,  0.28f,  0.12f),
-            new SkullBox( 0.56f,  0.00f, -0.18f,  0.72f,  0.28f,  0.12f),
+            new SkullBox(-0.24f, 0.82f, -0.14f, 0.24f, 1.00f, 0.16f),
+            new SkullBox(-0.54f, 0.60f, -0.20f, 0.54f, 0.82f, 0.26f),
+            new SkullBox(-0.74f, 0.12f, -0.24f, 0.74f, 0.60f, 0.52f),
+            new SkullBox(-0.60f, -0.20f, -0.20f, 0.60f, 0.12f, 0.26f),
+            new SkullBox(-0.36f, -0.40f, -0.16f, 0.36f, -0.20f, 0.20f),
+            new SkullBox(-0.62f, 0.42f, -0.30f, 0.62f, 0.56f, -0.16f),
+            new SkullBox(-0.72f, 0.00f, -0.18f, -0.56f, 0.28f, 0.12f),
+            new SkullBox( 0.56f, 0.00f, -0.18f, 0.72f, 0.28f, 0.12f),
     };
     private static final SkullBox[] SKULL_REAR = {
-            new SkullBox(-0.48f,  0.22f,  0.48f,  0.48f,  0.76f,  0.76f),
-            new SkullBox(-0.32f, -0.16f,  0.26f,  0.32f,  0.22f,  0.60f),
+            new SkullBox(-0.48f, 0.22f, 0.48f, 0.48f, 0.76f, 0.76f),
+            new SkullBox(-0.32f, -0.16f, 0.26f, 0.32f, 0.22f, 0.60f),
     };
     private static final SkullBox[] SKULL_JAW = {
-            new SkullBox(-0.66f, -0.52f, -0.12f, -0.28f, -0.06f,  0.20f),
-            new SkullBox( 0.28f, -0.52f, -0.12f,  0.66f, -0.06f,  0.20f),
-            new SkullBox(-0.32f, -0.76f, -0.20f,  0.32f, -0.30f,  0.20f),
-            new SkullBox(-0.18f, -0.80f, -0.24f,  0.18f, -0.68f, -0.14f),
+            new SkullBox(-0.66f, -0.52f, -0.12f, -0.28f, -0.06f, 0.20f),
+            new SkullBox( 0.28f, -0.52f, -0.12f, 0.66f, -0.06f, 0.20f),
+            new SkullBox(-0.32f, -0.76f, -0.20f, 0.32f, -0.30f, 0.20f),
+            new SkullBox(-0.18f, -0.80f, -0.24f, 0.18f, -0.68f, -0.14f),
     };
     private static final SkullBox[] SKULL_CAVITIES = {
-            new SkullBox(-0.52f,  0.10f, -0.38f, -0.14f,  0.52f, -0.16f),
-            new SkullBox( 0.14f,  0.10f, -0.38f,  0.52f,  0.52f, -0.16f),
-            new SkullBox(-0.12f, -0.10f, -0.38f,  0.12f,  0.30f, -0.16f),
-            new SkullBox(-0.16f, -0.22f, -0.32f,  0.16f, -0.10f, -0.18f),
+            new SkullBox(-0.52f, 0.10f, -0.38f, -0.14f, 0.52f, -0.16f),
+            new SkullBox( 0.14f, 0.10f, -0.38f, 0.52f, 0.52f, -0.16f),
+            new SkullBox(-0.12f, -0.10f, -0.38f, 0.12f, 0.30f, -0.16f),
+            new SkullBox(-0.16f, -0.22f, -0.32f, 0.16f, -0.10f, -0.18f),
     };
     private static final SkullBox[] SKULL_UPPER_TEETH = {
             new SkullBox(-0.26f, -0.32f, -0.24f, -0.18f, -0.22f, -0.16f),
             new SkullBox(-0.14f, -0.34f, -0.24f, -0.06f, -0.22f, -0.16f),
-            new SkullBox(-0.02f, -0.34f, -0.24f,  0.06f, -0.22f, -0.16f),
-            new SkullBox( 0.10f, -0.34f, -0.24f,  0.18f, -0.22f, -0.16f),
-            new SkullBox( 0.22f, -0.32f, -0.24f,  0.30f, -0.22f, -0.16f),
+            new SkullBox(-0.02f, -0.34f, -0.24f, 0.06f, -0.22f, -0.16f),
+            new SkullBox( 0.10f, -0.34f, -0.24f, 0.18f, -0.22f, -0.16f),
+            new SkullBox( 0.22f, -0.32f, -0.24f, 0.30f, -0.22f, -0.16f),
     };
     private static final SkullBox[] SKULL_LOWER_TEETH = {
             new SkullBox(-0.24f, -0.40f, -0.22f, -0.16f, -0.32f, -0.14f),
             new SkullBox(-0.12f, -0.42f, -0.22f, -0.04f, -0.32f, -0.14f),
-            new SkullBox( 0.00f, -0.42f, -0.22f,  0.08f, -0.32f, -0.14f),
-            new SkullBox( 0.12f, -0.42f, -0.22f,  0.20f, -0.32f, -0.14f),
-            new SkullBox( 0.24f, -0.40f, -0.22f,  0.32f, -0.32f, -0.14f),
+            new SkullBox( 0.00f, -0.42f, -0.22f, 0.08f, -0.32f, -0.14f),
+            new SkullBox( 0.12f, -0.42f, -0.22f, 0.20f, -0.32f, -0.14f),
+            new SkullBox( 0.24f, -0.40f, -0.22f, 0.32f, -0.32f, -0.14f),
     };
     private static final SkullBox[] SKULL_DETAIL = {
-            new SkullBox(-0.06f,  0.14f, -0.36f,  0.06f,  0.34f, -0.28f),
-            new SkullBox(-0.70f,  0.24f, -0.04f, -0.60f,  0.52f,  0.28f),
-            new SkullBox( 0.60f,  0.24f, -0.04f,  0.70f,  0.52f,  0.28f),
+            new SkullBox(-0.06f, 0.14f, -0.36f, 0.06f, 0.34f, -0.28f),
+            new SkullBox(-0.70f, 0.24f, -0.04f, -0.60f, 0.52f, 0.28f),
+            new SkullBox( 0.60f, 0.24f, -0.04f, 0.70f, 0.52f, 0.28f),
     };
 
     private static final int[][] BOX_EDGES = {
@@ -78,10 +78,8 @@ public class TargetEspSkulls extends TargetEspMode {
 
     private float orbitAngle = 0f;
     private float prevOrbitAngle = 0f;
-    private float glitchIntensity = 0f;
-    private long nextGlitchTime = 0;
 
-    private final SmoothFloat sSize = new SmoothFloat(0.9f);
+    private final SmoothFloat sSize = new SmoothFloat(0.6f);
     private final SmoothFloat sDist = new SmoothFloat(1.0f);
     private final SmoothFloat sOpac = new SmoothFloat(0.35f);
     private final SmoothFloat sGlow = new SmoothFloat(0.6f);
@@ -97,14 +95,6 @@ public class TargetEspSkulls extends TargetEspMode {
 
         prevOrbitAngle = orbitAngle;
         orbitAngle += 3.4f * sSpeed.get();
-
-        long now = System.currentTimeMillis();
-        if (now >= nextGlitchTime) {
-            glitchIntensity = 0.6f + (float)(Math.random() * 0.4f);
-            nextGlitchTime = now + 1800L + (long)(Math.random() * 2400L);
-        } else {
-            glitchIntensity = Math.max(0f, glitchIntensity - 0.08f);
-        }
     }
 
     @Override
@@ -135,7 +125,7 @@ public class TargetEspSkulls extends TargetEspMode {
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask(false);
 
-        List<SkullNode> orbitSkulls = buildOrbitNodes(center, preset, orbit, baseScale, time, appearance);
+        List<SkullNode> orbitSkulls = buildOrbitNodes(center, preset, orbit, baseScale, time, appearance, partialTicks);
 
         drawSkullLinks(matrices, orbitSkulls, alpha * sOpac.get(), preset);
 
@@ -189,10 +179,18 @@ public class TargetEspSkulls extends TargetEspMode {
         matrices.pop();
     }
 
-    private List<SkullNode> buildOrbitNodes(Vec3d center, SkullPreset preset, float orbit, float baseScale, float time, float appearance) {
+    private List<SkullNode> buildOrbitNodes(Vec3d center, SkullPreset preset, float orbit, float baseScale, float time, float appearance, float partialTicks) {
         List<SkullNode> list = new ArrayList<>(preset.count);
         float bodyRadius = Math.max(0.38f, currentTarget.getWidth() * 0.58f + preset.radius * sDist.get());
         Vec3d lookTarget = new Vec3d(getTargetX(), getTargetY() + currentTarget.getHeight() / 2, getTargetZ());
+
+        float strikeProgress = currentTarget.hurtTime > 0 ? (currentTarget.hurtTime - partialTicks) / 10.0f : 0f;
+        strikeProgress = MathHelper.clamp(strikeProgress, 0f, 1f);
+
+        float blend = getRetargetBlend();
+        float dx = (float) getTransitionDx();
+        float dy = (float) getTransitionDy();
+        float dz = (float) getTransitionDz();
 
         for (int i = 0; i < preset.count; i++) {
             float step = 360f / preset.count;
@@ -200,6 +198,7 @@ public class TargetEspSkulls extends TargetEspMode {
             float radians = (float) Math.toRadians(angle);
             float wobble = (float) Math.sin(time * 4.2f + i * 0.78f);
             float x, y, z;
+
             switch (preset.motionMode) {
                 case 1 -> {
                     x = MathHelper.cos(radians) * bodyRadius * 0.94f;
@@ -217,24 +216,49 @@ public class TargetEspSkulls extends TargetEspMode {
                     y = preset.verticalOffset + wobble * preset.verticalAmplitude;
                 }
             }
+
             float riseDelay = i * 0.12f;
             float riseProgress = MathHelper.clamp((appearance - riseDelay) / Math.max(0.26f, 1.0f - riseDelay), 0.0f, 1.0f);
             float riseEasing = 1.0f - (float) Math.pow(1.0f - riseProgress, 3.0f);
-            float undergroundY = -(0.88f + currentTarget.getHeight() * (0.22f + i * 0.03f));
+            float undergroundY = -(1.5f + currentTarget.getHeight() * (0.22f + i * 0.03f));
+
             float finalX = x, finalY = y, finalZ = z;
             x = MathHelper.lerp(riseEasing, finalX * 0.18f, finalX);
             y = MathHelper.lerp(riseEasing, undergroundY, finalY);
             z = MathHelper.lerp(riseEasing, finalZ * 0.18f, finalZ);
 
+            if (blend > 0) {
+                float spread = (float) i / preset.count;
+                x += dx * blend * (1.0f - spread);
+                y += dy * blend * (1.0f - spread);
+                z += dz * blend * (1.0f - spread);
+            }
+
+            if (strikeProgress > 0f && i == 0) {
+                float strikeEasing = (float) Math.sin(strikeProgress * Math.PI);
+                x = MathHelper.lerp(strikeEasing, x, 0);
+                y = MathHelper.lerp(strikeEasing, y, 0);
+                z = MathHelper.lerp(strikeEasing, z, 0);
+            }
+
             float scale = baseScale * preset.orbitScale * (0.84f + ((float) Math.sin(i * 1.37f + 0.6f) * 0.5f + 0.5f) * 0.26f) * (0.58f + riseEasing * 0.42f);
             Vec3d wp = center.add(x, y, z);
 
-            // Черепа всегда смотрят на центр цели
-            double dx = lookTarget.x - wp.x;
-            double dy = lookTarget.y - wp.y;
-            double dz = lookTarget.z - wp.z;
-            float targetYaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0f;
-            float targetPitch = (float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx*dx + dz*dz)));
+            float targetYaw, targetPitch;
+            String pName = TargetEspModule.getInstance().getSkullPreset();
+            if ("Орбита".equalsIgnoreCase(pName)) {
+                targetYaw = time * 200f;
+                targetPitch = 0f;
+            } else if ("Вращение".equalsIgnoreCase(pName)) {
+                targetYaw = (float) Math.sin(time * 3.0f + i) * 160f;
+                targetPitch = (float) Math.cos(time * 3.0f + i) * 30f;
+            } else {
+                double diffX = lookTarget.x - wp.x;
+                double diffY = lookTarget.y - wp.y;
+                double diffZ = lookTarget.z - wp.z;
+                targetYaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90.0f;
+                targetPitch = (float) -Math.toDegrees(Math.atan2(diffY, Math.sqrt(diffX*diffX + diffZ*diffZ)));
+            }
 
             list.add(new SkullNode(x, y, z, scale, targetYaw, targetPitch, 0f, i * 47));
         }
@@ -266,7 +290,6 @@ public class TargetEspSkulls extends TargetEspMode {
         Color cavC = new Color(6, 4, 3, cavA);
         for (SkullBox b : SKULL_CAVITIES) drawFaces(buf, m, b, cavC, cavC, cavC, cavC, cavC);
 
-        // Зубы больше не белые
         Color upperTeethC = faceBr(jawC, 1.2f);
         for (SkullBox b : SKULL_UPPER_TEETH) drawFaces(buf, m, b, upperTeethC, upperTeethC, upperTeethC, upperTeethC, upperTeethC);
         Color lowerTeethC = faceBr(jawC, 1.1f);

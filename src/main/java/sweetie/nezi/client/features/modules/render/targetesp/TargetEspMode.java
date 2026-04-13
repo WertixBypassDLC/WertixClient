@@ -15,14 +15,48 @@ import sweetie.nezi.client.features.modules.combat.TriggerBotModule;
 public abstract class TargetEspMode implements QuickImports {
     public static final AnimationUtil showAnimation = new AnimationUtil();
     public static final AnimationUtil sizeAnimation = new AnimationUtil();
+    public static final AnimationUtil transitionAnimation = new AnimationUtil();
+
     public static LivingEntity currentTarget = null;
     private static int currentTargetId = Integer.MIN_VALUE;
-    private static float retargetBlend = 0f;
+
     public float prevShowAnimation = 0f;
     public float prevSizeAnimation = 0f;
 
+    @Getter private static double targetX = -1;
+    @Getter private static double targetY = -1;
+    @Getter private static double targetZ = -1;
+
+    private static double lastTargetX = -1;
+    private static double lastTargetY = -1;
+    private static double lastTargetZ = -1;
+    private static double smoothedTargetX = -1;
+    private static double smoothedTargetY = -1;
+    private static double smoothedTargetZ = -1;
+
+    // Точки для расчета вектора отлета/прилета (эффект растяжения)
+    private static double transitionStartX = 0;
+    private static double transitionStartY = 0;
+    private static double transitionStartZ = 0;
+
     public AuraModule aura() {
         return AuraModule.getInstance();
+    }
+
+    public static float getRetargetBlend() {
+        return (float) transitionAnimation.getValue();
+    }
+
+    public static double getTransitionDx() {
+        return transitionStartX - lastTargetX;
+    }
+
+    public static double getTransitionDy() {
+        return transitionStartY - lastTargetY;
+    }
+
+    public static double getTransitionDz() {
+        return transitionStartZ - lastTargetZ;
     }
 
     public void updateTarget() {
@@ -45,7 +79,16 @@ public abstract class TargetEspMode implements QuickImports {
         if (currentTarget != null) {
             if (previousTarget == null || currentTarget.getId() != currentTargetId) {
                 currentTargetId = currentTarget.getId();
-                retargetBlend = 1.0f;
+
+                // Захватываем текущую позицию ESP для плавного, гармоничного старта перелета
+                if (smoothedTargetX != -1 && previousTarget != null) {
+                    transitionStartX = smoothedTargetX;
+                    transitionStartY = smoothedTargetY;
+                    transitionStartZ = smoothedTargetZ;
+
+                    transitionAnimation.setValue(1.0);
+                    transitionAnimation.run(0.0, 750, Easing.QUART_OUT);
+                }
             }
         } else if (showAnimation.getToValue() == 0.0) {
             currentTargetId = Integer.MIN_VALUE;
@@ -80,8 +123,11 @@ public abstract class TargetEspMode implements QuickImports {
     }
 
     public static void updatePositions() {
+        transitionAnimation.update();
+
         float animationValue = (float) showAnimation.getValue();
         float animationTarget = (float) showAnimation.getToValue();
+        float blend = getRetargetBlend();
 
         boolean useLastPosition = TargetEspModule.getInstance().lastPosition.getValue();
         boolean preventUpdate = useLastPosition && animationTarget == 0.0 && animationValue <= 0.9f;
@@ -97,31 +143,24 @@ public abstract class TargetEspMode implements QuickImports {
             smoothedTargetY = lastTargetY;
             smoothedTargetZ = lastTargetZ;
         } else {
-            retargetBlend = Math.max(0.0f, retargetBlend - 0.055f);
-            float smoothness = Math.max(0.05f, Math.min(0.55f, TargetEspModule.getInstance().getSmoothness()));
-            float baseFollow = smoothness * (0.80f + animationValue * 0.30f);
-            float switchFollow = MathHelper.lerp(retargetBlend, baseFollow * 0.42f, baseFollow);
-            float verticalFollow = Math.max(0.035f, switchFollow * 0.86f);
-            smoothedTargetX += (lastTargetX - smoothedTargetX) * switchFollow;
-            smoothedTargetY += (lastTargetY - smoothedTargetY) * verticalFollow;
-            smoothedTargetZ += (lastTargetZ - smoothedTargetZ) * switchFollow;
+            // Если идет анимация переключения (blend > 0), ESP плавно "доезжает" по идеальной кривой Easing
+            if (blend > 0.001f) {
+                smoothedTargetX = transitionStartX + (lastTargetX - transitionStartX) * (1.0f - blend);
+                smoothedTargetY = transitionStartY + (lastTargetY - transitionStartY) * (1.0f - blend);
+                smoothedTargetZ = transitionStartZ + (lastTargetZ - transitionStartZ) * (1.0f - blend);
+            } else {
+                // Обычное мягкое следование, когда ESP уже прикрепился к игроку
+                float s = Math.max(0.05f, Math.min(0.55f, TargetEspModule.getInstance().getSmoothness()));
+                smoothedTargetX += (lastTargetX - smoothedTargetX) * s;
+                smoothedTargetY += (lastTargetY - smoothedTargetY) * Math.max(0.035f, s * 0.86f);
+                smoothedTargetZ += (lastTargetZ - smoothedTargetZ) * s;
+            }
         }
 
         targetX = smoothedTargetX;
         targetY = smoothedTargetY;
         targetZ = smoothedTargetZ;
     }
-
-    @Getter private static double targetX = -1;
-    @Getter private static double targetY = -1;
-    @Getter private static double targetZ = -1;
-
-    private static double lastTargetX = -1;
-    private static double lastTargetY = -1;
-    private static double lastTargetZ = -1;
-    private static double smoothedTargetX = -1;
-    private static double smoothedTargetY = -1;
-    private static double smoothedTargetZ = -1;
 
     public int setAlpha(int color, int alpha) {
         return (color & 0x00FFFFFF) | (MathHelper.clamp(alpha, 0, 255) << 24);

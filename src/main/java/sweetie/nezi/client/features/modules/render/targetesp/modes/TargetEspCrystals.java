@@ -57,6 +57,7 @@ public class TargetEspCrystals extends TargetEspMode {
         RenderSystem.enableBlend();
         RenderSystem.disableCull();
         RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(false);
 
         rotationAngle = (rotationAngle + 0.5f * smoothSpeed.get()) % 360.0f;
 
@@ -64,13 +65,17 @@ public class TargetEspCrystals extends TargetEspMode {
         ms.translate(getTargetX() - cameraPos.x, getTargetY() - cameraPos.y, getTargetZ() - cameraPos.z);
         ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(rotationAngle));
 
+        float blend = getRetargetBlend();
+
         for (Crystal crystal : crystalList) {
-            crystal.render(ms, alpha * sizeVal, baseColor, camera, smoothSpeed.get(), smoothSize.get());
+            crystal.render(ms, alpha * sizeVal, baseColor, camera, smoothSpeed.get(), smoothSize.get(), blend);
         }
         ms.pop();
 
+        RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
         RenderSystem.enableCull();
+        RenderSystem.defaultBlendFunc();
     }
 
     private void createCrystals(int count) {
@@ -80,7 +85,7 @@ public class TargetEspCrystals extends TargetEspMode {
             float radius = 0.55f + (i % 2 == 0 ? 0.15f : 0.0f);
             float y = 0.6f + (i % 3 == 0 ? 0.3f : 0.0f);
             Vec3d pos = new Vec3d(Math.cos(angle) * radius, y, Math.sin(angle) * radius);
-            Vec3d rot = new Vec3d(Math.random() * 60 - 30, 0, Math.random() * 60 - 30);
+            Vec3d rot = new Vec3d(Math.random() * 360, Math.random() * 360, Math.random() * 360);
             crystalList.add(new Crystal(pos, rot));
         }
     }
@@ -96,11 +101,16 @@ public class TargetEspCrystals extends TargetEspMode {
             this.rotation = rotation;
         }
 
-        public void render(MatrixStack ms, float anim, int baseColor, Camera camera, float speedMul, float dynamicSize) {
+        public void render(MatrixStack ms, float anim, int baseColor, Camera camera, float speedMul, float dynamicSize, float blend) {
             ms.push();
             float t = (System.currentTimeMillis() / 500.0f) * speedMul;
             float bobY = (float) Math.sin(t * 1.5f + bobbingOffset) * 0.15f;
-            ms.translate(position.x, position.y + bobY, position.z);
+
+            float scatterX = (float) Math.cos(t * 2.0f + rotation.x) * blend * 2.5f;
+            float scatterY = (float) Math.sin(t * 2.5f + rotation.y) * blend * 2.5f;
+            float scatterZ = (float) Math.sin(t * 3.0f + rotation.z) * blend * 2.5f;
+
+            ms.translate(position.x + scatterX, position.y + bobY + scatterY, position.z + scatterZ);
 
             float size = dynamicSize * 0.05f;
             float pulsation = 1.0f + (float) Math.sin(t * 2.0f + bobbingOffset) * 0.15f;
@@ -151,6 +161,8 @@ public class TargetEspCrystals extends TargetEspMode {
                     filled ? VertexFormat.DrawMode.QUADS : VertexFormat.DrawMode.DEBUG_LINES,
                     VertexFormats.POSITION_COLOR
             );
+            RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
+
             float h = size * 1.8f;
             float w = size * 0.8f;
             int col = setAlpha(baseColor, (int)(alpha * 255 * anim));

@@ -29,8 +29,6 @@ public class TargetEspModule extends Module {
     private final TargetEspGarland espGarland = new TargetEspGarland();
     private final TargetEspRofl espRofl = new TargetEspRofl();
 
-    // ─── ОСНОВНЫЕ НАСТРОЙКИ ──────────────────────────────────────────────────────────
-
     private final ModeSetting mode = new ModeSetting("Режим").value("3D").values(
             "Кометы", "3D", "Рофл"
     );
@@ -39,25 +37,17 @@ public class TargetEspModule extends Module {
             "Призраки", "Кристаллы", "Фигуры", "Черепа", "Атом", "Гирлянда"
     ).setVisible(() -> mode.is("3D"));
 
-    // ─── АНИМАЦИИ И РАЗМЕРЫ ─────────────────────────────────────────────────────────
-
     private final ModeSetting animation = new ModeSetting("Тип анимации").value("Появление").values("Появление", "Затухание", "Нет");
     private final SliderSetting duration = new SliderSetting("Время анимации").value(3f).range(1f, 20f).step(1f);
     private final SliderSetting size = new SliderSetting("Базовый масштаб").value(1f).range(0.1f, 2f).step(0.1f);
     private final SliderSetting smoothness = new SliderSetting("Плавность следования").value(0.24f).range(0.05f, 0.55f).step(0.01f);
 
-    // Пояснение: Начальный размер при захвате цели
     private final SliderSetting inSize = new SliderSetting("Начальный размер").value(0f).range(0f, 1f).step(0.1f)
             .setVisible(() -> animation.is("Появление"));
-
-    // Пояснение: Размер, в который превратится ESP при смерти/потере цели
     private final SliderSetting outSize = new SliderSetting("Размер при исчезновении").value(2f).range(1f, 2f).step(0.1f)
             .setVisible(() -> animation.is("Затухание"));
 
-    // Пояснение: Оставлять ESP на месте убийства, чтобы он не проваливался под землю вместе с мертвой моделькой
     public final BooleanSetting lastPosition = new BooleanSetting("Оставаться на месте смерти").value(true);
-
-    // ─── ОБЩИЕ ВИЗУАЛЬНЫЕ ───────────────────────────────────────────────────────────
 
     private final SliderSetting speed = new SliderSetting("Скорость вращения").value(1.0f).range(0.1f, 3.0f).step(0.1f)
             .setVisible(() -> mode.is("3D") || mode.is("Рофл"));
@@ -65,9 +55,6 @@ public class TargetEspModule extends Module {
     private final SliderSetting lineWidth = new SliderSetting("Толщина линий").value(2.0f).range(0.5f, 4.0f).step(0.1f)
             .setVisible(() -> mode.is("3D") && (style3D.is("Фигуры") || style3D.is("Черепа") || style3D.is("Атом") || style3D.is("Гирлянда")));
 
-    // ─── ИНДИВИДУАЛЬНЫЕ НАСТРОЙКИ СТИЛЕЙ ────────────────────────────────────────────
-
-    // Настройки "Призраки"
     private final ModeSetting ghostTrajectory = new ModeSetting("Движение (Призраки)").value("Двойная спираль").values("Двойная спираль", "Орбита", "Хаос")
             .setVisible(() -> mode.is("3D") && style3D.is("Призраки"));
     private final SliderSetting ghostCount = new SliderSetting("Количество (Призраки)").value(40f).range(10f, 150f).step(1f)
@@ -75,13 +62,11 @@ public class TargetEspModule extends Module {
     private final SliderSetting ghostSize = new SliderSetting("Размер (Призраки)").value(0.3f).range(0.1f, 1.5f).step(0.05f)
             .setVisible(() -> mode.is("3D") && style3D.is("Призраки"));
 
-    // Настройки "Кристаллы"
     private final SliderSetting crystalSize = new SliderSetting("Размер (Кристаллы)").value(0.8f).range(0.1f, 2.0f).step(0.1f)
             .setVisible(() -> mode.is("3D") && style3D.is("Кристаллы"));
     private final SliderSetting crystalCount = new SliderSetting("Количество (Кристаллы)").value(7f).range(3f, 20f).step(1f)
             .setVisible(() -> mode.is("3D") && style3D.is("Кристаллы"));
 
-    // Настройки "Фигуры"
     private final SliderSetting figureSize = new SliderSetting("Размер (Фигуры)").value(0.9f).range(0.3f, 2.4f).step(0.1f)
             .setVisible(() -> mode.is("3D") && style3D.is("Фигуры"));
     private final SliderSetting figureDepth = new SliderSetting("Глубина 3D (Фигуры)").value(0.18f).range(0.0f, 0.6f).step(0.02f)
@@ -91,10 +76,9 @@ public class TargetEspModule extends Module {
     private final StringSetting customFigure = new StringSetting("Точки (Форма)").value("0,1;0.28,0.34;1,0;0.35,-0.22;0,-1;-0.35,-0.22;-1,0;-0.28,0.34")
             .setVisible(() -> mode.is("3D") && style3D.is("Фигуры") && figurePreset.is("Свой"));
 
-    // Настройки "Черепа"
     private final ModeSetting skullPreset = new ModeSetting("Стиль (Черепа)").value("Призраки").values("Призраки", "Орбита", "Вращение")
             .setVisible(() -> mode.is("3D") && style3D.is("Черепа"));
-    private final SliderSetting skullSize = new SliderSetting("Размер (Черепа)").value(0.9f).range(0.4f, 1.8f).step(0.1f)
+    private final SliderSetting skullSize = new SliderSetting("Размер (Черепа)").value(0.6f).range(0.2f, 1.8f).step(0.1f)
             .setVisible(() -> mode.is("3D") && style3D.is("Черепа"));
     private final SliderSetting skullOrbitDistance = new SliderSetting("Радиус (Черепа)").value(1.0f).range(0.3f, 3.0f).step(0.1f)
             .setVisible(() -> mode.is("3D") && style3D.is("Черепа"));
@@ -105,7 +89,6 @@ public class TargetEspModule extends Module {
     private final SliderSetting ghostGlowIntensity = new SliderSetting("Яркость ауры (Черепа)").value(0.6f).range(0.1f, 1.0f).step(0.05f)
             .setVisible(() -> mode.is("3D") && style3D.is("Черепа") && ghostGlow.getValue());
 
-    // Настройки "Рофл"
     private final ModeSetting animal = new ModeSetting("Животное (Рофл)").value("Свинья").values(
             "Свинья", "Летучая мышь", "Попугай", "Фея", "Пчела", "Векс", "Лисичка", "Лягушка", "Иглобрюх", "Слайм"
     ).setVisible(() -> mode.is("Рофл"));

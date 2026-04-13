@@ -5,8 +5,8 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.scoreboard.Team;
-import net.minecraft.text.Text;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.Arm;
 import org.joml.Vector2f;
 import sweetie.nezi.api.event.events.render.Render2DEvent;
 import sweetie.nezi.api.system.configs.FriendManager;
@@ -35,14 +35,15 @@ public class NameTagsRender implements QuickImports {
     private static final Pattern NOISE_EDGE_TOKEN = Pattern.compile("(?i)(^|\\s)[a-z0-9](?=\\s|$)");
 
     private final NameTagsModule module;
-    private final NameTagsItems nameTagsItems;
     private final NameTagsPotions nameTagsPotions;
     private final List<RenderEntry> renderQueue = new ArrayList<>(64);
     private final Map<UUID, PlayerSnapshot> playerSnapshots = new HashMap<>(32);
 
+    private final Color bgColor = new Color(0, 0, 0, 120);
+    private final Color friendColor = new Color(132, 229, 121);
+
     public NameTagsRender(NameTagsModule module) {
         this.module = module;
-        this.nameTagsItems = new NameTagsItems(module);
         this.nameTagsPotions = new NameTagsPotions(module);
     }
 
@@ -64,7 +65,6 @@ public class NameTagsRender implements QuickImports {
                 if (player == mc.player || !module.entityFilter.isValid(player)) {
                     continue;
                 }
-
                 activePlayers.add(player.getUuid());
                 queueEntity(player, partialTicks);
             }
@@ -73,7 +73,6 @@ public class NameTagsRender implements QuickImports {
                 if (!(entity instanceof LivingEntity livingEntity) || livingEntity == mc.player || !module.entityFilter.isValid(livingEntity)) {
                     continue;
                 }
-
                 if (livingEntity instanceof PlayerEntity player) {
                     activePlayers.add(player.getUuid());
                 }
@@ -101,31 +100,35 @@ public class NameTagsRender implements QuickImports {
         }
 
         double x = MathUtil.interpolate(entity.prevX, entity.getX(), partialTicks);
-        double y = MathUtil.interpolate(entity.prevY, entity.getY(), partialTicks) + entity.getHeight() + 0.34D;
+        double bottomY = MathUtil.interpolate(entity.prevY, entity.getY(), partialTicks);
+        double topY = bottomY + entity.getHeight() + 0.34D;
         double z = MathUtil.interpolate(entity.prevZ, entity.getZ(), partialTicks);
-        if (!ProjectionUtil.isInFrontOfCamera(x, y, z)) {
+
+        if (!ProjectionUtil.isInFrontOfCamera(x, topY, z)) {
             return;
         }
 
-        Vector2f projected = ProjectionUtil.project(x, y, z);
-        if (!ProjectionUtil.isProjectedOnScreen(projected, SCREEN_PADDING)) {
+        Vector2f projectedTop = ProjectionUtil.project(x, topY, z);
+        Vector2f projectedBottom = ProjectionUtil.project(x, bottomY, z);
+
+        if (!ProjectionUtil.isProjectedOnScreen(projectedTop, SCREEN_PADDING)) {
             return;
         }
 
-        renderQueue.add(new RenderEntry(entity, projected.x, projected.y, distSq));
+        renderQueue.add(new RenderEntry(entity, projectedTop.x, projectedTop.y, projectedBottom.x, projectedBottom.y, distSq));
     }
 
     private void renderTag(RenderEntry entry, DrawContext context) {
         LivingEntity entity = entry.entity();
         if (entity instanceof PlayerEntity player) {
-            renderPlayerTag(player, entry.projectedX(), entry.projectedY(), context);
+            renderPlayerTag(player, entry, context);
             return;
         }
 
-        renderSimpleTag(entity.getName().getString(), entry.projectedX(), entry.projectedY(), context, module.textColor.getValue());
+        renderSimpleTag(entity.getName().getString(), entry.topX(), entry.topY(), context);
     }
 
-    private void renderPlayerTag(PlayerEntity player, float centerX, float baseY, DrawContext context) {
+    private void renderPlayerTag(PlayerEntity player, RenderEntry entry, DrawContext context) {
         MatrixStack matrices = context.getMatrices();
         float scale = module.scale.getValue();
         float nameSize = 7.1f * scale;
@@ -133,14 +136,9 @@ public class NameTagsRender implements QuickImports {
         float padding = 3.5f * scale;
         float rowGap = 1.5f * scale;
         float sideGap = 4f * scale;
-        float lowerGap = 2.6f * scale;
-        float round = Math.max(2f, 3.2f * scale);
-        boolean showItems = module.information.isEnabled("Предметы");
 
         PlayerSnapshot snapshot = getPlayerSnapshot(player);
-        float itemRowHeight = showItems
-                ? nameTagsItems.renderCompactItems(context, snapshot.topItems, centerX, baseY - (1.8f * scale), scale)
-                : 0f;
+
         float hp = getScoreboardHealth(player);
         String hpText = " [" + (int) Math.ceil(hp) + "]";
         float hpWidth = Fonts.PS_BOLD.getWidth(hpText, nameSize);
@@ -149,48 +147,78 @@ public class NameTagsRender implements QuickImports {
         float cardWidth = textWidth + padding * 2f;
         float cardHeight = padding * 2f + nameSize;
 
-        float cardX = centerX - cardWidth / 2f;
-        float cardY = baseY + (itemRowHeight > 0f ? 1.2f * scale : 0f);
+        float cardX = entry.topX() - cardWidth / 2f;
+        float cardY = entry.topY();
 
-        drawDarkCard(matrices, cardX, cardY, cardWidth, cardHeight, 0f, 140, 0);
+        // Минималистичный фон основного неймтега
+        RenderUtil.RECT.draw(matrices, cardX, cardY, cardWidth, cardHeight, 0f, bgColor);
 
         float textY = cardY + padding;
-        float textX = centerX - textWidth / 2f;
-        Color nameColor = snapshot.friend ? module.friendColor.getValue() : module.textColor.getValue();
+        float textX = entry.topX() - textWidth / 2f;
+        Color nameColor = snapshot.friend ? friendColor : Color.WHITE;
         Fonts.PS_BOLD.drawText(matrices, snapshot.displayName, textX, textY, nameSize, nameColor);
 
         Color hpColor = getHealthColor(hp, player.getMaxHealth() + player.getAbsorptionAmount());
         Fonts.PS_BOLD.drawText(matrices, hpText, textX + snapshot.nameWidth, textY, nameSize, hpColor);
 
+        // Рендер зелий (если включено)
         if (!snapshot.potionLines.isEmpty()) {
             float sideX = cardX + cardWidth + sideGap;
             float sideY = cardY + Math.max(0f, (cardHeight - snapshot.effectBlockHeight) / 2f);
             float sidePad = 2.6f * scale;
-            float sideRound = Math.max(2.2f, 2.8f * scale);
-            drawDarkCard(matrices, sideX, sideY, snapshot.effectBlockWidth, snapshot.effectBlockHeight, sideRound, 196, 10);
+
+            RenderUtil.RECT.draw(matrices, sideX, sideY, snapshot.effectBlockWidth, snapshot.effectBlockHeight, 0f, bgColor);
 
             float effectY = sideY + sidePad;
             for (NameTagsPotions.PotionLine line : snapshot.potionLines) {
                 Fonts.PS_MEDIUM.drawText(matrices, line.left(), sideX + sidePad, effectY, infoSize, line.color());
                 if (!line.right().isEmpty()) {
-                    Fonts.PS_MEDIUM.drawText(matrices, line.right(), sideX + snapshot.effectBlockWidth - sidePad - getPotionRightWidth(snapshot, line), effectY, infoSize, new Color(225, 225, 225));
+                    float rightX = sideX + snapshot.effectBlockWidth - sidePad - Fonts.PS_MEDIUM.getWidth(line.right(), infoSize);
+                    Fonts.PS_MEDIUM.drawText(matrices, line.right(), rightX, effectY, infoSize, new Color(225, 225, 225));
                 }
                 effectY += infoSize + rowGap;
             }
         }
 
-        if (!snapshot.specialItems.isEmpty()) {
-            float extraY = cardY + cardHeight + lowerGap;
-            for (int i = 0; i < snapshot.specialItems.size(); i++) {
-                String specialItem = snapshot.specialItems.get(i);
-                float width = snapshot.specialItemWidths.get(i);
-                Fonts.PS_MEDIUM.drawText(matrices, specialItem, centerX - width / 2f, extraY, infoSize, module.textColor.getValue());
-                extraY += infoSize + rowGap;
-            }
+        // Рендер предметов в руках под игроком
+        if (module.showHands.getValue()) {
+            drawHandsText(matrices, snapshot, entry.bottomX(), entry.bottomY(), scale);
         }
     }
 
-    private void renderSimpleTag(String displayName, float centerX, float baseY, DrawContext context, Color textColor) {
+    private void drawHandsText(MatrixStack matrices, PlayerSnapshot snapshot, float centerX, float bottomY, float scale) {
+        float textSize = 6f * scale;
+        float padding = 2f * scale;
+        float gap = 1f * scale;
+
+        List<String> lines = new ArrayList<>(2);
+        if (!snapshot.rightHandItem.isEmpty()) lines.add(snapshot.rightHandItem);
+        if (!snapshot.leftHandItem.isEmpty()) lines.add(snapshot.leftHandItem);
+
+        if (lines.isEmpty()) return;
+
+        float blockHeight = lines.size() * textSize + Math.max(0, lines.size() - 1) * gap + padding * 2f;
+        float maxWidth = 0f;
+        for (String line : lines) {
+            maxWidth = Math.max(maxWidth, Fonts.PS_MEDIUM.getWidth(line, textSize));
+        }
+        float blockWidth = maxWidth + padding * 2f;
+
+        float startX = centerX - blockWidth / 2f;
+        // Смещение чуть ниже ног
+        float startY = bottomY + (4f * scale);
+
+        RenderUtil.RECT.draw(matrices, startX, startY, blockWidth, blockHeight, 0f, bgColor);
+
+        float textY = startY + padding;
+        for (String line : lines) {
+            float textX = centerX - Fonts.PS_MEDIUM.getWidth(line, textSize) / 2f;
+            Fonts.PS_MEDIUM.drawText(matrices, line, textX, textY, textSize, Color.WHITE);
+            textY += textSize + gap;
+        }
+    }
+
+    private void renderSimpleTag(String displayName, float centerX, float baseY, DrawContext context) {
         MatrixStack matrices = context.getMatrices();
         float scale = module.scale.getValue();
         float nameSize = 7f * scale;
@@ -200,8 +228,8 @@ public class NameTagsRender implements QuickImports {
         float cardHeight = nameSize + padding * 2f;
         float cardX = centerX - cardWidth / 2f;
 
-        drawDarkCard(matrices, cardX, baseY, cardWidth, cardHeight, 0f, 140, 0);
-        Fonts.PS_BOLD.drawText(matrices, displayName, centerX - nameWidth / 2f, baseY + padding, nameSize, textColor);
+        RenderUtil.RECT.draw(matrices, cardX, baseY, cardWidth, cardHeight, 0f, bgColor);
+        Fonts.PS_BOLD.drawText(matrices, displayName, centerX - nameWidth / 2f, baseY + padding, nameSize, Color.WHITE);
     }
 
     private Color getHealthColor(float health, float maxHealth) {
@@ -221,12 +249,6 @@ public class NameTagsRender implements QuickImports {
         return new Color(r, g, b, 255);
     }
 
-    private void drawDarkCard(MatrixStack matrices, float x, float y, float width, float height, float round, int alpha, int shineAlpha) {
-        float r = Math.max(round, height / 2.5f);
-        sweetie.nezi.api.utils.render.RenderUtil.RECT.draw(matrices, x, y, width, height, r, sweetie.nezi.api.utils.color.UIColors.card(Math.min(255, alpha + 40)));
-        sweetie.nezi.api.utils.render.RenderUtil.RECT.draw(matrices, x, y, width, height, r, sweetie.nezi.api.utils.color.UIColors.stroke(Math.min(255, alpha / 2)));
-    }
-
     private PlayerSnapshot getPlayerSnapshot(PlayerEntity player) {
         long now = System.currentTimeMillis();
         PlayerSnapshot snapshot = playerSnapshots.get(player.getUuid());
@@ -238,19 +260,24 @@ public class NameTagsRender implements QuickImports {
         String baseName = player.getGameProfile().getName();
         rebuilt.friend = FriendManager.getInstance().contains(baseName);
         rebuilt.displayName = buildDisplayName(player, baseName);
-        rebuilt.topItems = module.information.isEnabled("Предметы") ? nameTagsItems.collectDisplayItems(player) : List.of();
-        rebuilt.potionLines = module.information.isEnabled("Зелья") ? nameTagsPotions.collectLines(player) : List.of();
-        rebuilt.specialItems = module.information.isEnabled("Предметы") && module.options.isEnabled("Особые предметы")
-                ? nameTagsItems.collectSpecialItemNames(player)
-                : List.of();
+
+        if (module.showHands.getValue()) {
+            rebuilt.rightHandItem = getRightHandName(player);
+            rebuilt.leftHandItem = getLeftHandName(player);
+        }
+
+        rebuilt.potionLines = module.showPotions.getValue() ? nameTagsPotions.collectLines(player) : List.of();
+
         float scale = module.scale.getValue();
         float nameSize = 7.1f * scale;
         float infoSize = 5.4f * scale;
         float rowGap = 1.5f * scale;
         float sidePad = 2.6f * scale;
+
         rebuilt.nameWidth = Fonts.PS_BOLD.getWidth(rebuilt.displayName, nameSize);
         rebuilt.effectBlockWidth = 0f;
         rebuilt.effectBlockHeight = 0f;
+
         for (NameTagsPotions.PotionLine line : rebuilt.potionLines) {
             float width = Fonts.PS_MEDIUM.getWidth(line.left(), infoSize);
             if (!line.right().isEmpty()) {
@@ -264,20 +291,20 @@ public class NameTagsRender implements QuickImports {
                     + rebuilt.potionLines.size() * infoSize
                     + Math.max(0, rebuilt.potionLines.size() - 1) * rowGap;
         }
-        rebuilt.specialItemWidths = new ArrayList<>(rebuilt.specialItems.size());
-        rebuilt.specialBlockWidth = 0f;
-        for (String specialItem : rebuilt.specialItems) {
-            float width = Fonts.PS_MEDIUM.getWidth(specialItem, infoSize);
-            rebuilt.specialItemWidths.add(width);
-            rebuilt.specialBlockWidth = Math.max(rebuilt.specialBlockWidth, width);
-        }
-        rebuilt.specialBlockHeight = rebuilt.specialItems.isEmpty()
-                ? 0f
-                : rebuilt.specialItems.size() * infoSize + Math.max(0, rebuilt.specialItems.size() - 1) * rowGap;
         rebuilt.updatedAt = now;
 
         playerSnapshots.put(player.getUuid(), rebuilt);
         return rebuilt;
+    }
+
+    private String getRightHandName(PlayerEntity player) {
+        ItemStack stack = player.getMainArm() == Arm.RIGHT ? player.getMainHandStack() : player.getOffHandStack();
+        return stack.isEmpty() ? "" : stack.getName().getString();
+    }
+
+    private String getLeftHandName(PlayerEntity player) {
+        ItemStack stack = player.getMainArm() == Arm.RIGHT ? player.getOffHandStack() : player.getMainHandStack();
+        return stack.isEmpty() ? "" : stack.getName().getString();
     }
 
     private String buildDisplayName(PlayerEntity player, String baseName) {
@@ -291,10 +318,6 @@ public class NameTagsRender implements QuickImports {
         decorated = stripFormattingCodes(ReplaceUtil.replaceSymbols(decorated));
         String cleaned = sanitizeDecoratedName(decorated, baseName);
         return cleaned.isEmpty() ? baseName : cleaned;
-    }
-
-    private float getPotionRightWidth(PlayerSnapshot snapshot, NameTagsPotions.PotionLine line) {
-        return Fonts.PS_MEDIUM.getWidth(line.right(), 5.4f * module.scale.getValue());
     }
 
     private String sanitizeDecoratedName(String decorated, String baseName) {
@@ -325,29 +348,22 @@ public class NameTagsRender implements QuickImports {
         if (value == null) {
             return "";
         }
-
-        return value
-                .replaceAll("(?i)\u00A7[0-9A-FK-ORX]", "")
-                .replace(' ', ' ')
-                .trim();
+        return value.replaceAll("(?i)\u00A7[0-9A-FK-ORX]", "").replace(' ', ' ').trim();
     }
 
     private static final class PlayerSnapshot {
         private String displayName = "";
         private boolean friend;
-        private List<net.minecraft.item.ItemStack> topItems = List.of();
+        private String rightHandItem = "";
+        private String leftHandItem = "";
         private List<NameTagsPotions.PotionLine> potionLines = List.of();
-        private List<String> specialItems = List.of();
-        private List<Float> specialItemWidths = List.of();
         private float nameWidth;
         private float effectBlockWidth;
         private float effectBlockHeight;
-        private float specialBlockWidth;
-        private float specialBlockHeight;
         private long updatedAt;
     }
 
-    private record RenderEntry(LivingEntity entity, float projectedX, float projectedY, double distanceSq) { }
+    private record RenderEntry(LivingEntity entity, float topX, float topY, float bottomX, float bottomY, double distanceSq) { }
 
     private float getScoreboardHealth(LivingEntity entity) {
         if (mc.world == null || entity == null) return entity.getHealth();

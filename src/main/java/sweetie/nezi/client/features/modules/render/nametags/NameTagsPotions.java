@@ -25,7 +25,7 @@ public class NameTagsPotions {
             lines.put(lineKey(effect.getTranslationKey(), effect.getAmplifier() + 1), new PotionLine(
                     getEffectName(effect),
                     TextUtil.getDurationText(effect.getDuration()),
-                    module.textColor.getValue()
+                    Color.WHITE
             ));
         }
 
@@ -43,7 +43,7 @@ public class NameTagsPotions {
                     lines.put(key, new PotionLine(
                             formatTrackedName(effect),
                             formatSeconds(remainingSec),
-                            effect.color != null ? effect.color : module.textColor.getValue()
+                            effect.color != null ? effect.color : Color.WHITE
                     ));
                 }
             }

@@ -43,9 +43,12 @@ public class TargetEspAtom extends TargetEspMode {
         float red = MathHelper.clamp((currentTarget.hurtTime - partialTicks) / 20f, 0f, 1f);
         float sp = smoothSpeed.get();
         float anim = alpha * sizeVal;
+        float appearance = alpha * alpha * (3.0f - 2.0f * alpha);
 
         float time = (float)((System.nanoTime() / 1_000_000_000.0f) * sp);
         int baseColor = TargetEspModule.getInstance().getCustomColor(red).getRGB();
+
+        float blend = getRetargetBlend();
 
         ms.push();
         ms.translate(getTargetX() - cameraPos.x, getTargetY() + currentTarget.getHeight() / 2f - cameraPos.y, getTargetZ() - cameraPos.z);
@@ -58,7 +61,13 @@ public class TargetEspAtom extends TargetEspMode {
 
         float radius = 1.0f;
         int segments = 160;
-        float ringSpin = time * 78f;
+
+        // Гармоничное ускорение-замедление вращения
+        float ringSpin = time * 78f + (blend * 800f);
+        float ringScale = 1.0f + (1.0f - appearance) * 5.0f;
+
+        ms.push();
+        ms.scale(ringScale, ringScale, ringScale);
 
         for (int ring = 0; ring < 3; ring++) {
             ms.push();
@@ -104,13 +113,15 @@ public class TargetEspAtom extends TargetEspMode {
             }
             ms.pop();
         }
+        ms.pop();
 
+        float coreFade = appearance * appearance;
         RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
         RenderSystem.setShaderTexture(0, ESP_BLOOM_TEX);
         BufferBuilder core = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-        drawBillboard(core, ms, 0, 0, 0, 0.55f * anim, camera.getYaw(), camera.getPitch(), setAlpha(baseColor, (int)(255 * anim)));
-        drawBillboard(core, ms, 0, 0, 0, 0.90f * anim, camera.getYaw(), camera.getPitch(), setAlpha(baseColor, (int)(160 * anim)));
-        drawBillboard(core, ms, 0, 0, 0, 0.25f * anim, camera.getYaw(), camera.getPitch(), setAlpha(0xFFFFFF, (int)(255 * anim)));
+        drawBillboard(core, ms, 0, 0, 0, 0.55f * anim, camera.getYaw(), camera.getPitch(), setAlpha(baseColor, (int)(255 * coreFade)));
+        drawBillboard(core, ms, 0, 0, 0, 0.90f * anim, camera.getYaw(), camera.getPitch(), setAlpha(baseColor, (int)(160 * coreFade)));
+        drawBillboard(core, ms, 0, 0, 0, 0.25f * anim, camera.getYaw(), camera.getPitch(), setAlpha(0xFFFFFF, (int)(255 * coreFade)));
         BufferRenderer.drawWithGlobalProgram(core.end());
 
         RenderSystem.enableDepthTest();

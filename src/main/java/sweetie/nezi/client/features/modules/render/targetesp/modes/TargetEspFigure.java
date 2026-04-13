@@ -78,9 +78,11 @@ public class TargetEspFigure extends TargetEspMode {
         Vec3d center = new Vec3d(getTargetX(), getTargetY() + currentTarget.getHeight() * 0.58, getTargetZ());
         Vec3d renderPos = center.subtract(cameraPos);
 
-        float figureSize = smoothSize.get() * (0.28f + sizeVal * 0.52f);
+        float blend = getRetargetBlend();
+
+        float figureSize = smoothSize.get() * (0.28f + sizeVal * 0.52f) * (1.0f - blend * 0.8f);
         float figureDepth = smoothDepth.get() * (0.35f + sizeVal * 0.65f);
-        float spin = MathUtil.interpolate(prevSpinAngle, spinAngle, event.partialTicks());
+        float spin = MathUtil.interpolate(prevSpinAngle, spinAngle, event.partialTicks()) + (blend * 800f);
 
         List<FigurePoint> points = getFigurePoints();
         if (points.size() < 3) return;

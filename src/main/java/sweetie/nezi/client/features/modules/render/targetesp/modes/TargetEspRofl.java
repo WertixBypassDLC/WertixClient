@@ -51,31 +51,34 @@ public class TargetEspRofl extends TargetEspMode {
 
         float spMul = smoothSpeed.get();
         float anim = alpha * sizeVal;
+        float appearance = alpha * alpha * (3.0f - 2.0f * alpha);
 
         String animalSetting = TargetEspModule.getInstance().getAnimal();
         Entity pet = getPet(animalSetting);
         if (pet == null) return;
 
-        float radius = Math.max(0.45f, currentTarget.getWidth() * 0.8f);
-        float yBase = Math.max(0.35f, currentTarget.getHeight() * 0.6f);
+        float radius = Math.max(0.45f, currentTarget.getWidth() * 0.8f) * appearance;
+        float yBase = Math.max(0.35f, currentTarget.getHeight() * 0.6f) * appearance;
         float time = -(System.currentTimeMillis() % 1_000_000L) * 0.00025f * spMul;
         float aoe = time * 360f;
+
+        float blend = getRetargetBlend();
 
         double[] px = new double[8], py = new double[8], pz = new double[8];
         for (int i = 0; i < 8; i++) {
             float ta = aoe + (i / 8.0f) * 360f;
             double rad = Math.toRadians(ta);
             px[i] = getTargetX() + Math.cos(rad) * radius - cameraPos.x;
-            py[i] = getTargetY() + yBase + ((i % 2 == 0) ? 0.10f : -0.10f) - 0.20f - cameraPos.y;
+            py[i] = getTargetY() + yBase + ((i % 2 == 0) ? 0.10f : -0.10f) - 0.20f - cameraPos.y + Math.sin(blend * Math.PI) * 2.5f;
             pz[i] = getTargetZ() + Math.sin(rad) * radius - cameraPos.z;
         }
 
         double coreX = getTargetX() - cameraPos.x;
-        double coreY = getTargetY() + Math.max(1.15f, currentTarget.getHeight() + 0.6f) - cameraPos.y;
+        double coreY = getTargetY() + Math.max(1.15f, currentTarget.getHeight() + 0.6f) - cameraPos.y + Math.sin(blend * Math.PI) * 2.5f;
         double coreZ = getTargetZ() - cameraPos.z;
 
         float t2 = (System.currentTimeMillis() % 1_000_000L) * spMul * 0.00100f;
-        float yaw2 = t2 * 180f, pitch2 = (float)(Math.sin(t2 * 1.5) * 120f), roll2 = (float)(Math.cos(t2 * 1.2) * 90f);
+        float yaw2 = t2 * 180f, pitch2 = (float)(Math.sin(t2 * 1.5) * 120f) + blend * 720f, roll2 = (float)(Math.cos(t2 * 1.2) * 90f);
 
         VertexConsumerProvider.Immediate vcp = mc.getBufferBuilders().getEntityVertexConsumers();
 
@@ -92,7 +95,7 @@ public class TargetEspRofl extends TargetEspMode {
             ms.translate(wx, wy, wz);
 
             float walkT = ((System.currentTimeMillis() % 1_000_000L) * 0.001f) * (1.2f * spMul) + (i * 0.55f);
-            ms.translate(0, Math.sin(walkT * 3f) * 0.045f * spMul, 0);
+            ms.translate(0, Math.sin(walkT * 3f) * 0.045f * spMul * appearance, 0);
 
             if (i == 8) {
                 ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(yaw2));
