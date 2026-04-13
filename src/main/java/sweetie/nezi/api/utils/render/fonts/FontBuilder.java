@@ -21,14 +21,13 @@ public class FontBuilder {
     public FontBuilder find(String fontName) {
         this.name = fontName;
 
-        // Очищаем имя от возможных лишних слэшей и переводим в нижний регистр
+        // Minecraft 1.21.4 не принимает "//", ":" или заглавные буквы в путях
         String cleanName = fontName.replace("/", "").toLowerCase();
         String namespace = ClientInfo.NAME.toLowerCase();
 
-        // Формируем идентификаторы без риска получить двойной слэш
+        // Формируем чистые идентификаторы
         this.dataIdentifier = Identifier.of(namespace, "fonts/" + cleanName + ".json");
         this.atlasIdentifier = Identifier.of(namespace, "fonts/" + cleanName + ".png");
-
         return this;
     }
 
@@ -36,12 +35,12 @@ public class FontBuilder {
         FontData data = FileUtil.fromJsonToInstance(this.dataIdentifier, FontData.class);
 
         if (data == null) {
-            // Более информативная ошибка для отладки
             throw new RuntimeException("Failed to read font data: " + this.dataIdentifier.toString());
         }
 
         AbstractTexture texture = MinecraftClient.getInstance().getTextureManager().getTexture(this.atlasIdentifier);
 
+        // Безопасная установка фильтрации текстуры
         RenderSystem.recordRenderCall(() -> {
             if (texture != null) {
                 texture.setFilter(true, false);
@@ -51,11 +50,12 @@ public class FontBuilder {
         float aWidth = data.atlas().width();
         float aHeight = data.atlas().height();
 
+        // Используем мапу с защитой от дубликатов юникода
         Map<Integer, MsdfGlyph> glyphs = data.glyphs().stream()
                 .collect(Collectors.toMap(
                         FontData.GlyphData::unicode,
                         (glyphData) -> new MsdfGlyph(glyphData, aWidth, aHeight),
-                        (existing, replacement) -> existing // Защита от дубликатов юникода
+                        (existing, replacement) -> existing
                 ));
 
         Map<Integer, Map<Integer, Float>> kernings = new HashMap<>();
