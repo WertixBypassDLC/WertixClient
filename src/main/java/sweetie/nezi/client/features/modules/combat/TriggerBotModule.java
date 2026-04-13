@@ -48,7 +48,7 @@ public class TriggerBotModule extends Module {
     private final TimerUtil attackTimer = new TimerUtil();
     private long nextDelay = 0L;
 
-    // Флаг: мы уже передали атаку WTap и ждём колбэка
+    // Флаг: мы уже передали атаку WTap и ждём выполнения
     private volatile boolean pendingWtapAttack = false;
 
     public TriggerBotModule() {
@@ -141,23 +141,8 @@ public class TriggerBotModule extends Module {
         if (!onlyCrits.getValue()) return true;
 
         // === Логика крита ===
-        // Если WTap включён — он сам обеспечит крит через колбэк.
-        // Здесь мы только проверяем, можем ли вообще инициировать цикл WTap:
-        // игрок должен быть на земле (иначе WTap не прыгнет).
-        if (WTapModule.getInstance().isEnabled()) {
-            // Если игрок на земле — WTap подпрыгнет и даст крит
-            if (mc.player.isOnGround()) return true;
-            // Если уже в воздухе и падает — крит и без WTap
-            boolean falling  = mc.player.fallDistance > 0.05f;
-            boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
-            boolean climbing = mc.player.isClimbing();
-            return falling && !inLiquid && !climbing;
-        }
-
-        // WTap выключен — используем SmartCrits / обычный крит
         if (smartCrits.getValue() && mc.player.isOnGround() && !mc.options.jumpKey.isPressed()) {
-            // SmartCrits: атакуем на земле — в ванилле это не крит, но мы разрешаем
-            // (оставляем как было в оригинале для совместимости)
+            // SmartCrits: атакуем на земле
             return true;
         }
 
@@ -169,24 +154,11 @@ public class TriggerBotModule extends Module {
 
     /**
      * Инициируем атаку:
-     * - Если WTap включён → передаём атаку ему как колбэк (атака будет в момент крита)
+     * - Если WTap включён → передаём атаку ему как колбэк (он сбросит спринт и сразу ударит)
      * - Если WTap выключен → атакуем напрямую
      */
     private void initiateAttack(LivingEntity target) {
         if (WTapModule.getInstance().isEnabled()) {
-            // Если уже в воздухе и падает — атакуем немедленно без WTap цикла
-            boolean alreadyCrit = !mc.player.isOnGround()
-                    && mc.player.fallDistance > 0.05f
-                    && !mc.player.isTouchingWater()
-                    && !mc.player.isInLava()
-                    && !mc.player.isClimbing();
-
-            if (alreadyCrit) {
-                doAttack(target);
-                return;
-            }
-
-            // На земле — передаём WTap, он прыгнет и вернёт колбэк
             pendingWtapAttack = true;
             boolean accepted = WTapModule.getInstance().requestCritAttack(() -> {
                 pendingWtapAttack = false;

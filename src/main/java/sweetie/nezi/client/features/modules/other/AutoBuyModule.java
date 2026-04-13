@@ -34,7 +34,6 @@ import sweetie.nezi.api.module.setting.RunSetting;
 import sweetie.nezi.api.module.setting.SliderSetting;
 import sweetie.nezi.api.module.setting.StringSetting;
 import sweetie.nezi.api.system.configs.ConfigManager;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.auction.ParseModeChoice;
 import sweetie.nezi.api.utils.auction.PriceParser;
 import sweetie.nezi.api.utils.color.ColorUtil;
@@ -549,10 +548,10 @@ public class AutoBuyModule extends Module {
             return;
         }
         if (state != AutoBuyState.IDLE) {
-        state = AutoBuyState.IDLE;
-        purchaseConfirmClicked = false;
-        purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
+            state = AutoBuyState.IDLE;
+            purchaseConfirmClicked = false;
+            purchaseOpenRetryCount = 0;
+            pendingCandidate = null;
             if (recoveringPurchase) {
                 setDebugState("Покупка", "Окно пропало, заново открываю /ah");
                 openAuctionTimer.setMillis(System.currentTimeMillis() - AUCTION_OPEN_INTERVAL_MS);
@@ -639,9 +638,9 @@ public class AutoBuyModule extends Module {
                 state = AutoBuyState.IDLE;
                 purchaseConfirmClicked = false;
                 purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
-        pendingPurchaseSnapshot = null;
-        actionTimer.reset();
+                pendingCandidate = null;
+                pendingPurchaseSnapshot = null;
+                actionTimer.reset();
                 setDebugState("Покупка", "Лот в слоте изменился, отменяю подтверждение");
                 return;
             }
@@ -657,9 +656,9 @@ public class AutoBuyModule extends Module {
                 state = AutoBuyState.IDLE;
                 purchaseConfirmClicked = false;
                 purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
-        pendingPurchaseSnapshot = null;
-        actionTimer.reset();
+                pendingCandidate = null;
+                pendingPurchaseSnapshot = null;
+                actionTimer.reset();
                 setDebugState("Покупка", "Лот в слоте изменился, отменяю подтверждение");
                 return;
             }
@@ -668,9 +667,9 @@ public class AutoBuyModule extends Module {
                 state = AutoBuyState.IDLE;
                 purchaseConfirmClicked = false;
                 purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
-        pendingPurchaseSnapshot = null;
-        actionTimer.reset();
+                pendingCandidate = null;
+                pendingPurchaseSnapshot = null;
+                actionTimer.reset();
                 setDebugState("Покупка", "Лот в слоте изменился, отменяю подтверждение");
                 return;
             }
@@ -682,9 +681,9 @@ public class AutoBuyModule extends Module {
                     state = AutoBuyState.IDLE;
                     purchaseConfirmClicked = false;
                     purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
-        pendingPurchaseSnapshot = null;
-        actionTimer.reset();
+                    pendingCandidate = null;
+                    pendingPurchaseSnapshot = null;
+                    actionTimer.reset();
                     setDebugState("Покупка", "Лот в слоте изменился, отменяю повторный клик");
                     return;
                 }
@@ -700,9 +699,9 @@ public class AutoBuyModule extends Module {
                 state = AutoBuyState.IDLE;
                 purchaseConfirmClicked = false;
                 purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
-        pendingPurchaseSnapshot = null;
-        actionTimer.reset();
+                pendingCandidate = null;
+                pendingPurchaseSnapshot = null;
+                actionTimer.reset();
                 setDebugState("Покупка", "Confirm не появился, возвращаюсь к сканированию");
                 return;
             }
@@ -778,9 +777,9 @@ public class AutoBuyModule extends Module {
                     state = AutoBuyState.IDLE;
                     purchaseConfirmClicked = false;
                     purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
-        pendingPurchaseSnapshot = null;
-        actionTimer.reset();
+                    pendingCandidate = null;
+                    pendingPurchaseSnapshot = null;
+                    actionTimer.reset();
                     if (mc.player != null && mc.currentScreen != null) {
                         mc.player.closeHandledScreen();
                         openAuctionTimer.setMillis(System.currentTimeMillis() - AUCTION_OPEN_INTERVAL_MS);
@@ -808,9 +807,9 @@ public class AutoBuyModule extends Module {
                 state = AutoBuyState.IDLE;
                 purchaseConfirmClicked = false;
                 purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
-        pendingPurchaseSnapshot = null;
-        actionTimer.reset();
+                pendingCandidate = null;
+                pendingPurchaseSnapshot = null;
+                actionTimer.reset();
                 setDebugState("Покупка", "Лот в слоте изменился, отменяю подтверждение");
                 return;
             }
@@ -837,9 +836,9 @@ public class AutoBuyModule extends Module {
                 state = AutoBuyState.IDLE;
                 purchaseConfirmClicked = false;
                 purchaseOpenRetryCount = 0;
-        pendingCandidate = null;
-        pendingPurchaseSnapshot = null;
-        actionTimer.reset();
+                pendingCandidate = null;
+                pendingPurchaseSnapshot = null;
+                actionTimer.reset();
                 setDebugState("Покупка", "Окно подтверждения не появилось, возвращаюсь к сканированию");
                 return;
             }
@@ -1074,7 +1073,7 @@ public class AutoBuyModule extends Module {
 
         return value
                 .replaceAll("(?i)\u00a7[0-9A-FK-ORX]", "")
-                .replace(' ', ' ')
+                .replace(' ', ' ')
                 .replace('?', '?')
                 .toLowerCase(Locale.ROOT)
                 .replaceAll("\s{2,}", " ")
@@ -1410,6 +1409,7 @@ public class AutoBuyModule extends Module {
                 : copy.getName().getString();
         return new PendingPurchaseSnapshot(copy, itemName, Math.max(1, candidate.count()), Math.max(0, candidate.totalPrice()));
     }
+
     private void addSuccessfulHistory() {
         if (pendingPurchaseSnapshot == null) {
             return;
@@ -1421,6 +1421,7 @@ public class AutoBuyModule extends Module {
                 pendingPurchaseSnapshot.totalPrice()
         );
     }
+
     private void addFailedHistory(String message) {
         if (pendingPurchaseSnapshot == null) {
             return;
@@ -1432,7 +1433,9 @@ public class AutoBuyModule extends Module {
                 pendingPurchaseSnapshot.totalPrice(),
                 abbreviate(message, 46)
         );
-    }    private int getAuctionPrice(ItemStack stack, List<Text> tooltip) {
+    }
+
+    private int getAuctionPrice(ItemStack stack, List<Text> tooltip) {
         int parsed = AutoTradeMarketUtil.parseAuctionPrice(stack, tooltip);
         if (parsed > 0) {
             return parsed;
@@ -1893,9 +1896,7 @@ public class AutoBuyModule extends Module {
             return;
         }
 
-        String label = automationEnabled
-                ? LanguageManager.getInstance().ui("Автобай: ВКЛ", "AutoBuy: ON")
-                : LanguageManager.getInstance().ui("Автобай: ВЫКЛ", "AutoBuy: OFF");
+        String label = automationEnabled ? "Автобай: ВКЛ" : "Автобай: ВЫКЛ";
         float width = Math.max(102f, Fonts.PS_BOLD.getWidth(label, 6.1f) + 20f);
         float height = 17f;
         float round = 5.5f;
@@ -2041,5 +2042,3 @@ public class AutoBuyModule extends Module {
                 + " за " + formatCompactBalance(candidate.totalPrice());
     }
 }
-
-

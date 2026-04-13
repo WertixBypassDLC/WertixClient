@@ -58,7 +58,7 @@ public class ModuleManager {
                 ViewModelModule.getInstance(),
                 ChinaHatModule.getInstance(),
                 PointersModule.getInstance(),
-                AssistantModule.getInstance(),
+                FuntimeHelperModule.getInstance(),
                 PredictionsModule.getInstance(),
                 NoFriendHurtModule.getInstance(),
                 NoEntityTraceModule.getInstance(),

@@ -11,7 +11,6 @@ import sweetie.nezi.api.event.events.other.WindowResizeEvent;
 import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleManager;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.color.UIColors;
@@ -211,7 +210,7 @@ public class Panel extends UIComponent {
                 iconX + iconBox / 2f - iconWidth / 2f,
                 iconY + iconBox / 2f - iconSize / 2f + scaled(0.2f) + headerContentOffset * 0.25f,
                 iconSize, UIColors.themeFlow(category.ordinal() * 77, headerContentAlpha));
-        Fonts.PS_BOLD.drawText(matrixStack, LanguageManager.getInstance().getClickGuiCategoryLabel(category),
+        Fonts.PS_BOLD.drawText(matrixStack, category.name(),
                 getX() + iconBox + scaled(6f),
                 iconY + iconBox / 2f - titleSize / 2f + scaled(0.2f) + headerContentOffset,
                 titleSize,

@@ -58,7 +58,8 @@ public class ElytraSwapModule extends Module {
     public void handleFireworkLaunch(boolean tick) {
         if (tick || !mc.player.isGliding()) return;
 
-        itemUsage.handleUse(launchKey.getValue(), false);
+        // Передаем true для использования безопасной тиковой логики свапа фейерверка
+        itemUsage.handleUse(launchKey.getValue(), true);
     }
 
     public void handleChestplateSwap(boolean tick) {

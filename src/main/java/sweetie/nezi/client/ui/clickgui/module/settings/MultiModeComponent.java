@@ -3,7 +3,6 @@ package sweetie.nezi.client.ui.clickgui.module.settings;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import sweetie.nezi.api.module.setting.MultiModeSetting;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.color.UIColors;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
@@ -48,7 +47,7 @@ public class MultiModeComponent extends ExpandableComponent.ExpandableSettingCom
         float zavoz = offset();
         float anim = getValue();
 
-        String name = LanguageManager.getInstance().getClickGuiText(setting.getName());
+        String name = setting.getName();
         int selectedCount = setting.getSelectedCount();
         String countText = selectedCount > 0 ? selectedCount + "/" + setting.getAllModes().size() : "0";
         float countWidth = Fonts.PS_MEDIUM.getWidth(countText, fontSize);

@@ -43,32 +43,32 @@ import java.util.Map;
 public class PointersModule extends Module {
     @Getter private static final PointersModule instance = new PointersModule();
 
-    protected final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
+    protected final MultiBooleanSetting targets = new MultiBooleanSetting("Цели").value(
             new BooleanSetting("Игроки").value(true),
             new BooleanSetting("Голые").value(true),
             new BooleanSetting("Животные").value(false),
             new BooleanSetting("Мобы").value(false),
             new BooleanSetting("Жители").value(false),
-            new BooleanSetting("Items").value(false)
+            new BooleanSetting("Предметы").value(false)
     );
 
-    private final ModeSetting playerModeC = new ModeSetting("Players mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Игроки") || targets.isEnabled("Голые"));
-    private final ModeSetting animalsModeC = new ModeSetting("Animals mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Животные"));
-    private final ModeSetting mobModeC = new ModeSetting("Mobs mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Мобы"));
-    private final ModeSetting friendModeC = new ModeSetting("Friends mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Игроки") || targets.isEnabled("Голые"));
-    private final ModeSetting itemModeC = new ModeSetting("Items mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Items"));
+    private final ModeSetting playerModeC = new ModeSetting("Режим игроков").value("Клиент").values("Клиент", "Свой").setVisible(() -> targets.isEnabled("Игроки") || targets.isEnabled("Голые"));
+    private final ModeSetting animalsModeC = new ModeSetting("Режим животных").value("Клиент").values("Клиент", "Свой").setVisible(() -> targets.isEnabled("Животные"));
+    private final ModeSetting mobModeC = new ModeSetting("Режим мобов").value("Клиент").values("Клиент", "Свой").setVisible(() -> targets.isEnabled("Мобы"));
+    private final ModeSetting friendModeC = new ModeSetting("Режим друзей").value("Клиент").values("Клиент", "Свой").setVisible(() -> targets.isEnabled("Игроки") || targets.isEnabled("Голые"));
+    private final ModeSetting itemModeC = new ModeSetting("Режим предметов").value("Клиент").values("Клиент", "Свой").setVisible(() -> targets.isEnabled("Предметы"));
 
-    private final ColorSetting playerColor = new ColorSetting("Player color").value(new Color(-1)).setVisible(() -> playerModeC.is("Custom") && (targets.isEnabled("Игроки") || targets.isEnabled("Голые")));
-    private final ColorSetting animalsColor = new ColorSetting("Animals color").value(new Color(-1)).setVisible(() -> animalsModeC.is("Custom") && targets.isEnabled("Животные"));
-    private final ColorSetting mobColor = new ColorSetting("Mobs color").value(new Color(-1)).setVisible(() -> mobModeC.is("Custom") && targets.isEnabled("Мобы"));
-    private final ColorSetting friendColor = new ColorSetting("Friends color").value(new Color(94, 255, 69)).setVisible(() -> friendModeC.is("Custom") && (targets.isEnabled("Игроки") || targets.isEnabled("Голые")));
-    private final ColorSetting itemColor = new ColorSetting("Items color").value(new Color(255, 72, 69)).setVisible(() -> itemModeC.is("Custom") && targets.isEnabled("Items"));
+    private final ColorSetting playerColor = new ColorSetting("Цвет игроков").value(new Color(-1)).setVisible(() -> playerModeC.is("Свой") && (targets.isEnabled("Игроки") || targets.isEnabled("Голые")));
+    private final ColorSetting animalsColor = new ColorSetting("Цвет животных").value(new Color(-1)).setVisible(() -> animalsModeC.is("Свой") && targets.isEnabled("Животные"));
+    private final ColorSetting mobColor = new ColorSetting("Цвет мобов").value(new Color(-1)).setVisible(() -> mobModeC.is("Свой") && targets.isEnabled("Мобы"));
+    private final ColorSetting friendColor = new ColorSetting("Цвет друзей").value(new Color(94, 255, 69)).setVisible(() -> friendModeC.is("Свой") && (targets.isEnabled("Игроки") || targets.isEnabled("Голые")));
+    private final ColorSetting itemColor = new ColorSetting("Цвет предметов").value(new Color(255, 72, 69)).setVisible(() -> itemModeC.is("Свой") && targets.isEnabled("Предметы"));
 
-    private final SliderSetting pointerSize = new SliderSetting("Size").value(1f).range(0.5f, 2.5f).step(0.1f);
-    private final SliderSetting pointerRadius = new SliderSetting("Radius").value(40f).range(20f, 100f).step(1f);
+    private final SliderSetting pointerSize = new SliderSetting("Размер").value(1f).range(0.5f, 2.5f).step(0.1f);
+    private final SliderSetting pointerRadius = new SliderSetting("Радиус").value(40f).range(20f, 100f).step(1f);
 
-    private final ModeSetting animation = new ModeSetting("Animation").value("In").values("Out", "In", "None");
-    private final SliderSetting duration = new SliderSetting("Duration").value(4f).range(1f, 20f).step(1f);
+    private final ModeSetting animation = new ModeSetting("Анимация").value("Появление").values("Затухание", "Появление", "Нет");
+    private final SliderSetting duration = new SliderSetting("Длительность").value(4f).range(1f, 20f).step(1f);
 
     private final TargetManager.EntityFilter entityFilter = new TargetManager.EntityFilter(targets.getList());
 
@@ -82,7 +82,7 @@ public class PointersModule extends Module {
                 playerModeC, animalsModeC, mobModeC, friendModeC, itemModeC,
                 playerColor, animalsColor, mobColor, friendColor, itemColor,
                 pointerSize, pointerRadius, animation, duration
-                );
+        );
     }
 
     @Override
@@ -111,7 +111,7 @@ public class PointersModule extends Module {
             boolean playersOnly = (targets.isEnabled("Игроки") || targets.isEnabled("Голые"))
                     && !targets.isEnabled("Животные")
                     && !targets.isEnabled("Мобы")
-                    && !targets.isEnabled("Items");
+                    && !targets.isEnabled("Предметы");
 
             if (playersOnly) {
                 for (PlayerEntity player : mc.world.getPlayers()) {
@@ -123,7 +123,7 @@ public class PointersModule extends Module {
                 for (Entity entity : mc.world.getEntities()) {
                     if (mc.player == entity) continue;
 
-                    if ((entity instanceof ItemEntity && targets.isEnabled("Items")) ||
+                    if ((entity instanceof ItemEntity && targets.isEnabled("Предметы")) ||
                             (entity instanceof LivingEntity le && shouldRenderEntity(le))) {
                         alive.add(entity);
                     }
@@ -166,9 +166,9 @@ public class PointersModule extends Module {
         float animFactor = 1f;
         float spawnAnim = (float) spawn.getValue();
 
-        if (animation.is("In")) {
+        if (animation.is("Появление")) {
             animFactor = (2f - spawnAnim);
-        } else if (animation.is("Out")) {
+        } else if (animation.is("Затухание")) {
             animFactor = 0.3f + 0.7f * spawnAnim;
         }
 
@@ -241,10 +241,10 @@ public class PointersModule extends Module {
         int seed = entity.getId() * 13;
         Color gradient = UIColors.gradient(seed);
         return switch (entity) {
-            case ItemEntity itemEntity -> itemModeC.is("Custom") ? itemColor.getValue() : gradient;
-            case PlayerEntity player -> FriendManager.getInstance().contains(player.getName().getString()) ? friendModeC.is("Custom") ? friendColor.getValue() : gradient : playerModeC.is("Custom") ? playerColor.getValue() : gradient;
-            case AnimalEntity animalEntity -> animalsModeC.is("Custom") ? animalsColor.getValue() : gradient;
-            case MobEntity mobEntity -> mobModeC.is("Custom") ? mobColor.getValue() : gradient;
+            case ItemEntity itemEntity -> itemModeC.is("Свой") ? itemColor.getValue() : gradient;
+            case PlayerEntity player -> FriendManager.getInstance().contains(player.getName().getString()) ? friendModeC.is("Свой") ? friendColor.getValue() : gradient : playerModeC.is("Свой") ? playerColor.getValue() : gradient;
+            case AnimalEntity animalEntity -> animalsModeC.is("Свой") ? animalsColor.getValue() : gradient;
+            case MobEntity mobEntity -> mobModeC.is("Свой") ? mobColor.getValue() : gradient;
             default -> new Color(-1);
         };
     }

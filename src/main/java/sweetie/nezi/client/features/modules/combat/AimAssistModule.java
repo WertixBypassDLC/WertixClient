@@ -77,7 +77,7 @@ public class AimAssistModule extends Module {
                 target = null;
                 return;
             }
-            // Не сбрасываем цель во время WTap-прыжка — TriggerBot должен её помнить
+            // Не сбрасываем цель во время WTap — TriggerBot должен её помнить
             if (target != null && WTapModule.getInstance().isSuppressing()) return;
         }));
         addEvents(tick);

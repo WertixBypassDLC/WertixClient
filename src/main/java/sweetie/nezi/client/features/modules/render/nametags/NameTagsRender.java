@@ -55,9 +55,9 @@ public class NameTagsRender implements QuickImports {
         Set<UUID> activePlayers = new HashSet<>();
         float partialTicks = event.partialTicks();
 
-        boolean playersOnly = module.targets.isEnabled("Players")
-                && !module.targets.isEnabled("Animals")
-                && !module.targets.isEnabled("Mobs");
+        boolean playersOnly = module.targets.isEnabled("Игроки")
+                && !module.targets.isEnabled("Животные")
+                && !module.targets.isEnabled("Мобы");
 
         if (playersOnly) {
             for (PlayerEntity player : mc.world.getPlayers()) {
@@ -81,7 +81,7 @@ public class NameTagsRender implements QuickImports {
             }
         }
 
-        if (module.targets.isEnabled("Self") && !mc.options.getPerspective().isFirstPerson()) {
+        if (module.targets.isEnabled("Себя") && !mc.options.getPerspective().isFirstPerson()) {
             activePlayers.add(mc.player.getUuid());
             queueEntity(mc.player, partialTicks);
         }
@@ -95,9 +95,8 @@ public class NameTagsRender implements QuickImports {
     }
 
     private void queueEntity(LivingEntity entity, float partialTicks) {
-        // Early distance-based cull before expensive projection
         double distSq = mc.player.squaredDistanceTo(entity);
-        if (distSq > 4096.0) { // Skip entities beyond 64 blocks
+        if (distSq > 4096.0) {
             return;
         }
 
@@ -136,7 +135,7 @@ public class NameTagsRender implements QuickImports {
         float sideGap = 4f * scale;
         float lowerGap = 2.6f * scale;
         float round = Math.max(2f, 3.2f * scale);
-        boolean showItems = module.information.isEnabled("Items");
+        boolean showItems = module.information.isEnabled("Предметы");
 
         PlayerSnapshot snapshot = getPlayerSnapshot(player);
         float itemRowHeight = showItems
@@ -145,7 +144,7 @@ public class NameTagsRender implements QuickImports {
         float hp = getScoreboardHealth(player);
         String hpText = " [" + (int) Math.ceil(hp) + "]";
         float hpWidth = Fonts.PS_BOLD.getWidth(hpText, nameSize);
-        
+
         float textWidth = snapshot.nameWidth + hpWidth;
         float cardWidth = textWidth + padding * 2f;
         float cardHeight = padding * 2f + nameSize;
@@ -159,7 +158,7 @@ public class NameTagsRender implements QuickImports {
         float textX = centerX - textWidth / 2f;
         Color nameColor = snapshot.friend ? module.friendColor.getValue() : module.textColor.getValue();
         Fonts.PS_BOLD.drawText(matrices, snapshot.displayName, textX, textY, nameSize, nameColor);
-        
+
         Color hpColor = getHealthColor(hp, player.getMaxHealth() + player.getAbsorptionAmount());
         Fonts.PS_BOLD.drawText(matrices, hpText, textX + snapshot.nameWidth, textY, nameSize, hpColor);
 
@@ -239,9 +238,9 @@ public class NameTagsRender implements QuickImports {
         String baseName = player.getGameProfile().getName();
         rebuilt.friend = FriendManager.getInstance().contains(baseName);
         rebuilt.displayName = buildDisplayName(player, baseName);
-        rebuilt.topItems = module.information.isEnabled("Items") ? nameTagsItems.collectDisplayItems(player) : List.of();
-        rebuilt.potionLines = module.information.isEnabled("Potions") ? nameTagsPotions.collectLines(player) : List.of();
-        rebuilt.specialItems = module.information.isEnabled("Items") && module.options.isEnabled("Special items")
+        rebuilt.topItems = module.information.isEnabled("Предметы") ? nameTagsItems.collectDisplayItems(player) : List.of();
+        rebuilt.potionLines = module.information.isEnabled("Зелья") ? nameTagsPotions.collectLines(player) : List.of();
+        rebuilt.specialItems = module.information.isEnabled("Предметы") && module.options.isEnabled("Особые предметы")
                 ? nameTagsItems.collectSpecialItemNames(player)
                 : List.of();
         float scale = module.scale.getValue();
@@ -329,7 +328,7 @@ public class NameTagsRender implements QuickImports {
 
         return value
                 .replaceAll("(?i)\u00A7[0-9A-FK-ORX]", "")
-                .replace(' ', ' ')
+                .replace(' ', ' ')
                 .trim();
     }
 
@@ -354,12 +353,12 @@ public class NameTagsRender implements QuickImports {
         if (mc.world == null || entity == null) return entity.getHealth();
 
         net.minecraft.scoreboard.Scoreboard scoreboard = mc.world.getScoreboard();
-        net.minecraft.scoreboard.ScoreboardObjective objective = 
-            scoreboard.getObjectiveForSlot(net.minecraft.scoreboard.ScoreboardDisplaySlot.BELOW_NAME);
+        net.minecraft.scoreboard.ScoreboardObjective objective =
+                scoreboard.getObjectiveForSlot(net.minecraft.scoreboard.ScoreboardDisplaySlot.BELOW_NAME);
 
         if (objective != null) {
-            net.minecraft.scoreboard.ReadableScoreboardScore score = 
-                scoreboard.getScore(entity, objective);
+            net.minecraft.scoreboard.ReadableScoreboardScore score =
+                    scoreboard.getScore(entity, objective);
 
             if (score != null) {
                 return (float) score.getScore();
@@ -369,4 +368,3 @@ public class NameTagsRender implements QuickImports {
         return entity.getHealth() + entity.getAbsorptionAmount();
     }
 }
-

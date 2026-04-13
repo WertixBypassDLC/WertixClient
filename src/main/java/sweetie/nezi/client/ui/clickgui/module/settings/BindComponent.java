@@ -5,7 +5,6 @@ import net.minecraft.client.util.math.MatrixStack;
 import org.lwjgl.glfw.GLFW;
 import sweetie.nezi.api.module.setting.BindSetting;
 import sweetie.nezi.api.system.backend.KeyStorage;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.color.UIColors;
@@ -44,13 +43,13 @@ public class BindComponent extends SettingComponent {
 
         Font mediumFont = Fonts.PS_MEDIUM;
 
-        mediumFont.drawText(matrixStack, LanguageManager.getInstance().getClickGuiText(setting.getName()), getX(), halfY - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
+        mediumFont.drawText(matrixStack, setting.getName(), getX(), halfY - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
 
         float anim = (float) animation.getValue();
         float reverseAnim = (float) (1.0 - animation.getValue());
 
         float valueSize = fontSize * 0.9f;
-        String noneText = "Нема";
+        String noneText = "None";
         String valueText = setting.getValue() == -999 ? noneText : KeyStorage.getBind(setting.getValue());
         String bindingText = "...";
         float valueWidth = mediumFont.getWidth(valueText, valueSize);

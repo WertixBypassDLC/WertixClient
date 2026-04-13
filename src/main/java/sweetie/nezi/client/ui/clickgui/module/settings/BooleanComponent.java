@@ -3,7 +3,6 @@ package sweetie.nezi.client.ui.clickgui.module.settings;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import sweetie.nezi.api.module.setting.BooleanSetting;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.color.UIColors;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
@@ -13,7 +12,7 @@ import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.ui.clickgui.module.SettingComponent;
 
-import java.awt.*;
+import java.awt.Color;
 import java.time.Duration;
 
 public class BooleanComponent extends SettingComponent {
@@ -64,7 +63,7 @@ public class BooleanComponent extends SettingComponent {
         float knobRound = knobSize / 2f;
 
         Color labelColor = ColorUtil.interpolate(UIColors.textColor(fullAlpha), UIColors.mutedText(fullAlpha), anim);
-        Fonts.PS_MEDIUM.drawWrap(matrixStack, LanguageManager.getInstance().getClickGuiText(setting.getName()), getX(), getY() + getHeight() / 2f - fontSize / 2f, getWidth() - checkWidth - scaled(6f), fontSize, labelColor, scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
+        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), getX(), getY() + getHeight() / 2f - fontSize / 2f, getWidth() - checkWidth - scaled(6f), fontSize, labelColor, scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
 
         Color inactiveTrack = ColorUtil.setAlpha(color, fullAlpha);
         Color activeTrack = ColorUtil.interpolate(new Color(255, 255, 255, fullAlpha), UIColors.cardSecondary(fullAlpha), 0.24f);

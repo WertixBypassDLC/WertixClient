@@ -25,7 +25,7 @@ public class NameTagsItems {
     public List<ItemStack> collectDisplayItems(PlayerEntity player) {
         List<ItemStack> result = new ArrayList<>(6);
 
-        if (!module.options.isEnabled("Only hands")) {
+        if (!module.options.isEnabled("Только в руках")) {
             addIfPresent(result, player.getEquippedStack(EquipmentSlot.HEAD));
             addIfPresent(result, player.getEquippedStack(EquipmentSlot.CHEST));
             addIfPresent(result, player.getEquippedStack(EquipmentSlot.LEGS));

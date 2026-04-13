@@ -14,11 +14,11 @@ public class RemovalsModule extends Module {
     @Getter private static final RemovalsModule instance = new RemovalsModule();
 
     private final String[] elements = {
-            "Fire overlay", "Hurt camera", "Inwall overlay", "Water overlay",
-            "Scoreboard", "Glow effect", "Bad effects", "Boss bar"
+            "Огонь", "Тряска камеры", "Текстуры в стене", "Вода",
+            "Скорборд", "Эффект свечения", "Плохие эффекты", "Босс бар"
     };
 
-    private final MultiBooleanSetting remove = new MultiBooleanSetting("Remove").value(
+    private final MultiBooleanSetting remove = new MultiBooleanSetting("Удалить").value(
             Arrays.stream(elements)
                     .map(name -> new BooleanSetting(name).value(false))
                     .toArray(BooleanSetting[]::new)
@@ -28,14 +28,14 @@ public class RemovalsModule extends Module {
         addSettings(remove);
     }
 
-    public boolean isFireOverlay()   { return isEnabled() && remove.isEnabled("Fire overlay"); }
-    public boolean isHurtCamera()    { return isEnabled() && remove.isEnabled("Hurt camera"); }
-    public boolean isInwallOverlay() { return isEnabled() && remove.isEnabled("Inwall overlay"); }
-    public boolean isWaterOverlay()  { return isEnabled() && remove.isEnabled("Water overlay"); }
-    public boolean isScoreboard()    { return isEnabled() && remove.isEnabled("Scoreboard"); }
-    public boolean isGlowEffect()    { return isEnabled() && remove.isEnabled("Glow effect"); }
-    public boolean isBadEffects()    { return isEnabled() && remove.isEnabled("Bad effects"); }
-    public boolean isBossBar()       { return isEnabled() && remove.isEnabled("Boss bar"); }
+    public boolean isFireOverlay()   { return isEnabled() && remove.isEnabled("Огонь"); }
+    public boolean isHurtCamera()    { return isEnabled() && remove.isEnabled("Тряска камеры"); }
+    public boolean isInwallOverlay() { return isEnabled() && remove.isEnabled("Текстуры в стене"); }
+    public boolean isWaterOverlay()  { return isEnabled() && remove.isEnabled("Вода"); }
+    public boolean isScoreboard()    { return isEnabled() && remove.isEnabled("Скорборд"); }
+    public boolean isGlowEffect()    { return isEnabled() && remove.isEnabled("Эффект свечения"); }
+    public boolean isBadEffects()    { return isEnabled() && remove.isEnabled("Плохие эффекты"); }
+    public boolean isBossBar()       { return isEnabled() && remove.isEnabled("Босс бар"); }
 
     @Override
     public void onEvent() {

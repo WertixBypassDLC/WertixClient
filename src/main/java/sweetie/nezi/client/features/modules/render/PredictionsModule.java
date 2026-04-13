@@ -53,16 +53,16 @@ import java.util.UUID;
 public class PredictionsModule extends Module {
     @Getter private static final PredictionsModule instance = new PredictionsModule();
 
-    private final MultiBooleanSetting render = new MultiBooleanSetting("Render").value(
-            new BooleanSetting("Ender pearl").value(true),
-            new BooleanSetting("Trident").value(false),
-            new BooleanSetting("Arrow").value(false),
-            new BooleanSetting("Potion").value(false)
+    private final MultiBooleanSetting render = new MultiBooleanSetting("Отображение").value(
+            new BooleanSetting("Эндер перл").value(true),
+            new BooleanSetting("Трезубец").value(false),
+            new BooleanSetting("Стрела").value(false),
+            new BooleanSetting("Зелье").value(false)
     );
-    private final BooleanSetting walls = new BooleanSetting("Through walls").value(true);
-    private final BooleanSetting friend = new BooleanSetting("Friendly indicator").value(false);
-    private final ColorSetting friendColor = new ColorSetting("Color").value(new Color(0, 255, 0));
-    private final BooleanSetting potionCircle = new BooleanSetting("Potion area").value(true).setVisible(() -> render.isEnabled("Potion"));
+    private final BooleanSetting walls = new BooleanSetting("Сквозь стены").value(true);
+    private final BooleanSetting friend = new BooleanSetting("Индикатор друга").value(false);
+    private final ColorSetting friendColor = new ColorSetting("Цвет").value(new Color(0, 255, 0));
+    private final BooleanSetting potionCircle = new BooleanSetting("Область зелья").value(true).setVisible(() -> render.isEnabled("Зелье"));
 
     private final List<PredictionPoint> points = new ArrayList<>();
     private final Map<Integer, GhostTrail> ghostTrails = new HashMap<>();
@@ -154,10 +154,10 @@ public class PredictionsModule extends Module {
             boolean isArrow = entity instanceof ArrowEntity;
             boolean isPotion = entity instanceof PotionEntity;
 
-            if ((isPearl && render.isEnabled("Ender pearl"))
-                    || (isTrident && render.isEnabled("Trident"))
-                    || (isArrow && render.isEnabled("Arrow"))
-                    || (isPotion && render.isEnabled("Potion"))) {
+            if ((isPearl && render.isEnabled("Эндер перл"))
+                    || (isTrident && render.isEnabled("Трезубец"))
+                    || (isArrow && render.isEnabled("Стрела"))
+                    || (isPotion && render.isEnabled("Зелье"))) {
 
                 if ((isArrow || isTrident) && (entity.getVelocity().lengthSquared() < 0.001)) continue;
 
@@ -175,7 +175,6 @@ public class PredictionsModule extends Module {
         RenderSystem.enableDepthTest();
         RenderSystem.disableBlend();
 
-        // Render ghost trails for projectiles that left render distance
         renderGhostTrails(matrixStack, renderOffset);
 
         matrixStack.pop();
@@ -222,7 +221,6 @@ public class PredictionsModule extends Module {
             ticks++;
         }
 
-        // Cache trajectory for ghost trail rendering
         ghostTrails.put(entity.getId(), new GhostTrail(trailPoints, System.currentTimeMillis(), ticks, isFriend, itemName, ownerName, isPotion));
     }
 
@@ -276,10 +274,8 @@ public class PredictionsModule extends Module {
     private void renderGhostTrails(MatrixStack matrixStack, Vec3d renderOffset) {
         long now = System.currentTimeMillis();
 
-        // Clean up expired ghost trails
         ghostTrails.values().removeIf(trail -> now - trail.createdAt > GHOST_TRAIL_LIFETIME_MS);
 
-        // Check which entity IDs are still alive
         java.util.Set<Integer> aliveIds = new java.util.HashSet<>();
         if (mc.world != null) {
             for (Entity e : mc.world.getEntities()) {
@@ -287,10 +283,9 @@ public class PredictionsModule extends Module {
             }
         }
 
-        // Only draw ghost trails for entities that are no longer in the world
         for (Map.Entry<Integer, GhostTrail> entry : ghostTrails.entrySet()) {
             if (aliveIds.contains(entry.getKey())) {
-                continue; // Entity is still alive, skip — it's drawn normally
+                continue;
             }
 
             GhostTrail trail = entry.getValue();
@@ -324,12 +319,11 @@ public class PredictionsModule extends Module {
             RenderSystem.disableBlend();
             matrixStack.pop();
 
-            // Also render the label for the ghost trail endpoint and potion circle
             if (!pts.isEmpty()) {
                 Vec3d lastPoint = pts.getLast();
                 int ticksPassed = (int) ((now - trail.createdAt) / 50L);
                 int remainingTicks = Math.max(0, trail.predictedTicks - ticksPassed);
-                
+
                 if (trail.isPotion && potionCircle.getValue()) {
                     renderPotionImpactCircle(matrixStack, lastPoint, color, (int) (age * 100), remainingTicks);
                 }

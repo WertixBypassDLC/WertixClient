@@ -16,7 +16,7 @@ import java.awt.*;
 public class SeeInvisiblesModule extends Module {
     @Getter private static final SeeInvisiblesModule instance = new SeeInvisiblesModule();
 
-    private final SliderSetting alpha = new SliderSetting("Alpha").value(0.3f).range(0.0f, 1f).step(0.1f);
+    private final SliderSetting alpha = new SliderSetting("Прозрачность").value(0.3f).range(0.0f, 1f).step(0.1f);
 
     public SeeInvisiblesModule() {
         addSettings(alpha);

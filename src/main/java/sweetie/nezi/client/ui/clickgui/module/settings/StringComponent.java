@@ -5,7 +5,6 @@ import net.minecraft.client.util.math.MatrixStack;
 import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 import sweetie.nezi.api.module.setting.StringSetting;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.color.ColorUtil;
@@ -16,7 +15,7 @@ import sweetie.nezi.api.utils.render.ScissorUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.ui.clickgui.module.SettingComponent;
 
-import java.awt.*;
+import java.awt.Color;
 
 public class StringComponent extends SettingComponent {
     private final StringSetting setting;
@@ -45,7 +44,7 @@ public class StringComponent extends SettingComponent {
         int fullAlpha = (int) (getAlpha() * 255f);
         float labelOffset = scaled(0.5f);
 
-        Fonts.PS_MEDIUM.drawText(matrixStack, LanguageManager.getInstance().getClickGuiText(setting.getName()), getX() + labelOffset, getY() + labelOffset, fontSize, UIColors.textColor(fullAlpha));
+        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + labelOffset, getY() + labelOffset, fontSize, UIColors.textColor(fullAlpha));
 
         float boxHeight = scaled(12f);
         float boxY = getY() + fontSize + scaled(3f);

@@ -4,7 +4,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import sweetie.nezi.api.module.setting.BooleanSetting;
 import sweetie.nezi.api.module.setting.MultiBooleanSetting;
-import sweetie.nezi.api.system.language.LanguageManager;
+import sweetie.nezi.api.utils.color.ColorUtil;
 import sweetie.nezi.api.utils.color.UIColors;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
@@ -63,7 +63,7 @@ public class MultiBooleanComponent extends ExpandableComponent.ExpandableSetting
         float dermoWidth = Fonts.PS_MEDIUM.getWidth(dermo, fontSize);
 
         RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), getWidth() * 0.04f, UIColors.card(Math.min(fullAlpha, 110)));
-        Fonts.PS_MEDIUM.drawWrap(matrixStack, LanguageManager.getInstance().getClickGuiText(setting.getName()), getX() + offset(), getY() + scd / 2f - fontSize / 2f, getWidth() - offset() * 3f - dermoWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
+        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), getX() + offset(), getY() + scd / 2f - fontSize / 2f, getWidth() - offset() * 3f - dermoWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
         Fonts.PS_MEDIUM.drawText(matrixStack, dermo, getX() + getWidth() - offset() * 2f - dermoWidth, getY() + scd / 2f - fontSize / 2f - scaled(2f), fontSize, UIColors.inactiveTextColor(fullAlpha));
 
         if (openAnim > 0.0) {

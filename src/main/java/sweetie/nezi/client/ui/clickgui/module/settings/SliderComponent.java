@@ -3,9 +3,7 @@ package sweetie.nezi.client.ui.clickgui.module.settings;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.MathHelper;
-import org.joml.Vector4f;
 import sweetie.nezi.api.module.setting.SliderSetting;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.color.ColorUtil;
@@ -17,7 +15,7 @@ import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.features.modules.render.InterfaceModule;
 import sweetie.nezi.client.ui.clickgui.module.SettingComponent;
 
-import java.awt.*;
+import java.awt.Color;
 
 public class SliderComponent extends SettingComponent {
     private final SliderSetting setting;
@@ -55,7 +53,7 @@ public class SliderComponent extends SettingComponent {
         float progress = (bigPenis - setting.getMin()) / (setting.getMax() - setting.getMin()) * sliderWidth();
         currentWidth = MathHelper.clamp(MathUtil.interpolate(currentWidth, progress, 0.2f), 0f, sliderWidth());
 
-        Fonts.PS_MEDIUM.drawText(matrixStack, LanguageManager.getInstance().getClickGuiText(setting.getName()), getX() + piska, getY() + piska, fontSize, UIColors.mutedText(fullAlpha));
+        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + piska, getY() + piska, fontSize, UIColors.mutedText(fullAlpha));
         Fonts.PS_MEDIUM.drawText(matrixStack, valueText, getX() - piska + getWidth() - valueWidth, getY() + piska, fontSize, UIColors.textColor(fullAlpha));
 
         float sliderRound = sliderHeight() / 2f;

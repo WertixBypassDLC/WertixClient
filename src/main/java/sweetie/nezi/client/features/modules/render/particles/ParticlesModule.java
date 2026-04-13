@@ -15,7 +15,7 @@ public class ParticlesModule extends Module {
     private final HitParticles hitParticles = new HitParticles();
     private final WorldParticles worldParticles = new WorldParticles();
 
-    @Getter private final BooleanSetting worldBoolean = new BooleanSetting("World").value(true).onAction(() -> {
+    @Getter private final BooleanSetting worldBoolean = new BooleanSetting("Мир").value(true).onAction(() -> {
         if (!getWorldBoolean().getValue()) {
             worldParticles.toggle();
             worldParticles.removeAllEvents();
@@ -26,7 +26,7 @@ public class ParticlesModule extends Module {
         }
     });
 
-    @Getter private final BooleanSetting hitBoolean = new BooleanSetting("Hit").value(false).onAction(() -> {
+    @Getter private final BooleanSetting hitBoolean = new BooleanSetting("Удар").value(false).onAction(() -> {
         if (!getHitBoolean().getValue()) {
             hitParticles.toggle();
             hitParticles.removeAllEvents();
@@ -37,11 +37,11 @@ public class ParticlesModule extends Module {
         }
     });
 
-    private final MultiBooleanSetting spawn = new MultiBooleanSetting("Spawn").value(
+    private final MultiBooleanSetting spawn = new MultiBooleanSetting("Появление").value(
             worldBoolean,
             hitBoolean
     );
-    
+
     @Override
     public void toggle() {
         super.toggle();
@@ -96,16 +96,16 @@ public class ParticlesModule extends Module {
         public BaseSettings(String prefix) {
             this.prefix = prefix + ": ";
 
-            textureMode = new ModeSetting(this.prefix + "Texture").value("Glow").values(ParticleRender.textures);
-            count = new SliderSetting(this.prefix + "Count").value(25f).range(10f, 100f).step(1f);
-            size = new SliderSetting(this.prefix + "Size").value(0.2f).range(0.1f, 0.4f).step(0.05f);
-            lifeTime = new SliderSetting(this.prefix + "Life time").value(10f).range(2f, 100f).step(1f);
-            spawnDuration = new SliderSetting(this.prefix + "Spawn duration").value(15f).range(0f, 40f).step(1f);
-            dyingDuration = new SliderSetting(this.prefix + "Dying duration").value(15f).range(0f, 40f).step(1f);
-            rotate = new BooleanSetting(this.prefix + "Rotate").value(true);
-            trail = new BooleanSetting(this.prefix + "Trail").value(false);
-            trailLength = new SliderSetting(this.prefix + "Trail length").value(5f).range(1f, 20f).step(1f);
-            dyingEffect = new BooleanSetting(this.prefix + "Dying effect").value(false);
+            textureMode = new ModeSetting(this.prefix + "Текстура").value("Glow").values(ParticleRender.textures);
+            count = new SliderSetting(this.prefix + "Количество").value(25f).range(10f, 100f).step(1f);
+            size = new SliderSetting(this.prefix + "Размер").value(0.2f).range(0.1f, 0.4f).step(0.05f);
+            lifeTime = new SliderSetting(this.prefix + "Время жизни").value(10f).range(2f, 100f).step(1f);
+            spawnDuration = new SliderSetting(this.prefix + "Время появления").value(15f).range(0f, 40f).step(1f);
+            dyingDuration = new SliderSetting(this.prefix + "Время исчезновения").value(15f).range(0f, 40f).step(1f);
+            rotate = new BooleanSetting(this.prefix + "Вращение").value(true);
+            trail = new BooleanSetting(this.prefix + "Следы").value(false);
+            trailLength = new SliderSetting(this.prefix + "Длина следа").value(5f).range(1f, 20f).step(1f);
+            dyingEffect = new BooleanSetting(this.prefix + "Эффект при смерти").value(false);
 
 
             addSettings(

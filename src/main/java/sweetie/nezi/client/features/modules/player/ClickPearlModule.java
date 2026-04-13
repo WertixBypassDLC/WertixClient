@@ -46,6 +46,7 @@ public class ClickPearlModule extends Module {
     private void handle(boolean tick) {
         if (tick) return;
 
-        itemUsage.handleUse(throwKey.getValue(), false);
+        // Передаем true для использования безопасной тиковой логики свапа перлов
+        itemUsage.handleUse(throwKey.getValue(), true);
     }
 }

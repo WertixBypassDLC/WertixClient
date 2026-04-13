@@ -4,7 +4,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import sweetie.nezi.api.module.setting.ColorSetting;
 import sweetie.nezi.api.system.files.FileUtil;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.color.ColorUtil;
 import sweetie.nezi.api.utils.color.UIColors;
 import sweetie.nezi.api.utils.math.MouseUtil;
@@ -13,7 +12,7 @@ import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.ui.clickgui.module.ExpandableComponent;
 import sweetie.nezi.client.ui.theme.Theme;
 
-import java.awt.*;
+import java.awt.Color;
 
 import static sweetie.nezi.api.system.interfaces.QuickImports.mc;
 
@@ -80,7 +79,7 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         int fullAlpha = (int) (getAlpha() * 255f);
 
         if (setting != null) {
-            Fonts.PS_MEDIUM.drawText(ms, LanguageManager.getInstance().getClickGuiText(setting.getName()), getX(), getY() + baseHeight / 2f - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
+            Fonts.PS_MEDIUM.drawText(ms, setting.getName(), getX(), getY() + baseHeight / 2f - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
 
             float previewSize = baseHeight * 0.7f;
             float previewX = getX() + getWidth() - previewSize;
@@ -135,8 +134,6 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         draggingAlpha = false;
     }
 
-
-    // updates
     private void updateHue(double mouseX) {
         float rel = (float) ((mouseX - getPickerX()) / getPickerWidth());
         rel = Math.max(0f, Math.min(1f, rel));
@@ -170,7 +167,6 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         setCurrentColor(new Color(c.getRed(), c.getGreen(), c.getBlue(), alpha));
     }
 
-    // render
     private void drawAlphaBar(MatrixStack ms, float animValue) {
         float y = getAlphaY() + getAnimY();
         float h = getAlphaHeight();
@@ -209,16 +205,13 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         float circleOffset = scaled(2f);
         float circleSize = circleOffset * 2f;
 
-        // Sat/Bri selector
         float satX = getPickerX() + hsb[1] * getPickerWidth();
         float briY = getColorPickerY() + (1 - hsb[2]) * getColorPickerHeight();
         RenderUtil.RECT.draw(ms, satX - circleOffset, briY + getAnimY() - circleOffset, circleSize, circleSize, circleSize * 0.5f, cursorColor);
 
-        // Hue selector
         float hueX = getPickerX() + hueCache * getPickerWidth();
         RenderUtil.RECT.draw(ms, hueX - lineOffset, getHueY() + getAnimY() + lineYOffset, lineWidth, lineHeight, lineRound, cursorColor);
 
-        // Alpha selector
         float alphaRel = currentColor.getAlpha() / 255f;
         float alphaX = getPickerX() + alphaRel * getPickerWidth();
         RenderUtil.RECT.draw(ms, alphaX - lineOffset, getAlphaY() + getAnimY() + lineYOffset, lineWidth, lineHeight, lineRound, cursorColor);
@@ -227,7 +220,6 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
     @Override public void keyPressed(int keyCode, int scanCode, int modifiers) {}
     @Override public void mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) { }
 
-    // helpers
     private float getAnimY() { return (-gap() * (1f - getAnimValue())); }
     private float getColorPickerY() { return getY() + (setting != null ? scaled(getDefaultHeight()) : 0f); }
     private float getColorPickerHeight() { return getWidth() * getAnimValue() * 0.36f; }

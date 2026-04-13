@@ -28,8 +28,6 @@ public class TargetEspComets extends TargetEspMode {
 
     @Override
     public void onUpdate() {
-        updateTarget();
-
         prevGhostRotationAngle = ghostRotationAngle;
         prevGhostYRotationAngle = ghostYRotationAngle;
 
@@ -47,8 +45,8 @@ public class TargetEspComets extends TargetEspMode {
         RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
 
         float size = 0.24f;
-        float dony = 0.92f * MathUtil.interpolate(prevSizeAnimation, sizeAnimation.getValue());
-        float rem = (float) (0.28 * MathUtil.interpolate(prevSizeAnimation, sizeAnimation.getValue()));
+        float dony = 0.92f * MathUtil.interpolate(prevSizeAnimation, (float) sizeAnimation.getValue(), event.partialTicks());
+        float rem = (float) (0.28 * MathUtil.interpolate(prevSizeAnimation, (float) sizeAnimation.getValue(), event.partialTicks()));
         int trailLength = 28;
 
         List<double[]> currentGhostPositions = new ArrayList<>();
@@ -58,15 +56,14 @@ public class TargetEspComets extends TargetEspMode {
         double centerZ = getTargetZ();
 
         for (int i = 0; i < 3; i++) {
-            float angle = MathUtil.interpolate(prevGhostRotationAngle, ghostRotationAngle) + (i * 180);
-
+            float angle = MathUtil.interpolate(prevGhostRotationAngle, ghostRotationAngle, event.partialTicks()) + (i * 180);
             double radius = Math.max(currentTarget.getWidth() * dony, 0.28);
 
             double offsetX = Math.cos(Math.toRadians(angle)) * radius;
             double offsetZ = Math.sin(Math.toRadians(angle)) * radius;
             double offsetY = Math.cos(Math.toRadians(angle)) / 3f * radius;
 
-            double ghostYI = MathUtil.interpolate(prevGhostYRotationAngle, ghostYRotationAngle);
+            double ghostYI = MathUtil.interpolate(prevGhostYRotationAngle, ghostYRotationAngle, event.partialTicks());
 
             if (i == 0) {
                 offsetY = Math.sin(Math.toRadians(ghostYI)) * currentTarget.getHeight() * rem;

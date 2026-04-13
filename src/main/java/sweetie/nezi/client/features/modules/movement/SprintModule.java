@@ -40,7 +40,7 @@ public class SprintModule extends Module {
         addEvents(sprintEvent);
     }
 
-    /** WTap сейчас обрабатывает прыжок/крит */
+    /** WTap сейчас глушит спринт */
     private boolean isWTapSuppressing() {
         return WTapModule.getInstance().isEnabled()
                 && WTapModule.getInstance().isSuppressing();
@@ -50,7 +50,7 @@ public class SprintModule extends Module {
         if (mc.player == null) return false;
         if (mc.player.isSneaking()) return false;
         if (mc.player.horizontalCollision) return false;
-        // Пока WTap прыгает — не трогаем спринт
+        // Пока WTap активен — не трогаем спринт
         if (isWTapSuppressing()) return false;
 
         AuraModule aura = AuraModule.getInstance();

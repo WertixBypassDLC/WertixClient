@@ -30,7 +30,6 @@ public abstract class TargetEspMode implements QuickImports {
         LivingEntity auraTarget = aura().target;
         LivingEntity triggerTarget = TriggerBotModule.getInstance().isEnabled() ? aura().target : null;
 
-        // Also try to get the target directly from AimAssist when no aura/trigger target
         LivingEntity previousTarget = currentTarget;
 
         if (auraTarget != null) {
@@ -59,8 +58,8 @@ public abstract class TargetEspMode implements QuickImports {
 
         sizeAnimation.update();
         double dyingSize = switch (mode) {
-            case "In" -> in;
-            case "Out" -> out;
+            case "Появление" -> in;
+            case "Затухание" -> out;
             default -> size;
         };
         sizeAnimation.run(reason() ? size : dyingSize, duration, Easing.CUBIC_BOTH);
@@ -74,7 +73,6 @@ public abstract class TargetEspMode implements QuickImports {
         boolean aimAssistActive = AimAssistModule.getInstance().isEnabled() && AimAssistModule.getInstance().getTarget() != null;
         return auraActive || aimAssistActive;
     }
-
 
     public boolean canDraw() {
         if (mc.player == null || mc.world == null) return false;
@@ -124,6 +122,18 @@ public abstract class TargetEspMode implements QuickImports {
     private static double smoothedTargetX = -1;
     private static double smoothedTargetY = -1;
     private static double smoothedTargetZ = -1;
+
+    public int setAlpha(int color, int alpha) {
+        return (color & 0x00FFFFFF) | (MathHelper.clamp(alpha, 0, 255) << 24);
+    }
+
+    public static class SmoothFloat {
+        private float value;
+        public SmoothFloat(float initial) { this.value = initial; }
+        public void update(float target, float speed) { this.value += (target - this.value) * speed; }
+        public float get() { return this.value; }
+        public void set(float val) { this.value = val; }
+    }
 
     public abstract void onUpdate();
     public abstract void onRender3D(Render3DEvent.Render3DEventData event);

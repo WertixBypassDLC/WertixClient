@@ -6,7 +6,6 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.joml.Vector4f;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.color.ColorUtil;
@@ -27,9 +26,9 @@ public class AutoBuyConfigScreen extends Screen {
     private final AutoBuyModule module;
     private final AnimationUtil openAnimation = new AnimationUtil();
 
-    private final InputField buyField = new InputField("Покупка <= за 1 шт", "Buy <= per item");
-    private final InputField sellField = new InputField("Продажа", "Sell price");
-    private final InputField countField = new InputField("Мин. стак", "Min stack");
+    private final InputField buyField = new InputField("Покупка <= за 1 шт");
+    private final InputField sellField = new InputField("Продажа");
+    private final InputField countField = new InputField("Мин. стак");
 
     private boolean closing;
     private AutoTradeItem selectedItem = AutoTradeItem.INVISIBILITY;
@@ -49,14 +48,13 @@ public class AutoBuyConfigScreen extends Screen {
     private float searchButtonHeight;
 
     private AutoBuyConfigScreen(AutoBuyModule module) {
-        super(Text.literal(LanguageManager.getInstance().ui("Настройка автобая", "AutoBuy setup")));
+        super(Text.literal("Настройка автобая"));
         this.module = module;
     }
 
     public static AutoBuyConfigScreen create(AutoBuyModule module) {
         return new AutoBuyConfigScreen(module);
     }
-
 
     @Override
     protected void init() {
@@ -131,13 +129,10 @@ public class AutoBuyConfigScreen extends Screen {
         float pad = scaled(12f);
         float titleSize = scaled(9f);
         float subSize = scaled(5.8f);
-        Fonts.PS_BOLD.drawText(ms, localized("Автобай", "AutoBuy"),
+        Fonts.PS_BOLD.drawText(ms, "Автобай",
                 panelX + pad, panelY + scaled(10f), titleSize, UIColors.textColor(alpha));
         Fonts.PS_MEDIUM.drawText(ms,
-                localized(
-                        "ЛКМ открывает настройку, ПКМ включает предмет. Цена покупки считается за 1 шт.",
-                        "LMB edits item, RMB toggles it. Buy price is counted per one item."
-                ),
+                "ЛКМ открывает настройку, ПКМ включает предмет. Цена покупки считается за 1 шт.",
                 panelX + pad, panelY + scaled(24f), subSize, UIColors.mutedText(Math.min(220, alpha)));
     }
 
@@ -211,10 +206,10 @@ public class AutoBuyConfigScreen extends Screen {
         ms.pop();
 
         float titleX = x + scaled(6f);
-        Fonts.PS_BOLD.drawText(ms, displayTitle(item), titleX, y + scaled(22f), scaled(4.65f), UIColors.textColor(alpha));
-        Fonts.PS_MEDIUM.drawText(ms, displaySubtitle(item), titleX, y + scaled(29f), scaled(4.05f), UIColors.mutedText(Math.min(220, alpha)));
+        Fonts.PS_BOLD.drawText(ms, item.getTitle(), titleX, y + scaled(22f), scaled(4.65f), UIColors.textColor(alpha));
+        Fonts.PS_MEDIUM.drawText(ms, item.getSubtitle(), titleX, y + scaled(29f), scaled(4.05f), UIColors.mutedText(Math.min(220, alpha)));
 
-        String status = rule.isEnabled() ? localized("ВКЛ", "ON") : localized("ВЫКЛ", "OFF");
+        String status = rule.isEnabled() ? "ВКЛ" : "ВЫКЛ";
         float pillW = scaled(16f);
         float pillH = scaled(11f);
         float pillX = x + w - pillW - scaled(5f);
@@ -226,8 +221,8 @@ public class AutoBuyConfigScreen extends Screen {
         Fonts.PS_BOLD.drawCenteredText(ms, status, pillX + pillW / 2f, pillY + scaled(2.2f), scaled(3.9f),
                 rule.isEnabled() ? UIColors.primary(alpha) : UIColors.inactiveTextColor(alpha));
 
-        String buyPrefix = localized("К", "B");
-        String sellPrefix = localized("П", "S");
+        String buyPrefix = "К";
+        String sellPrefix = "П";
         String buy = rule.getBuyUnitPrice() > 0 ? buyPrefix + " " + formatCompactPrice(rule.getBuyUnitPrice()) : buyPrefix + " -";
         String sell = rule.getSellPrice() > 0 ? sellPrefix + " " + formatCompactPrice(rule.getSellPrice()) : sellPrefix + " -";
         float statY = y + h - scaled(11f);
@@ -252,7 +247,7 @@ public class AutoBuyConfigScreen extends Screen {
         float round = scaled(6f);
 
         drawGlassSurface(ms, x, y, w, h, round, UIColors.card(Math.min(118, alpha)), alpha, false);
-        Fonts.PS_BOLD.drawText(ms, displayTitle(selectedItem) + " " + displaySubtitle(selectedItem),
+        Fonts.PS_BOLD.drawText(ms, selectedItem.getTitle() + " " + selectedItem.getSubtitle(),
                 x + scaled(8f), y + scaled(8f), scaled(5.7f), UIColors.textColor(alpha));
 
         float rowX = x + scaled(10f);
@@ -271,11 +266,11 @@ public class AutoBuyConfigScreen extends Screen {
                         ? ColorUtil.interpolate(UIColors.cardSecondary(Math.min(196, alpha)), UIColors.primary(Math.min(86, alpha)), 0.18f)
                         : UIColors.panel(Math.min(168, alpha)),
                 alpha, true);
-        Fonts.PS_MEDIUM.drawCenteredText(ms, localized("Открыть поиск на /ah", "Open /ah search"),
+        Fonts.PS_MEDIUM.drawCenteredText(ms, "Открыть поиск на /ah",
                 searchButtonX + searchButtonWidth / 2f,
                 searchButtonY + scaled(4.0f), scaled(4.8f), UIColors.textColor(alpha));
 
-        String enabledText = localized("Включено: ", "Enabled: ") + (rule.isEnabled() ? localized("Да", "Yes") : localized("Нет", "No"));
+        String enabledText = "Включено: " + (rule.isEnabled() ? "Да" : "Нет");
         Fonts.PS_MEDIUM.drawText(ms, enabledText, x + scaled(9f), y + h - scaled(10f), scaled(5.2f),
                 rule.isEnabled() ? UIColors.primary(alpha) : UIColors.inactiveTextColor(alpha));
     }
@@ -283,10 +278,7 @@ public class AutoBuyConfigScreen extends Screen {
     private void drawFooter(MatrixStack ms, float anim) {
         int alpha = MathHelper.clamp((int) (255f * anim), 0, 255);
         Fonts.PS_MEDIUM.drawText(ms,
-                localized(
-                        "ЛКМ по предмету -> редактировать. ПКМ -> вкл/выкл. ESC -> закрыть. Сохранение мгновенное.",
-                        "LMB item -> edit. RMB -> enable or disable. ESC -> close. Settings save instantly."
-                ),
+                "ЛКМ по предмету -> редактировать. ПКМ -> вкл/выкл. ESC -> закрыть. Сохранение мгновенное.",
                 panelX + scaled(12f), panelY + panelHeight - scaled(14f), scaled(5.2f),
                 UIColors.mutedText(Math.min(215, alpha)));
     }
@@ -447,10 +439,10 @@ public class AutoBuyConfigScreen extends Screen {
 
     private String formatCompactPrice(int value) {
         if (value >= 1_000_000) {
-            return formatCompactUnit(value / 1_000_000f, localized("кк", "M"));
+            return formatCompactUnit(value / 1_000_000f, "кк");
         }
         if (value >= 1_000) {
-            return formatCompactUnit(value / 1_000f, localized("к", "K"));
+            return formatCompactUnit(value / 1_000f, "к");
         }
         return String.valueOf(value);
     }
@@ -460,103 +452,6 @@ public class AutoBuyConfigScreen extends Screen {
             return Math.round(value) + suffix;
         }
         return String.format(Locale.US, "%.1f%s", value, suffix);
-    }
-
-
-    private String displayTitle(AutoTradeItem item) {
-        if (LanguageManager.getInstance().isRussian()) {
-            return item.getTitle();
-        }
-
-        return switch (item) {
-            case INVISIBILITY -> "Invisibility";
-            case GOLDEN_APPLE -> "Golden";
-            case ENCHANTED_GAPPLE -> "Enchanted";
-            case ELYTRA -> "Elytra";
-            case NETHERITE_INGOT -> "Netherite";
-            case SPAWNER -> "Spawner";
-            case DIAMOND -> "Diamond";
-            case BEACON -> "Beacon";
-            case SNIFFER_EGG -> "Sniffer";
-            case TRIAL_KEY -> "Trial";
-            case DRAGON_HEAD -> "Dragon";
-            case VILLAGER_SPAWN_EGG -> "Villager";
-            case DYNAMITE_BLACK, DYNAMITE_WHITE -> "Dynamite";
-            case SILVER -> "Silver";
-            case TRAPKA -> "Trapka";
-            case TOTEM -> "Totem";
-            case EMERALD_ORE -> "Emerald";
-            case MACE -> "Mace";
-            case LOCKPICK_SPHERES -> "Lockpick";
-            case BLOCK_DAMAGER -> "Damager";
-            case CHUNK_LOADER_1X1, CHUNK_LOADER_3X3, CHUNK_LOADER_5X5 -> "Loader";
-            case DRAGON_SKIN -> "Dragon";
-            case SPHERE_BEAST, SPHERE_SATYR, SPHERE_CHAOS, SPHERE_ARES, SPHERE_HYDRA, SPHERE_TITAN -> "Sphere";
-            case TALISMAN_DEMON, TALISMAN_DISCORD, TALISMAN_RAGE, TALISMAN_CRUSHER, TALISMAN_TYRANT -> "Talisman";
-            case POTION_ASSASSIN, POTION_PALADIN, POTION_SLEEPING, POTION_CLAPPER, POTION_WRATH, POTION_RADIATION -> "Potion";
-            case POTION_HOLY_WATER -> "Holy";
-            case CRUSHER_SWORD, CRUSHER_PICKAXE, CRUSHER_CROSSBOW, CRUSHER_TRIDENT, CRUSHER_MACE,
-                    CRUSHER_LEGGINGS, CRUSHER_CHESTPLATE, CRUSHER_HELMET, CRUSHER_BOOTS -> "Crusher";
-        };
-    }
-
-    private String displaySubtitle(AutoTradeItem item) {
-        if (LanguageManager.getInstance().isRussian()) {
-            return item.getSubtitle();
-        }
-
-        return switch (item) {
-            case INVISIBILITY -> "Potion";
-            case GOLDEN_APPLE, ENCHANTED_GAPPLE -> "Apple";
-            case ELYTRA -> "Wings";
-            case NETHERITE_INGOT -> "Ingot";
-            case SPAWNER -> "Mob";
-            case DIAMOND -> "Resource";
-            case BEACON -> "Block";
-            case SNIFFER_EGG, VILLAGER_SPAWN_EGG -> "Egg";
-            case TRIAL_KEY -> "Key";
-            case DRAGON_HEAD -> "Head";
-            case DYNAMITE_BLACK -> "Black";
-            case DYNAMITE_WHITE -> "White";
-            case SILVER -> "Currency";
-            case TRAPKA -> "Scrap";
-            case TOTEM -> "Undying";
-            case EMERALD_ORE -> "Ore";
-            case MACE -> "Base";
-            case LOCKPICK_SPHERES -> "Spheres";
-            case BLOCK_DAMAGER -> "Block";
-            case CHUNK_LOADER_1X1 -> "1x1";
-            case CHUNK_LOADER_3X3 -> "3x3";
-            case CHUNK_LOADER_5X5 -> "5x5";
-            case DRAGON_SKIN -> "Skin";
-            case SPHERE_BEAST -> "Beast";
-            case SPHERE_SATYR -> "Satyr";
-            case SPHERE_CHAOS -> "Chaos";
-            case SPHERE_ARES -> "Ares";
-            case SPHERE_HYDRA -> "Hydra";
-            case SPHERE_TITAN -> "Titan";
-            case TALISMAN_DEMON -> "Demon";
-            case TALISMAN_DISCORD -> "Discord";
-            case TALISMAN_RAGE -> "Rage";
-            case TALISMAN_CRUSHER -> "Crusher";
-            case TALISMAN_TYRANT -> "Tyrant";
-            case POTION_ASSASSIN -> "Assassin";
-            case POTION_HOLY_WATER -> "Water";
-            case POTION_PALADIN -> "Paladin";
-            case POTION_SLEEPING -> "Sleep";
-            case POTION_CLAPPER -> "Clapper";
-            case POTION_WRATH -> "Wrath";
-            case POTION_RADIATION -> "Radiation";
-            case CRUSHER_SWORD -> "Sword";
-            case CRUSHER_PICKAXE -> "Pickaxe";
-            case CRUSHER_CROSSBOW -> "Crossbow";
-            case CRUSHER_TRIDENT -> "Trident";
-            case CRUSHER_MACE -> "Mace";
-            case CRUSHER_LEGGINGS -> "Leggings";
-            case CRUSHER_CHESTPLATE -> "Chest";
-            case CRUSHER_HELMET -> "Helmet";
-            case CRUSHER_BOOTS -> "Boots";
-        };
     }
 
     private void drawGlassSurface(MatrixStack ms, float x, float y, float width, float height, float round,
@@ -573,13 +468,8 @@ public class AutoBuyConfigScreen extends Screen {
         RenderUtil.RECT.draw(ms, x, y, width, height, round, UIColors.stroke(strokeAlpha));
     }
 
-    private String localized(String russian, String english) {
-        return LanguageManager.getInstance().ui(russian, english);
-    }
-
     private static class InputField {
-        private final String russianLabel;
-        private final String englishLabel;
+        private final String label;
         private String text = "";
         private boolean focused;
         private float x;
@@ -587,9 +477,8 @@ public class AutoBuyConfigScreen extends Screen {
         private float width;
         private float height;
 
-        private InputField(String russianLabel, String englishLabel) {
-            this.russianLabel = russianLabel;
-            this.englishLabel = englishLabel;
+        private InputField(String label) {
+            this.label = label;
         }
 
         private void render(MatrixStack ms, float x, float y, float width, float height, int mouseX, int mouseY, int alpha) {
@@ -644,7 +533,7 @@ public class AutoBuyConfigScreen extends Screen {
         }
 
         private String displayLabel() {
-            return LanguageManager.getInstance().ui(russianLabel, englishLabel);
+            return label;
         }
 
         private float scaled(float value) {

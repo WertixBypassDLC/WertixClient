@@ -41,8 +41,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @ModuleRegister(name = "Funtime Helper", category = Category.PLAYER)
-public class AssistantModule extends Module {
-    @Getter private static final AssistantModule instance = new AssistantModule();
+public class FuntimeHelperModule extends Module {
+    @Getter private static final FuntimeHelperModule instance = new FuntimeHelperModule();
 
     private final BooleanSetting timer = new BooleanSetting("Таймер").value(true);
     private final Map<InventoryUtil.ItemUsage, BindSetting> keyBindings = new HashMap<>();
@@ -50,7 +50,7 @@ public class AssistantModule extends Module {
     private final List<Pair<Long, Vec3d>> consumables = new ArrayList<>();
     private final Map<Vec3d, String> consumableNames = new HashMap<>();
 
-    public AssistantModule() {
+    public FuntimeHelperModule() {
         keyBindings.put(new InventoryUtil.ItemUsage(Items.PHANTOM_MEMBRANE, this), new BindSetting("Божья аура").value(-999));
         keyBindings.put(new InventoryUtil.ItemUsage(Items.ENDER_EYE, this), new BindSetting("Дезорентация").value(-999));
         keyBindings.put(new InventoryUtil.ItemUsage(Items.SUGAR, this), new BindSetting("Явная пыль").value(-999));
@@ -160,7 +160,8 @@ public class AssistantModule extends Module {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) return;
         if (client.currentScreen != null && !InventoryMoveModule.getInstance().isEnabled()) return;
-        keyBindings.forEach((usage, bind) -> usage.handleUse(bind.getValue(), false));
+        // Вызываем с true, чтобы задействовать тиковый обход античита
+        keyBindings.forEach((usage, bind) -> usage.handleUse(bind.getValue(), true));
     }
 
     private double getDistance(BlockPos pos1, BlockPos pos2) {

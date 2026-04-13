@@ -27,13 +27,13 @@ public class AmbienceModule extends Module {
 
     @AllArgsConstructor
     private enum WorldTime implements ModeSetting.NamedChoice {
-        NO_CHANGE("No change"),
-        DAWN("Dawn"),
-        DAY("Day"),
-        NOON("Noon"),
-        DUSK("Dusk"),
-        NIGHT("Night"),
-        MID_NIGHT("Mid Night");
+        NO_CHANGE("Без изменений"),
+        DAWN("Рассвет"),
+        DAY("День"),
+        NOON("Полдень"),
+        DUSK("Закат"),
+        NIGHT("Ночь"),
+        MID_NIGHT("Полночь");
 
         private final String name;
 
@@ -45,11 +45,11 @@ public class AmbienceModule extends Module {
 
     @AllArgsConstructor
     public enum Weather implements ModeSetting.NamedChoice {
-        NO_CHANGE("No change"),
-        SUNNY("Sunny"),
-        RAINY("Rainy"),
-        SNOWY("Snowy"),
-        THUNDER("Thunder");
+        NO_CHANGE("Без изменений"),
+        SUNNY("Ясно"),
+        RAINY("Дождь"),
+        SNOWY("Снег"),
+        THUNDER("Гроза");
 
         private final String name;
 
@@ -59,14 +59,14 @@ public class AmbienceModule extends Module {
         }
     }
 
-    private final ModeSetting time = new ModeSetting("Time").value(WorldTime.DAY).values(WorldTime.values());
-    public final ModeSetting weather = new ModeSetting("Weather").value(Weather.SUNNY).values(Weather.values());
+    private final ModeSetting time = new ModeSetting("Время").value(WorldTime.DAY).values(WorldTime.values());
+    public final ModeSetting weather = new ModeSetting("Погода").value(Weather.SUNNY).values(Weather.values());
 
-    private final BooleanSetting customFog = new BooleanSetting("Custom fog").value(false);
-    private final BooleanSetting syncFogWithTheme = new BooleanSetting("Sync with client").value(true).setVisible(customFog::getValue);
-    private final ColorSetting fogColor = new ColorSetting("Fog color").value(new Color(200, 200, 200)).setVisible(() -> customFog.getValue() && !syncFogWithTheme.getValue());
-    private final SliderSetting fogDistance = new SliderSetting("Fog distance").value(-8f).range(-8f, 25f).step(1f).setVisible(customFog::getValue);
-    private final SliderSetting fogDensity = new SliderSetting("Fog density").value(100f).range(0f, 100f).step(1f).setVisible(customFog::getValue);
+    private final BooleanSetting customFog = new BooleanSetting("Свой туман").value(false);
+    private final BooleanSetting syncFogWithTheme = new BooleanSetting("Синхронизация с клиентом").value(true).setVisible(customFog::getValue);
+    private final ColorSetting fogColor = new ColorSetting("Цвет тумана").value(new Color(200, 200, 200)).setVisible(() -> customFog.getValue() && !syncFogWithTheme.getValue());
+    private final SliderSetting fogDistance = new SliderSetting("Дальность тумана").value(-8f).range(-8f, 25f).step(1f).setVisible(customFog::getValue);
+    private final SliderSetting fogDensity = new SliderSetting("Плотность тумана").value(100f).range(0f, 100f).step(1f).setVisible(customFog::getValue);
 
 
     public AmbienceModule() {

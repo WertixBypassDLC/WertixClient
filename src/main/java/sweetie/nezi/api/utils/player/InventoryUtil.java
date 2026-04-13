@@ -213,23 +213,22 @@ public class InventoryUtil implements QuickImports {
     public static class ItemUsage {
         private final Item item;
         private final Module provider;
-        
+
         private boolean forceUse = false;
         @Setter private boolean useRotation = true;
         private Rotation customRotation = new Rotation(Float.MIN_VALUE, Float.MIN_VALUE);
 
         private int targetSlot = -1;
         private int previousSlot = -1;
+        private int originalInvSlot = -1;
         private int stateDelay = 0;
 
-        private Runnable pendingAction = null;
         private UsageState usageState = UsageState.IDLE;
 
         private boolean canUseWithCurrentScreen() {
             if (mc.currentScreen instanceof ChatScreen || mc.currentScreen instanceof ScreenClickGUI) {
                 return false;
             }
-
             return mc.currentScreen == null || InventoryMoveModule.getInstance().isEnabled();
         }
 
@@ -252,50 +251,36 @@ public class InventoryUtil implements QuickImports {
         }
 
         public void handleUse(boolean isLegit) {
-            if (pendingAction != null && canUseWithCurrentScreen()) {
-                pendingAction.run();
-            }
-
-            if (mc.player.getItemCooldownManager().isCoolingDown(item.getDefaultStack())) return;
+            if (!canUseWithCurrentScreen() || mc.player.getItemCooldownManager().isCoolingDown(item.getDefaultStack())) return;
 
             if (isLegit) {
-                pendingAction = () -> executeLegitMode(-1);
+                executeLegitMode(-1);
             } else {
                 executePacketMode();
             }
-
             forceUse = false;
         }
 
 
         public void handleUse(int bind, boolean isLegit) {
-            if (!isLegit) {
-                pendingAction = null;
-            }
-
-            if (pendingAction != null && canUseWithCurrentScreen()) {
-                pendingAction.run();
-            }
-
             boolean pressed = bind != -999 && bind != -1 && KeyStorage.isPressed(bind);
-            if (pendingAction == null && !pressed) {
+
+            // Если кнопка не нажата и стейт-машина закончила работу
+            if (!pressed && usageState == UsageState.IDLE) {
                 forceUse = false;
                 return;
             }
 
-            if (forceUse || !canUseWithCurrentScreen() || mc.player.getItemCooldownManager().isCoolingDown(item.getDefaultStack())) return;
+            if (!canUseWithCurrentScreen() || mc.player.getItemCooldownManager().isCoolingDown(item.getDefaultStack())) return;
 
             if (isLegit) {
-                pendingAction = () -> executeLegitMode(bind);
+                executeLegitMode(bind);
             } else {
                 executePacketMode();
             }
         }
 
         public void executePacketMode() {
-            int invSlot = InventoryUtil.findItem(item, false);
-            int hbSlot = InventoryUtil.findItem(item, true);
-
             if (mc.player.getOffHandStack().isOf(item)) {
                 applyRotation();
                 InventoryUtil.useItem(Hand.OFF_HAND);
@@ -310,20 +295,24 @@ public class InventoryUtil implements QuickImports {
                 return;
             }
 
+            int hbSlot = InventoryUtil.findItem(item, true);
+            int invSlot = InventoryUtil.findItem(item, false);
             int oldSlot = mc.player.getInventory().selectedSlot;
-            int bestSlot = InventoryUtil.findBestSlotInHotBar();
 
             if (hbSlot != -1) {
-                applyRotation();
                 InventoryUtil.swapToSlot(hbSlot);
+                applyRotation();
                 InventoryUtil.useItem(Hand.MAIN_HAND);
                 InventoryUtil.swapToSlot(oldSlot);
                 forceUse = true;
             } else if (invSlot != -1) {
+                int bestSlot = InventoryUtil.findBestSlotInHotBar();
+                if (bestSlot == -1) return;
+
                 Runnable runnable = () -> {
-                    applyRotation();
                     InventoryUtil.swapSlots(invSlot, bestSlot);
                     InventoryUtil.swapToSlot(bestSlot);
+                    applyRotation();
                     InventoryUtil.useItem(Hand.MAIN_HAND);
                     InventoryUtil.swapToSlot(oldSlot);
                     InventoryUtil.swapSlots(invSlot, bestSlot);
@@ -343,41 +332,42 @@ public class InventoryUtil implements QuickImports {
                 case IDLE:
                     if (bind != -1 && bind != -999 && !KeyStorage.isPressed(bind)) return;
 
-                    targetSlot = InventoryUtil.findItem(item, true);
-                    previousSlot = mc.player.getInventory().selectedSlot;
+                    if (mc.player.getOffHandStack().isOf(item)) {
+                        applyRotation();
+                        InventoryUtil.useItem(Hand.OFF_HAND);
+                        forceUse = true;
+                        return;
+                    }
+                    if (mc.player.getMainHandStack().isOf(item)) {
+                        applyRotation();
+                        InventoryUtil.useItem(Hand.MAIN_HAND);
+                        forceUse = true;
+                        return;
+                    }
 
-                    if (targetSlot == -1) {
-                        targetSlot = InventoryUtil.findItem(item, false);
-                        if (targetSlot == -1) return;
-                        usageState = UsageState.SWAP_ITEM;
-                        stateDelay = 1;
-                    } else {
-                        mc.player.getInventory().selectedSlot = targetSlot;
+                    int hbSlot = InventoryUtil.findItem(item, true);
+                    int invSlot = InventoryUtil.findItem(item, false);
+
+                    if (hbSlot != -1) {
+                        targetSlot = hbSlot;
+                        previousSlot = mc.player.getInventory().selectedSlot;
+                        originalInvSlot = -1;
+
+                        InventoryUtil.swapToSlot(targetSlot);
                         usageState = UsageState.USE_ITEM;
                         stateDelay = 1;
-                    }
-                    break;
+                    } else if (invSlot != -1) {
+                        originalInvSlot = invSlot;
+                        previousSlot = mc.player.getInventory().selectedSlot;
+                        targetSlot = InventoryUtil.findBestSlotInHotBar();
 
-                case SWAP_ITEM:
-                    if (stateDelay-- > 0) return;
+                        if (targetSlot == -1) return;
 
-                    int hotbarSlot = InventoryUtil.findBestSlotInHotBar();
-                    if (hotbarSlot != -1) {
-                        Runnable toUseItem = () -> {
-                            InventoryUtil.swapSlots(targetSlot, hotbarSlot);
-                            targetSlot = hotbarSlot;
-                            mc.player.getInventory().selectedSlot = targetSlot;
-                            InventoryUtil.swapToSlot(targetSlot);
-                            usageState = UsageState.USE_ITEM;
-                            stateDelay = 1;
-                        };
-                        if (SlownessManager.isEnabled()) {
-                            SlownessManager.applySlowness(10, toUseItem);
-                        } else {
-                            toUseItem.run();
-                        }
-                    } else {
-                        usageState = UsageState.IDLE;
+                        InventoryUtil.swapSlots(originalInvSlot, targetSlot);
+                        InventoryUtil.swapToSlot(targetSlot);
+
+                        usageState = UsageState.USE_ITEM;
+                        stateDelay = 1;
                     }
                     break;
 
@@ -386,6 +376,7 @@ public class InventoryUtil implements QuickImports {
 
                     applyRotation();
                     InventoryUtil.useItem(Hand.MAIN_HAND);
+
                     usageState = UsageState.RESTORE_SLOT;
                     stateDelay = 1;
                     break;
@@ -393,9 +384,13 @@ public class InventoryUtil implements QuickImports {
                 case RESTORE_SLOT:
                     if (stateDelay-- > 0) return;
 
-                    mc.player.getInventory().selectedSlot = previousSlot;
+                    InventoryUtil.swapToSlot(previousSlot);
+
+                    if (originalInvSlot != -1) {
+                        InventoryUtil.swapSlots(originalInvSlot, targetSlot);
+                    }
+
                     usageState = UsageState.IDLE;
-                    pendingAction = null;
                     forceUse = true;
                     break;
             }
@@ -403,7 +398,6 @@ public class InventoryUtil implements QuickImports {
 
         public enum UsageState {
             IDLE,
-            SWAP_ITEM,
             USE_ITEM,
             RESTORE_SLOT
         }

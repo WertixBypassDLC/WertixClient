@@ -10,29 +10,17 @@ import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
 import sweetie.nezi.api.utils.math.TimerUtil;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 @ModuleRegister(name = "WTap", category = Category.COMBAT)
 public class WTapModule extends Module {
     @Getter private static final WTapModule instance = new WTapModule();
 
-    /**
-     * Фаза крит-цикла:
-     * IDLE        — ничего не происходит
-     * JUMP        — только что инициировали прыжок
-     * WAIT_FALL   — ждём, когда игрок оторвался от земли и начал падать
-     * READY       — игрок падает, крит гарантирован → вызываем attackCallback
-     */
-    private enum CritPhase { IDLE, JUMP, WAIT_FALL, READY }
+    private enum Phase { IDLE, SUPPRESSING }
 
-    private volatile CritPhase critPhase = CritPhase.IDLE;
-    private volatile Runnable attackCallback;
+    private volatile Phase phase = Phase.IDLE;
     private final TimerUtil phaseTimer = new TimerUtil();
 
-    // Сколько тиков (мс) ждём перед проверкой падения после прыжка
-    private static final long JUMP_GRACE_MS = 80L;
-    // Максимальное время ожидания крита (защита от зависания)
-    private static final long CRIT_TIMEOUT_MS = 600L;
+    // Сколько миллисекунд удерживать отжатым спринт для создания Knockback-эффекта
+    private static final long SUPPRESS_MS = 100L;
 
     public WTapModule() {
         setEnabled(true);
@@ -40,61 +28,42 @@ public class WTapModule extends Module {
 
     @Override
     public void onDisable() {
-        cancelCrit();
+        cancel();
     }
 
-    /** Активен ли цикл WTap прямо сейчас */
+    /** Активен ли цикл подавления спринта прямо сейчас */
     public boolean isSuppressing() {
-        return critPhase != CritPhase.IDLE;
+        return phase == Phase.SUPPRESSING;
     }
 
     /**
      * Вызывается из TriggerBot / Aura перед атакой.
-     * Вместо немедленной атаки — запускает цикл WTap:
-     *   1. Сбрасываем спринт (только через setPressed/setSprinting, без пакетов)
-     *   2. Прыгаем
-     *   3. Ждём падения
-     *   4. Вызываем attackCallback (сама атака)
-     *
-     * @param onCritReady — колбэк, который будет вызван в момент гарантированного крита
-     * @return true  — WTap принял запрос (атаку нужно отложить)
-     *         false — WTap не может принять (выключен / уже в процессе / не спринтует)
+     * Запускает классический WTap (сброс спринта на короткое время)
+     * и сразу вызывает саму атаку.
      */
-    public boolean requestCritAttack(Runnable onCritReady) {
+    public boolean requestCritAttack(Runnable onAttack) {
         if (!isEnabled() || mc.player == null) return false;
-        // Если уже в процессе — не перебиваем
-        if (critPhase != CritPhase.IDLE) return true;
-        // Если игрок уже в воздухе и падает — крит и так будет, сразу атакуем
-        if (!mc.player.isOnGround() && mc.player.fallDistance > 0.0f) {
-            onCritReady.run();
-            return true;
-        }
 
-        attackCallback = onCritReady;
-        critPhase = CritPhase.JUMP;
+        phase = Phase.SUPPRESSING;
         phaseTimer.reset();
 
-        // Сразу глушим спринт (без пакетов)
+        // Глушим спринт перед ударом
         suppressSprint();
-        // Инициируем прыжок через jump() — это легитный способ
-        mc.player.jump();
+
+        // Сразу вызываем атаку, прыжок больше не инициируется
+        onAttack.run();
 
         return true;
     }
 
     /**
-     * Старый метод для обратной совместимости с Aura/TriggerBot,
-     * которые не используют колбэк (они сами атакуют потом).
-     * Просто глушим спринт + прыгаем. Атака должна будет
-     * дождаться isSuppressing() == false.
+     * Вызывается из старых систем для ручного сброса спринта.
      */
     public void requestReset() {
         if (!isEnabled() || mc.player == null) return;
-        if (critPhase != CritPhase.IDLE) return;
-        critPhase = CritPhase.JUMP;
+        phase = Phase.SUPPRESSING;
         phaseTimer.reset();
         suppressSprint();
-        mc.player.jump();
     }
 
     @Override
@@ -102,45 +71,12 @@ public class WTapModule extends Module {
         EventListener update = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
             if (mc.player == null) return;
 
-            switch (critPhase) {
-                case IDLE -> { /* ничего */ }
+            if (phase == Phase.SUPPRESSING) {
+                // Продолжаем глушить спринт заданное время
+                suppressSprint();
 
-                case JUMP -> {
-                    // Продолжаем глушить спринт пока не взлетели
-                    suppressSprint();
-                    // Подождём grace-период чтобы игрок точно оторвался от земли
-                    if (phaseTimer.finished(JUMP_GRACE_MS)) {
-                        critPhase = CritPhase.WAIT_FALL;
-                    }
-                    // Таймаут защиты
-                    if (phaseTimer.finished(CRIT_TIMEOUT_MS)) cancelCrit();
-                }
-
-                case WAIT_FALL -> {
-                    // Продолжаем глушить спринт
-                    suppressSprint();
-                    // Ждём момента, когда игрок в воздухе и начинает падать (fallDistance растёт)
-                    boolean inAir    = !mc.player.isOnGround();
-                    boolean falling  = mc.player.fallDistance > 0.01f;
-                    boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
-                    boolean climbing = mc.player.isClimbing();
-
-                    if (inAir && falling && !inLiquid && !climbing) {
-                        critPhase = CritPhase.READY;
-                    }
-                    // Таймаут защиты
-                    if (phaseTimer.finished(CRIT_TIMEOUT_MS)) cancelCrit();
-                }
-
-                case READY -> {
-                    // Крит гарантирован! Вызываем атаку
-                    if (attackCallback != null) {
-                        attackCallback.run();
-                        attackCallback = null;
-                    }
-                    critPhase = CritPhase.IDLE;
-                    // Восстанавливаем клавишу движения
-                    restoreKey();
+                if (phaseTimer.finished(SUPPRESS_MS)) {
+                    cancel();
                 }
             }
         }));
@@ -153,9 +89,8 @@ public class WTapModule extends Module {
         mc.player.setSprinting(false);
     }
 
-    private void cancelCrit() {
-        critPhase = CritPhase.IDLE;
-        attackCallback = null;
+    private void cancel() {
+        phase = Phase.IDLE;
         restoreKey();
     }
 

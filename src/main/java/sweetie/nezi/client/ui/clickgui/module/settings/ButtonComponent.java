@@ -4,7 +4,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import org.joml.Vector4f;
 import sweetie.nezi.api.module.setting.RunSetting;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.color.ColorUtil;
@@ -14,7 +13,7 @@ import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.ui.clickgui.module.SettingComponent;
 
-import java.awt.*;
+import java.awt.Color;
 import java.time.Duration;
 
 public class ButtonComponent extends SettingComponent {
@@ -47,7 +46,7 @@ public class ButtonComponent extends SettingComponent {
         RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), round, UIColors.stroke(Math.min(fullAlpha, 116)));
         Fonts.PS_MEDIUM.drawWrap(
                 matrixStack,
-                LanguageManager.getInstance().getClickGuiText(setting.getName()),
+                setting.getName(),
                 getX() + scaled(4f),
                 getY() + getHeight() / 2f - fontSize / 2f,
                 getWidth() - scaled(8f),

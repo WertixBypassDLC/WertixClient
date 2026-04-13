@@ -37,13 +37,11 @@ import sweetie.nezi.api.utils.auction.PriceParser;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.api.utils.color.UIColors;
-import sweetie.nezi.api.system.language.LanguageManager;
-import sweetie.nezi.client.features.modules.other.AutoBuyModule;
 import sweetie.nezi.client.features.modules.other.autobuy.AutoTradeHistoryRecord;
 import sweetie.nezi.client.services.RenderService;
 import sweetie.nezi.client.ui.auction.AuctionSettingsPanel;
 
-import java.awt.*;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -409,7 +407,7 @@ public class AuctionHelperModule extends Module {
 
         var records = autoBuy.getHistoryManager().getRecords();
         if (records.isEmpty()) {
-            return; // No history to show
+            return;
         }
 
         float scaleMultiplier = RenderService.getInstance().getScale();
@@ -417,7 +415,7 @@ public class AuctionHelperModule extends Module {
         float scaledContainerY = containerY / scaleMultiplier;
 
         float w = 180f;
-        float x = scaledContainerX - w - 8f; // To the left of the container, aligned
+        float x = scaledContainerX - w - 8f;
         float y = scaledContainerY;
 
         float padding = 8f;
@@ -441,18 +439,17 @@ public class AuctionHelperModule extends Module {
                     : UIColors.secondary(210);
 
             RenderUtil.RECT.draw(context.getMatrices(), x + 8f, rowY + 3f, 4f, 4f, 1.5f, accent);
-            
-            // Draw item safely using default matrix stack before pushing extra scales
+
             context.drawItem(record.getDisplayStack(), Math.round(x + 16f), Math.round(rowY - 2f));
 
             String status = record.getResult() == AutoTradeHistoryRecord.Result.SUCCESS
                     ? "куплено"
                     : "не успел";
-            
+
             String line = abbreviateHistory(record.getItemName(), 18)
                     + " x" + record.getCount();
             Fonts.PS_MEDIUM.drawText(context.getMatrices(), line, x + 34f, rowY - 1f, 4.8f, UIColors.textColor(255));
-            
+
             String subLine = formatCompactPrice(record.getTotalPrice())
                     + " • " + status
                     + " • " + formatHistoryAge(record.getTimestamp());
@@ -740,7 +737,7 @@ public class AuctionHelperModule extends Module {
         }
 
         for (Text text : tooltip) {
-        String clean = text.getString().replaceAll("§[0-9a-fk-or]", "").trim();
+            String clean = text.getString().replaceAll("§[0-9a-fk-or]", "").trim();
             if (clean.isEmpty()) {
                 continue;
             }

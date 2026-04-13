@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import sweetie.nezi.api.system.backend.Configurable;
 import sweetie.nezi.api.system.interfaces.QuickImports;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.client.features.modules.other.ToggleSoundsModule;
 import sweetie.nezi.client.features.modules.render.ClickGUIModule;
 import sweetie.nezi.client.ui.widget.WidgetManager;
@@ -36,11 +35,11 @@ public abstract class Module extends Configurable implements QuickImports {
     }
 
     public String getLocalizedName() {
-        return LanguageManager.getInstance().getLocalizedModuleName(name);
+        return name;
     }
 
     public String getDescription() {
-        return LanguageManager.getInstance().getModuleDescription(name);
+        return "";
     }
 
     public void toggle() {
@@ -96,10 +95,7 @@ public abstract class Module extends Configurable implements QuickImports {
                     .orElse(null);
 
             if (widget != null && widget.moduleState) {
-                String stateText = LanguageManager.getInstance().ui(
-                        newState ? " §aвключен" : " §cвыключен",
-                        newState ? " §aenabled" : " §cdisabled"
-                );
+                String stateText = newState ? " §aвключен" : " §cвыключен";
                 widget.addNotif(getLocalizedName() + stateText);
             }
         }

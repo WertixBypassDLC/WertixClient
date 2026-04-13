@@ -3,7 +3,6 @@ package sweetie.nezi.client.ui.clickgui.module.settings;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.math.MatrixStack;
 import sweetie.nezi.api.module.setting.ModeSetting;
-import sweetie.nezi.api.system.language.LanguageManager;
 import sweetie.nezi.api.utils.color.UIColors;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
@@ -14,7 +13,7 @@ import sweetie.nezi.api.utils.render.ScissorUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.ui.clickgui.module.ExpandableComponent;
 
-import java.awt.*;
+import java.awt.Color;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,7 +48,7 @@ public class ModeComponent extends ExpandableComponent.ExpandableSettingComponen
         float anim = getValue();
 
         String valueText = setting.getValue();
-        String name = LanguageManager.getInstance().getClickGuiText(setting.getName());
+        String name = setting.getName();
         float valueWidth = Fonts.PS_MEDIUM.getWidth(valueText, fontSize);
         float nameWidth = Fonts.PS_BOLD.getWidth(name, fontSize);
 
