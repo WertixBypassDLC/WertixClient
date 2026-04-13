@@ -72,9 +72,9 @@ public class WTapModule extends Module {
     }
 
     private void restoreKeys() {
-        if (mc.player == null || mc.window == null) return;
+        if (mc.player == null || mc.getWindow() == null) return;
 
-        long handle = mc.window.getHandle();
+        long handle = mc.getWindow().getHandle();
         int forwardKey = mc.options.forwardKey.getDefaultKey().getCode();
 
         if (forwardKey > 0 && InputUtil.isKeyPressed(handle, forwardKey)) {

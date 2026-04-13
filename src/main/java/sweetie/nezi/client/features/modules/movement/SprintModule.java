@@ -47,7 +47,8 @@ public class SprintModule extends Module {
         }
 
         AuraModule auraModule = AuraModule.getInstance();
-        boolean auraCheck = mode.is("Legit") && auraModule.getTarget() != null && auraModule.isEnabled();
+
+        boolean auraCheck = mode.is("Legit") && auraModule.target != null && auraModule.isEnabled();
 
         return (mc.player.input.movementForward > 0 || auraCheck) && isActuallyMovingForward();
     }
