@@ -44,22 +44,24 @@ public class PointersModule extends Module {
     @Getter private static final PointersModule instance = new PointersModule();
 
     protected final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
-            new BooleanSetting("Players").value(true),
-            new BooleanSetting("Animals").value(false),
-            new BooleanSetting("Mobs").value(false),
+            new BooleanSetting("Игроки").value(true),
+            new BooleanSetting("Голые").value(true),
+            new BooleanSetting("Животные").value(false),
+            new BooleanSetting("Мобы").value(false),
+            new BooleanSetting("Жители").value(false),
             new BooleanSetting("Items").value(false)
     );
 
-    private final ModeSetting playerModeC = new ModeSetting("Players mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Players"));
-    private final ModeSetting animalsModeC = new ModeSetting("Animals mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Animals"));
-    private final ModeSetting mobModeC = new ModeSetting("Mobs mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Mobs"));
-    private final ModeSetting friendModeC = new ModeSetting("Friends mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Players"));
+    private final ModeSetting playerModeC = new ModeSetting("Players mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Игроки") || targets.isEnabled("Голые"));
+    private final ModeSetting animalsModeC = new ModeSetting("Animals mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Животные"));
+    private final ModeSetting mobModeC = new ModeSetting("Mobs mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Мобы"));
+    private final ModeSetting friendModeC = new ModeSetting("Friends mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Игроки") || targets.isEnabled("Голые"));
     private final ModeSetting itemModeC = new ModeSetting("Items mode").value("Client").values("Client", "Custom").setVisible(() -> targets.isEnabled("Items"));
 
-    private final ColorSetting playerColor = new ColorSetting("Player color").value(new Color(-1)).setVisible(() -> playerModeC.is("Custom") && targets.isEnabled("Players"));
-    private final ColorSetting animalsColor = new ColorSetting("Animals color").value(new Color(-1)).setVisible(() -> animalsModeC.is("Custom") && targets.isEnabled("Animals"));
-    private final ColorSetting mobColor = new ColorSetting("Mobs color").value(new Color(-1)).setVisible(() -> mobModeC.is("Custom") && targets.isEnabled("Mobs"));
-    private final ColorSetting friendColor = new ColorSetting("Friends color").value(new Color(94, 255, 69)).setVisible(() -> friendModeC.is("Custom") && targets.isEnabled("Players"));
+    private final ColorSetting playerColor = new ColorSetting("Player color").value(new Color(-1)).setVisible(() -> playerModeC.is("Custom") && (targets.isEnabled("Игроки") || targets.isEnabled("Голые")));
+    private final ColorSetting animalsColor = new ColorSetting("Animals color").value(new Color(-1)).setVisible(() -> animalsModeC.is("Custom") && targets.isEnabled("Животные"));
+    private final ColorSetting mobColor = new ColorSetting("Mobs color").value(new Color(-1)).setVisible(() -> mobModeC.is("Custom") && targets.isEnabled("Мобы"));
+    private final ColorSetting friendColor = new ColorSetting("Friends color").value(new Color(94, 255, 69)).setVisible(() -> friendModeC.is("Custom") && (targets.isEnabled("Игроки") || targets.isEnabled("Голые")));
     private final ColorSetting itemColor = new ColorSetting("Items color").value(new Color(255, 72, 69)).setVisible(() -> itemModeC.is("Custom") && targets.isEnabled("Items"));
 
     private final SliderSetting pointerSize = new SliderSetting("Size").value(1f).range(0.5f, 2.5f).step(0.1f);
@@ -106,9 +108,9 @@ public class PointersModule extends Module {
 
             radiusAnimation.run(getContainerSize(), 300, Easing.EXPO_OUT);
 
-            boolean playersOnly = targets.isEnabled("Players")
-                    && !targets.isEnabled("Animals")
-                    && !targets.isEnabled("Mobs")
+            boolean playersOnly = (targets.isEnabled("Игроки") || targets.isEnabled("Голые"))
+                    && !targets.isEnabled("Животные")
+                    && !targets.isEnabled("Мобы")
                     && !targets.isEnabled("Items");
 
             if (playersOnly) {
@@ -248,7 +250,7 @@ public class PointersModule extends Module {
     }
 
     private boolean shouldRenderEntity(LivingEntity entity) {
-        if (entity instanceof PlayerEntity player && targets.isEnabled("Players")) {
+        if (entity instanceof PlayerEntity player && (targets.isEnabled("Игроки") || targets.isEnabled("Голые"))) {
             return player != mc.player && player.isAlive();
         }
 

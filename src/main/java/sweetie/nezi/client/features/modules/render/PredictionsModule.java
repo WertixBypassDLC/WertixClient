@@ -223,7 +223,7 @@ public class PredictionsModule extends Module {
         }
 
         // Cache trajectory for ghost trail rendering
-        ghostTrails.put(entity.getId(), new GhostTrail(trailPoints, System.currentTimeMillis(), isFriend, itemName, ownerName));
+        ghostTrails.put(entity.getId(), new GhostTrail(trailPoints, System.currentTimeMillis(), ticks, isFriend, itemName, ownerName, isPotion));
     }
 
     private void renderPotionImpactCircle(MatrixStack matrixStack, Vec3d pos, Color color, int age, int ticks) {
@@ -324,15 +324,21 @@ public class PredictionsModule extends Module {
             RenderSystem.disableBlend();
             matrixStack.pop();
 
-            // Also render the label for the ghost trail endpoint
+            // Also render the label for the ghost trail endpoint and potion circle
             if (!pts.isEmpty()) {
                 Vec3d lastPoint = pts.getLast();
-                points.add(new PredictionPoint(lastPoint, pts.size(), trail.isFriend, trail.itemName, trail.ownerName));
+                int ticksPassed = (int) ((now - trail.createdAt) / 50L);
+                int remainingTicks = Math.max(0, trail.predictedTicks - ticksPassed);
+                
+                if (trail.isPotion && potionCircle.getValue()) {
+                    renderPotionImpactCircle(matrixStack, lastPoint, color, (int) (age * 100), remainingTicks);
+                }
+                points.add(new PredictionPoint(lastPoint, remainingTicks, trail.isFriend, trail.itemName, trail.ownerName));
             }
         }
     }
 
-    private record GhostTrail(List<Vec3d> points, long createdAt, boolean isFriend, String itemName, String ownerName) {}
+    private record GhostTrail(List<Vec3d> points, long createdAt, int predictedTicks, boolean isFriend, String itemName, String ownerName, boolean isPotion) {}
 
 }
 

@@ -130,14 +130,24 @@ public class TargetManager implements QuickImports {
                 }
                 if (FriendManager.getInstance().contains(player.getName().getString()) && !needFriends) {
                     return false;
-                } else {
-                    return targetSettings.contains("Players");
                 }
+                
+                boolean isNaked = true;
+                for (net.minecraft.item.ItemStack armor : player.getArmorItems()) {
+                    if (!armor.isEmpty()) { isNaked = false; break; }
+                }
+                if (isNaked) {
+                    return targetSettings.contains("Игрок голый") || targetSettings.contains("Голые") || targetSettings.contains("Naked");
+                } else {
+                    return targetSettings.contains("Игрок") || targetSettings.contains("Игроки") || targetSettings.contains("Players");
+                }
+            } else if (entity instanceof net.minecraft.entity.passive.VillagerEntity) {
+                return targetSettings.contains("Жители") || targetSettings.contains("Villagers");
             } else if (entity instanceof AnimalEntity) {
-                return targetSettings.contains("Animals");
+                return targetSettings.contains("Животные") || targetSettings.contains("Animals");
             } else if (entity instanceof MobEntity) {
-                return targetSettings.contains("Mobs");
-            } else return !(entity instanceof ArmorStandEntity);
+                return targetSettings.contains("Мобы") || targetSettings.contains("Mobs");
+            } else return false;
         }
     }
 }

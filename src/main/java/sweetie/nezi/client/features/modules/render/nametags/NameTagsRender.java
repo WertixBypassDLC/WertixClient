@@ -142,17 +142,26 @@ public class NameTagsRender implements QuickImports {
         float itemRowHeight = showItems
                 ? nameTagsItems.renderCompactItems(context, snapshot.topItems, centerX, baseY - (1.8f * scale), scale)
                 : 0f;
-        float cardWidth = snapshot.nameWidth + padding * 2f;
+        float hp = getScoreboardHealth(player);
+        String hpText = " [" + (int) Math.ceil(hp) + "]";
+        float hpWidth = Fonts.PS_BOLD.getWidth(hpText, nameSize);
+        
+        float textWidth = snapshot.nameWidth + hpWidth;
+        float cardWidth = textWidth + padding * 2f;
         float cardHeight = padding * 2f + nameSize;
 
         float cardX = centerX - cardWidth / 2f;
         float cardY = baseY + (itemRowHeight > 0f ? 1.2f * scale : 0f);
 
-        drawDarkCard(matrices, cardX, cardY, cardWidth, cardHeight, round, 212, 12);
+        drawDarkCard(matrices, cardX, cardY, cardWidth, cardHeight, 0f, 140, 0);
 
         float textY = cardY + padding;
+        float textX = centerX - textWidth / 2f;
         Color nameColor = snapshot.friend ? module.friendColor.getValue() : module.textColor.getValue();
-        Fonts.PS_BOLD.drawText(matrices, snapshot.displayName, centerX - snapshot.nameWidth / 2f, textY, nameSize, nameColor);
+        Fonts.PS_BOLD.drawText(matrices, snapshot.displayName, textX, textY, nameSize, nameColor);
+        
+        Color hpColor = getHealthColor(hp, player.getMaxHealth() + player.getAbsorptionAmount());
+        Fonts.PS_BOLD.drawText(matrices, hpText, textX + snapshot.nameWidth, textY, nameSize, hpColor);
 
         if (!snapshot.potionLines.isEmpty()) {
             float sideX = cardX + cardWidth + sideGap;
@@ -187,20 +196,36 @@ public class NameTagsRender implements QuickImports {
         float scale = module.scale.getValue();
         float nameSize = 7f * scale;
         float padding = 3f * scale;
-        float round = Math.max(2f, 3f * scale);
         float nameWidth = Fonts.PS_BOLD.getWidth(displayName, nameSize);
         float cardWidth = nameWidth + padding * 2f;
         float cardHeight = nameSize + padding * 2f;
         float cardX = centerX - cardWidth / 2f;
 
-        drawDarkCard(matrices, cardX, baseY, cardWidth, cardHeight, round, 212, 12);
+        drawDarkCard(matrices, cardX, baseY, cardWidth, cardHeight, 0f, 140, 0);
         Fonts.PS_BOLD.drawText(matrices, displayName, centerX - nameWidth / 2f, baseY + padding, nameSize, textColor);
     }
 
+    private Color getHealthColor(float health, float maxHealth) {
+        float p = net.minecraft.util.math.MathHelper.clamp(health / Math.max(1f, maxHealth), 0f, 1f);
+        int r, g, b;
+        if (p > 0.5f) {
+            float t = (p - 0.5f) * 2f;
+            r = (int) net.minecraft.util.math.MathHelper.lerp(t, 255, 72);
+            g = (int) net.minecraft.util.math.MathHelper.lerp(t, 235, 220);
+            b = (int) net.minecraft.util.math.MathHelper.lerp(t, 59, 86);
+        } else {
+            float t = p * 2f;
+            r = 255;
+            g = (int) net.minecraft.util.math.MathHelper.lerp(t, 62, 235);
+            b = (int) net.minecraft.util.math.MathHelper.lerp(t, 62, 59);
+        }
+        return new Color(r, g, b, 255);
+    }
+
     private void drawDarkCard(MatrixStack matrices, float x, float y, float width, float height, float round, int alpha, int shineAlpha) {
-        RenderUtil.RECT.draw(matrices, x, y, width, height, round, new Color(8, 10, 14, alpha));
-        RenderUtil.RECT.draw(matrices, x + 0.7f, y + 0.7f, width - 1.4f, height - 1.4f, Math.max(1f, round - 0.7f), new Color(255, 255, 255, shineAlpha));
-        RenderUtil.RECT.draw(matrices, x, y, width, height, round, new Color(32, 36, 44, Math.min(255, alpha - 36)));
+        float r = Math.max(round, height / 2.5f);
+        sweetie.nezi.api.utils.render.RenderUtil.RECT.draw(matrices, x, y, width, height, r, sweetie.nezi.api.utils.color.UIColors.card(Math.min(255, alpha + 40)));
+        sweetie.nezi.api.utils.render.RenderUtil.RECT.draw(matrices, x, y, width, height, r, sweetie.nezi.api.utils.color.UIColors.stroke(Math.min(255, alpha / 2)));
     }
 
     private PlayerSnapshot getPlayerSnapshot(PlayerEntity player) {
@@ -324,5 +349,24 @@ public class NameTagsRender implements QuickImports {
     }
 
     private record RenderEntry(LivingEntity entity, float projectedX, float projectedY, double distanceSq) { }
+
+    private float getScoreboardHealth(LivingEntity entity) {
+        if (mc.world == null || entity == null) return entity.getHealth();
+
+        net.minecraft.scoreboard.Scoreboard scoreboard = mc.world.getScoreboard();
+        net.minecraft.scoreboard.ScoreboardObjective objective = 
+            scoreboard.getObjectiveForSlot(net.minecraft.scoreboard.ScoreboardDisplaySlot.BELOW_NAME);
+
+        if (objective != null) {
+            net.minecraft.scoreboard.ReadableScoreboardScore score = 
+                scoreboard.getScore(entity, objective);
+
+            if (score != null) {
+                return (float) score.getScore();
+            }
+        }
+
+        return entity.getHealth() + entity.getAbsorptionAmount();
+    }
 }
 

@@ -53,9 +53,11 @@ public class AuraModule extends Module {
     private final SliderSetting distance = new SliderSetting("Distance").value(3f).range(2.5f, 5f).step(0.1f);
     private final SliderSetting preDistance = new SliderSetting("Pre distance").value(0.3f).range(0f, 3f).step(0.1f);
     private final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
-            new BooleanSetting("Players").value(true),
-            new BooleanSetting("Mobs").value(false),
-            new BooleanSetting("Animals").value(false)
+            new BooleanSetting("Игроки").value(true),
+            new BooleanSetting("Голые").value(true),
+            new BooleanSetting("Мобы").value(false),
+            new BooleanSetting("Животные").value(false),
+            new BooleanSetting("Жители").value(false)
     );
 
     // Bypasses are always enabled, no UI setting exposed

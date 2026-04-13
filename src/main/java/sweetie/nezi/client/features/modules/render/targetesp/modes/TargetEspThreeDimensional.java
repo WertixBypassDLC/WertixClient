@@ -167,12 +167,12 @@ public class TargetEspThreeDimensional extends TargetEspMode {
         float alpha   = MathUtil.interpolate(prevShowAnimation, (float) showAnimation.getValue(), partialTicks);
         float sizeVal = MathUtil.interpolate(prevSizeAnimation, (float) sizeAnimation.getValue(), partialTicks);
         if (alpha <= 0.01f || sizeVal <= 0.01f) return;
-        if (TargetEspModule.getInstance().isCrystalsStyle()) {
-            renderCrystals(event, alpha, sizeVal);
-        } else if (TargetEspModule.getInstance().isSkullsStyle()) {
+        if (TargetEspModule.getInstance().isSkullsStyle()) {
             renderSkulls(event, alpha, sizeVal);
-        } else {
+        } else if (TargetEspModule.getInstance().isFigureStyle()) {
             renderFigure(event, alpha, sizeVal);
+        } else {
+            sweetie.nezi.client.features.modules.render.targetesp.TargetEspRichRender.render(TargetEspModule.getInstance().getThreeDimensionalStyleString(), event, currentTarget, alpha * sizeVal, getTargetX(), getTargetY(), getTargetZ());
         }
     }
 
@@ -616,92 +616,7 @@ public class TargetEspThreeDimensional extends TargetEspMode {
         return new Color(r, g, b, fa);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // CRYSTALS
-    // ─────────────────────────────────────────────────────────────────────────
-    private void renderCrystals(Render3DEvent.Render3DEventData event, float alpha, float sizeAnimationValue) {
-        Camera camera   = mc.gameRenderer.getCamera();
-        Vec3d cameraPos = camera.getPos();
-        Vec3d center    = new Vec3d(getTargetX(), getTargetY() + currentTarget.getHeight() * 0.5, getTargetZ());
-        Vec3d renderPos = center.subtract(cameraPos);
-        float orbit        = MathUtil.interpolate(prevOrbitAngle, orbitAngle, event.partialTicks());
-        float entityHeight = currentTarget.getHeight();
-        float halfWidth    = currentTarget.getWidth() * 0.5f;
-        int   crystalCount = Math.max(8, TargetEspModule.getInstance().getCrystalCount());
-        float crystalScale = TargetEspModule.getInstance().getCrystalSize();
-        List<CrystalNode> nodes = new ArrayList<>(crystalCount);
-        for (int i = 0; i < crystalCount; i++) {
-            float s1 = (float)(Math.sin(i * 1.71f + 0.35f) * 0.5f + 0.5f);
-            float s2 = (float)(Math.cos(i * 2.11f + 0.90f) * 0.5f + 0.5f);
-            float s3 = (float)(Math.sin(i * 2.93f + 1.40f) * 0.5f + 0.5f);
-            float angle  = orbit + i * (360f / crystalCount) + s1 * 14f;
-            float radius = Math.max(0.34f, halfWidth + 0.28f + s3 * 0.18f + sizeAnimationValue * 0.04f);
-            nodes.add(new CrystalNode(
-                    radius * MathHelper.cos((float) Math.toRadians(angle)),
-                    (s2 - 0.5f) * entityHeight * 1.12f,
-                    radius * MathHelper.sin((float) Math.toRadians(angle)),
-                    (0.11f + sizeAnimationValue * 0.12f) * crystalScale * (0.82f + s3 * 0.48f),
-                    angle, i * 37));
-        }
-        MatrixStack matrices = event.matrixStack();
-        matrices.push();
-        matrices.translate(renderPos.x, renderPos.y, renderPos.z);
-        RenderSystem.enableBlend();
-        RenderSystem.disableCull();
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthMask(false);
-        drawCrystalLines(matrices, nodes, alpha);
-        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
-        for (CrystalNode node : nodes)
-            drawGlowBillboard(matrices, camera, node.x, node.y, node.z, node.scale * 4.1f, color(node.colorSeed, 0.24f + alpha * 0.26f));
-        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
-        BufferBuilder tris = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION_COLOR);
-        for (CrystalNode node : nodes) drawCrystal(tris, matrices, node, alpha);
-        BufferRenderer.drawWithGlobalProgram(tris.end());
-        RenderSystem.lineWidth(1.0f);
-        RenderSystem.enableCull();
-        RenderSystem.depthMask(true);
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableBlend();
-        matrices.pop();
-    }
 
-    private void drawCrystalLines(MatrixStack matrices, List<CrystalNode> nodes, float alpha) {
-        if (nodes.size() < 2) return;
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
-        RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
-        RenderSystem.lineWidth(TargetEspModule.getInstance().getLineWidth());
-        BufferBuilder lines = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
-        Matrix4f matrix = matrices.peek().getPositionMatrix();
-        for (int i = 0; i < nodes.size(); i++) {
-            CrystalNode cur  = nodes.get(i);
-            CrystalNode next = nodes.get((i + 1) % nodes.size());
-            Color cc = color(cur.colorSeed,  0.28f + alpha * 0.28f);
-            Color nc = color(next.colorSeed, 0.18f + alpha * 0.24f);
-            addLine(lines, matrix, cur.x, cur.y, cur.z, next.x, next.y, next.z, cc, nc);
-            if (i % 4 == 0)
-                addLine(lines, matrix, cur.x, cur.y, cur.z, 0f, cur.y * 0.15f, 0f, cc, color(cur.colorSeed + 25, 0.10f + alpha * 0.16f));
-        }
-        BufferRenderer.drawWithGlobalProgram(lines.end());
-    }
-
-    private void drawCrystal(BufferBuilder buffer, MatrixStack matrices, CrystalNode node, float alpha) {
-        matrices.push();
-        matrices.translate(node.x, node.y, node.z);
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-node.angle + 90f));
-        matrices.scale(node.scale, node.scale, node.scale);
-        Matrix4f m  = matrices.peek().getPositionMatrix();
-        Color base  = color(node.colorSeed, 0.36f + alpha * 0.44f);
-        Color light = ColorUtil.interpolate(Color.WHITE, base, 0.22f);
-        Color dark  = ColorUtil.interpolate(base, Color.BLACK, 0.42f);
-        float w = 0.55f, h = 1.08f;
-        addTri(buffer,m,0,0,h,-w,0,0,0,w,0,light); addTri(buffer,m,0,0,h,0,w,0,w,0,0,light);
-        addTri(buffer,m,0,0,h,w,0,0,0,-w,0,base);  addTri(buffer,m,0,0,h,0,-w,0,-w,0,0,base);
-        addTri(buffer,m,0,0,-h,0,w,0,-w,0,0,dark);  addTri(buffer,m,0,0,-h,w,0,0,0,w,0,dark);
-        addTri(buffer,m,0,0,-h,0,-w,0,w,0,0,dark);  addTri(buffer,m,0,0,-h,-w,0,0,0,-w,0,dark);
-        matrices.pop();
-    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // FIGURE
@@ -880,7 +795,6 @@ public class TargetEspThreeDimensional extends TargetEspMode {
     }
 
     // ── Records ───────────────────────────────────────────────────────────────
-    private record CrystalNode(float x, float y, float z, float scale, float angle, int colorSeed) {}
     private record SkullNode  (float x, float y, float z, float scale, float yaw, float pitch, float roll, int colorSeed) {}
     private record SkullBox   (float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {}
     private record FigurePoint (float x, float y) {}

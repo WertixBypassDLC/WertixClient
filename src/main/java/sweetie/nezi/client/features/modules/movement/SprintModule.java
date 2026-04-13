@@ -13,7 +13,7 @@ import sweetie.nezi.api.utils.rotation.manager.Rotation;
 import sweetie.nezi.api.utils.rotation.manager.RotationManager;
 import sweetie.nezi.api.utils.rotation.manager.RotationPlan;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
-
+import sweetie.nezi.client.features.modules.combat.WTapModule;
 @ModuleRegister(name = "Sprint", category = Category.MOVEMENT)
 public class SprintModule extends Module {
     @Getter private static final SprintModule instance = new SprintModule();
@@ -28,7 +28,7 @@ public class SprintModule extends Module {
     @Override
     public void onEvent() {
         EventListener sprintEvent = SprintEvent.getInstance().subscribe(new Listener<>(1, event -> {
-            if (!isSprintAllowed()) {
+            if (shouldForceSprint()) {
                 event.setSprint(true);
             }
         }));
@@ -36,18 +36,28 @@ public class SprintModule extends Module {
         addEvents(sprintEvent);
     }
 
-    public boolean isSprintAllowed() {
+    public boolean shouldForceSprint() {
+        if (mc.player == null) return false;
+        
+        // If WTap is actively suppressing movement to reset sprint, do NOT force sprint.
+        if (WTapModule.getInstance().isEnabled() && WTapModule.getInstance().isSuppressing()) {
+            return false;
+        }
+
         AuraModule auraModule = AuraModule.getInstance();
         boolean auraCheck = mode.is("Legit") && auraModule.target != null && auraModule.isEnabled() && auraModule.combatExecutor.combatManager().clickScheduler().isOneTickBeforeAttack();
 
-        return (!mc.options.sprintKey.isPressed() || mc.player.input.movementForward != 0) && (hasForwardMovement() || auraCheck);
+        return (!mc.options.sprintKey.isPressed() || mc.player.input.movementForward != 0) && (isActuallyMovingForward() || auraCheck);
     }
 
     @SuppressWarnings("MagicNumber")
-    public boolean hasForwardMovement() {
+    public boolean isActuallyMovingForward() {
         RotationManager rotationManager = RotationManager.getInstance();
         RotationPlan plan = rotationManager.getCurrentRotationPlan();
-        if (plan == null || plan.provider() instanceof StrafeModule || plan.moveCorrection() || mode.is("None")) {
+        if (mode.is("None")) {
+            return false;
+        }
+        if (plan != null && (plan.provider() instanceof StrafeModule || plan.moveCorrection())) {
             return false;
         }
 
@@ -57,9 +67,7 @@ public class SprintModule extends Module {
         float forward = mc.player.input.movementForward;
         float sideways = mc.player.input.movementSideways;
 
-        boolean hasForwardMovement = forward * MathHelper.cos(deltaYaw * 0.017453292f) + sideways * MathHelper.sin(deltaYaw * 0.017453292f) > 1.0E-5f;
-
-        return !hasForwardMovement;
+        return forward * MathHelper.cos(deltaYaw * 0.017453292f) + sideways * MathHelper.sin(deltaYaw * 0.017453292f) > 1.0E-5f;
     }
 
 }

@@ -23,8 +23,10 @@ public class TargetEspModule extends Module {
     private final TargetEspThreeDimensional espThreeDimensional = new TargetEspThreeDimensional();
 
     private final ModeSetting mode = new ModeSetting("Mode").value("Comets").values("Comets", "3D");
-    private final ModeSetting threeDimensionalStyle = new ModeSetting("3D Style").value("Crystals").values("Crystals", "Figure", "Skulls")
-            .setVisible(this::isThreeDimensionalMode);
+    private final ModeSetting threeDimensionalStyle = new ModeSetting("3D Style").value("Skulls").values(
+            "Crystals", "Figure", "Skulls", "Circle V2", "Ghost V2", "Garland", "Atom",
+            "Pig", "Летучая мышь", "Попугай", "Фея", "Пчела", "Векс", "Лисичка", "Лягушка", "Иглобрюх", "Слайм"
+    ).setVisible(this::isThreeDimensionalMode);
     private final ModeSetting animation = new ModeSetting("Animation").value("In").values("In", "Out", "None");
     private final SliderSetting duration = new SliderSetting("Duration").value(3f).range(1f, 20f).step(1f);
     private final SliderSetting size = new SliderSetting("Size").value(1f).range(0.1f, 2f).step(0.1f);
@@ -59,11 +61,13 @@ public class TargetEspModule extends Module {
             .setVisible(this::isSkullsStyle);
     private final SliderSetting ghostGlowIntensity = new SliderSetting("Glow intensity").value(0.6f).range(0.1f, 1.0f).step(0.05f)
             .setVisible(() -> isSkullsStyle() && ghostGlow.getValue());
+    private final SliderSetting speed = new SliderSetting("Speed").value(1.0f).range(0.1f, 3.0f).step(0.1f)
+            .setVisible(this::isRichStyle);
 
     public TargetEspModule() {
         addSettings(
                 mode, threeDimensionalStyle,
-                animation, duration, size, smoothness, inSize, outSize, lastPosition,
+                animation, duration, size, speed, smoothness, inSize, outSize, lastPosition,
                 lineWidth, crystalSize, crystalCount,
                 figureSize, figureDepth, figurePreset, customFigure,
                 skullPreset, skullSize, skullOrbitDistance, skullOpacity, ghostGlow, ghostGlowIntensity
@@ -101,6 +105,24 @@ public class TargetEspModule extends Module {
 
     public boolean isSkullsStyle() {
         return isThreeDimensionalMode() && threeDimensionalStyle.is("Skulls");
+    }
+
+    public boolean isRichStyle() {
+        if (!isThreeDimensionalMode()) return false;
+        String s = threeDimensionalStyle.getValue();
+        return !s.equals("Crystals") && !s.equals("Figure") && !s.equals("Skulls");
+    }
+
+    public String getThreeDimensionalStyleString() {
+        return threeDimensionalStyle.getValue();
+    }
+
+    public float getSpeed() {
+        return speed.getValue();
+    }
+
+    public java.awt.Color getCustomColor() {
+        return sweetie.nezi.api.utils.color.UIColors.primary(255);
     }
 
     public float getLineWidth() {

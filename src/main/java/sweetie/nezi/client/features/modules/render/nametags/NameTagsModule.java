@@ -22,9 +22,11 @@ public class NameTagsModule extends Module {
 
     public final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
             new BooleanSetting("Self").value(false),
-            new BooleanSetting("Players").value(true),
-            new BooleanSetting("Animals").value(false),
-            new BooleanSetting("Mobs").value(false)
+            new BooleanSetting("Игроки").value(true),
+            new BooleanSetting("Голые").value(true),
+            new BooleanSetting("Животные").value(false),
+            new BooleanSetting("Мобы").value(false),
+            new BooleanSetting("Жители").value(false)
     );
     public final SliderSetting scale = new SliderSetting("Scale").value(1f).range(0.1f, 2f).step(0.1f);
     public final MultiBooleanSetting information = new MultiBooleanSetting("Information").value(
@@ -42,7 +44,7 @@ public class NameTagsModule extends Module {
     public final SliderSetting glassy = new SliderSetting("Glassy").value(0.5f).range(0.0f, 1f).step(0.1f);
     public final ColorSetting textColor = new ColorSetting("Text color").value(new Color(255, 255, 255));
     public final ColorSetting color = new ColorSetting("Color").value(new Color(20, 20, 20));
-    public final ColorSetting friendColor = new ColorSetting("Friend color").value(new Color(132, 229, 121)).setVisible(() -> targets.isEnabled("Players") || targets.isEnabled("Self"));
+    public final ColorSetting friendColor = new ColorSetting("Friend color").value(new Color(132, 229, 121)).setVisible(() -> targets.isEnabled("Игроки") || targets.isEnabled("Голые") || targets.isEnabled("Self"));
 
     public final TargetManager.EntityFilter entityFilter = new TargetManager.EntityFilter(targets.getList());
 

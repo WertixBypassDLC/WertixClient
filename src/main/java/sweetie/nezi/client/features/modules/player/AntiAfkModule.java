@@ -17,18 +17,10 @@ import java.util.concurrent.ThreadLocalRandom;
 public class AntiAfkModule extends Module {
     @Getter private static final AntiAfkModule instance = new AntiAfkModule();
     private static final long SPACE_TAP_MS = 110L;
-
-    private final SliderSetting minDelay = new SliderSetting("Min delay").value(10f).range(5f, 60f).step(1f);
-    private final SliderSetting maxDelay = new SliderSetting("Max delay").value(20f).range(6f, 90f).step(1f);
-    private final SliderSetting yawRange = new SliderSetting("Yaw range").value(10f).range(3f, 25f).step(1f);
-    private final SliderSetting pitchRange = new SliderSetting("Pitch range").value(4f).range(1f, 12f).step(1f);
-    private final BooleanSetting randomJump = new BooleanSetting("Random jump").value(true);
-
     private long nextActionAt = 0L;
     private long jumpReleaseAt = 0L;
 
     public AntiAfkModule() {
-        addSettings(minDelay, maxDelay, yawRange, pitchRange, randomJump);
     }
 
     @Override
@@ -78,8 +70,8 @@ public class AntiAfkModule extends Module {
 
     private void applyAntiAfkMotion() {
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        float yawOffset = (random.nextFloat() * 2f - 1f) * yawRange.getValue();
-        float pitchOffset = (random.nextFloat() * 2f - 1f) * pitchRange.getValue();
+        float yawOffset = (random.nextFloat() * 2f - 1f) * 12f;
+        float pitchOffset = (random.nextFloat() * 2f - 1f) * 6f;
         float newYaw = mc.player.getYaw() + yawOffset;
         float newPitch = MathHelper.clamp(mc.player.getPitch() + pitchOffset, -85f, 85f);
 
@@ -88,15 +80,13 @@ public class AntiAfkModule extends Module {
         mc.player.setHeadYaw(newYaw);
         mc.player.setBodyYaw(newYaw);
 
-        if (randomJump.getValue() && mc.player.isOnGround() && random.nextFloat() < 0.55f) {
+        if (mc.player.isOnGround() && random.nextFloat() < 0.6f) {
             tapJumpKey();
         }
     }
 
     private void scheduleNextAction() {
-        float min = Math.min(minDelay.getValue(), maxDelay.getValue());
-        float max = Math.max(minDelay.getValue(), maxDelay.getValue());
-        long delayMs = (long) (ThreadLocalRandom.current().nextDouble(min, max + 0.001) * 1000.0);
+        long delayMs = (long) (ThreadLocalRandom.current().nextDouble(15.0, 25.0) * 1000.0);
         nextActionAt = System.currentTimeMillis() + delayMs;
     }
 

@@ -35,15 +35,16 @@ public class AimAssistModule extends Module {
     private final SliderSetting speed = new SliderSetting("Speed").value(5.0f).range(1.0f, 10.0f).step(0.1f);
 
     private final BooleanSetting throughWalls = new BooleanSetting("Through Walls").value(false);
-    private final BooleanSetting players = new BooleanSetting("Players").value(true);
-    private final BooleanSetting mobs = new BooleanSetting("Mobs").value(true);
-    private final BooleanSetting animals = new BooleanSetting("Animals").value(false);
-    private final BooleanSetting friends = new BooleanSetting("Friends").value(false);
+    
+    private final sweetie.nezi.api.module.setting.MultiBooleanSetting targets = new sweetie.nezi.api.module.setting.MultiBooleanSetting("Targets").value(
+            new BooleanSetting("Игроки").value(true),
+            new BooleanSetting("Голые").value(true),
+            new BooleanSetting("Мобы").value(false),
+            new BooleanSetting("Животные").value(false),
+            new BooleanSetting("Жители").value(false)
+    );
 
     private final ModeSetting aimPoint = new ModeSetting("Aim Point").values("Head", "Body", "Legs").value("Head");
-
-    private final BooleanSetting attackInvisibles = new BooleanSetting("Attack Invisibles").value(false).setVisible(players::getValue);
-    private final BooleanSetting attackNaked = new BooleanSetting("Attack Naked").value(false).setVisible(players::getValue);
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -62,13 +63,8 @@ public class AimAssistModule extends Module {
                 range,
                 speed,
                 throughWalls,
-                players,
-                mobs,
-                animals,
-                friends,
-                aimPoint,
-                attackInvisibles,
-                attackNaked
+                targets,
+                aimPoint
         );
     }
 
@@ -324,36 +320,14 @@ public class AimAssistModule extends Module {
             return false;
         }
 
-        if (entity instanceof PlayerEntity player) {
-            if (!players.getValue()) {
-                return false;
-            }
-            if (player.isCreative() || player.isSpectator()) return false;
-            if (FriendManager.getInstance().contains(player.getName().getString()) && !friends.getValue()) {
-                return false;
-            }
-            if (player.isInvisible() && !attackInvisibles.getValue()) {
-                return false;
-            }
-            if (!attackNaked.getValue()) {
-                boolean hasArmor = false;
-                for (net.minecraft.item.ItemStack armorItem : player.getArmorItems()) {
-                    if (!armorItem.isEmpty()) {
-                        hasArmor = true;
-                        break;
-                    }
-                }
-                if (!hasArmor) return false;
-            }
-            return true;
+        if (!new sweetie.nezi.api.utils.combat.TargetManager.EntityFilter(targets.getList()).isValid(entity)) {
+            return false;
         }
 
-        if (entity instanceof AnimalEntity || entity instanceof VillagerEntity) {
-            return animals.getValue();
+        if (!throughWalls.getValue() && !mc.player.canSee(entity)) {
+            return false;
         }
-        if (entity instanceof MobEntity) {
-            return mobs.getValue();
-        }
-        return false;
+
+        return true;
     }
 }
