@@ -11,19 +11,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PriceParser implements QuickImports {
-    public ParseModeChoice currentMode = ParseModeChoice.FUN_TIME;
 
-    private static final Pattern DOLLAR_PRICE = Pattern.compile(
+    // Паттерн ценника для FunTime
+    private static final Pattern FUN_TIME_PRICE = Pattern.compile(
             "\\$\\s*\u0426\u0435\u043D[\u0430a]\\s*:?\\s*\\$?\\s*([\\d,. ]+)"
-    );
-    private static final Pattern HOLY_WORLD_PRICE = Pattern.compile(
-            "\u258D\\s*\u0426\u0435\u043D[\u0430a]\\s+\u0437\u0430\\s+1\\s+\u0435\u0434\\.\\s*:?\\s*([\\d,. ]+)"
-    );
-    private static final Pattern GENERIC_PRICE = Pattern.compile(
-            "\u0426\u0435\u043D[\u0430a]\\s*:\\s*([\\d,. ]+)"
-    );
-    private static final Pattern BROAD_PRICE = Pattern.compile(
-            "\u0426\u0435\u043D[\u0430a]\\s*:?\\s*\\$?\\s*([\\d,. ]+)"
     );
 
     public int getPrice(ItemStack stack) {
@@ -31,28 +22,11 @@ public class PriceParser implements QuickImports {
     }
 
     public int getPrice(ItemStack stack, List<Text> tooltip) {
-        Pattern primary = getPattern();
-
         for (Text text : tooltip) {
             String value = sanitize(text);
-            int price = tryParse(primary, value);
+            int price = tryParse(FUN_TIME_PRICE, value);
             if (price != -1) {
                 return price;
-            }
-        }
-
-        if (primary != GENERIC_PRICE && primary != BROAD_PRICE) {
-            for (Text text : tooltip) {
-                String value = sanitize(text);
-                int price = tryParse(GENERIC_PRICE, value);
-                if (price != -1) {
-                    return price;
-                }
-
-                price = tryParse(BROAD_PRICE, value);
-                if (price != -1) {
-                    return price;
-                }
             }
         }
 
@@ -79,13 +53,5 @@ public class PriceParser implements QuickImports {
         } catch (NumberFormatException ignored) {
             return -1;
         }
-    }
-
-    private Pattern getPattern() {
-        return switch (currentMode) {
-            case FUN_TIME, SPOOKY_TIME -> DOLLAR_PRICE;
-            case HOLY_WORLD -> HOLY_WORLD_PRICE;
-            case REALLY_WORLD -> GENERIC_PRICE;
-        };
     }
 }
