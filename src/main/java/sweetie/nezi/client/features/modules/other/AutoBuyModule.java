@@ -34,7 +34,6 @@ import sweetie.nezi.api.module.setting.RunSetting;
 import sweetie.nezi.api.module.setting.SliderSetting;
 import sweetie.nezi.api.module.setting.StringSetting;
 import sweetie.nezi.api.system.configs.ConfigManager;
-import sweetie.nezi.api.utils.auction.ParseModeChoice;
 import sweetie.nezi.api.utils.auction.PriceParser;
 import sweetie.nezi.api.utils.color.ColorUtil;
 import sweetie.nezi.api.utils.color.UIColors;
@@ -165,7 +164,6 @@ public class AutoBuyModule extends Module {
             rules.put(item, new AutoTradeRule());
         }
 
-        priceParser.currentMode = ParseModeChoice.FUN_TIME;
         addSettings(refreshDelaySetting, openMenu, rulesData);
         saveRulesToSetting();
     }

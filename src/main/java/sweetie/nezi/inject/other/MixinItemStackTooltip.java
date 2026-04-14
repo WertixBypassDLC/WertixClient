@@ -40,7 +40,6 @@ public abstract class MixinItemStackTooltip {
             return;
         }
 
-        AUCTION_PRICE_PARSER.currentMode = module.getCurrentParseMode();
         int totalPrice = AUCTION_PRICE_PARSER.getPrice(stack, original);
         if (totalPrice <= 0) {
             return;

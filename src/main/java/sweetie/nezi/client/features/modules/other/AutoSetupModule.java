@@ -15,7 +15,6 @@ import sweetie.nezi.api.event.events.player.other.UpdateEvent;
 import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
-import sweetie.nezi.api.utils.auction.ParseModeChoice;
 import sweetie.nezi.api.utils.auction.PriceParser;
 import sweetie.nezi.api.utils.math.TimerUtil;
 import sweetie.nezi.api.utils.notification.NotificationUtil;
@@ -150,7 +149,6 @@ public class AutoSetupModule extends Module {
     private int currentSearchTermIndex;
 
     public AutoSetupModule() {
-        priceParser.currentMode = ParseModeChoice.FUN_TIME;
     }
 
     @Override

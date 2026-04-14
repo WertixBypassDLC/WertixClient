@@ -66,7 +66,7 @@ public class AuctionHelperModule extends Module {
     private static final String NO_THORNS = "\u0411\u0435\u0437 \u0448\u0438\u043f\u043e\u0432";
     private static final String THORNS = "\u0428\u0438\u043f\u044b";
     private static final String MENDING = "\u041f\u043e\u0447\u0438\u043d\u043a\u0430";
-    private static final String DEPTH_STRIDER = "\u041f\u043e\u0434\u0432\u043e\u0434\u043d\u0430\u044f \u0445\u043e\u0434\u044c\u0431\u0430";
+    private static final String DEPTH_STRIDER = "\u041f\u043e\u0434\u043d\u043e\u0434\u043d\u0430\u044f \u0445\u043e\u0434\u044c\u0431\u0430";
     private static final String VAMPIRISM = "\u0412\u0430\u043c\u043f\u0438\u0440\u0438\u0437\u043c";
     private static final String OXIDATION = "\u041e\u043a\u0438\u0441\u043b\u0435\u043d\u0438\u0435";
     private static final String POISON = "\u042f\u0434";
@@ -122,12 +122,13 @@ public class AuctionHelperModule extends Module {
     ) { }
 
     private final PriceParser priceParser = new PriceParser();
+    private ParseModeChoice currentParseMode = ParseModeChoice.FUN_TIME;
 
     @Getter
     private final ModeSetting mode = new ModeSetting("Mode")
             .value("Fun Time")
             .values("Fun Time")
-            .onAction(() -> priceParser.currentMode = ParseModeChoice.FUN_TIME);
+            .onAction(() -> currentParseMode = ParseModeChoice.FUN_TIME);
 
     private final BooleanSetting calculator = new BooleanSetting("Calculator").value(false);
     private final BooleanSetting unitPriceTooltip = new BooleanSetting("Unit price tooltip").value(true);
@@ -207,7 +208,6 @@ public class AuctionHelperModule extends Module {
     private boolean debugContainerOpen = false;
 
     public AuctionHelperModule() {
-        priceParser.currentMode = ParseModeChoice.FUN_TIME;
         addSettings(
                 calculator, unitPriceTooltip, itemTypes, slots,
                 swordEnchants, sharpnessMin, unbreakingSwordMin, lootingMin, fireAspectMin, vampirismMin, oxidationMin, poisonMin, detectionMin,
@@ -515,7 +515,7 @@ public class AuctionHelperModule extends Module {
     }
 
     public ParseModeChoice getCurrentParseMode() {
-        return priceParser.currentMode;
+        return currentParseMode;
     }
 
     private boolean isSupportedDebugScreen() {
