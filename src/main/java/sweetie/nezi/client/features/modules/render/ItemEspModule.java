@@ -96,15 +96,28 @@ public class ItemEspModule extends Module {
             float cardX = label.x - totalW / 2f;
             float cardY = label.y;
 
-            RenderUtil.RECT.draw(ms, cardX, cardY, totalW, totalH, round,
-                    new Color(12, 14, 18, 90));
-            RenderUtil.RECT.draw(ms, cardX, cardY, totalW, totalH, round,
-                    UIColors.stroke(60));
+            drawGlassDark(ms, cardX, cardY, totalW, totalH, round);
 
             Fonts.PS_MEDIUM.drawText(ms, label.text,
                     cardX + padding, cardY + padding, fontSize,
-                    new Color(255, 255, 255, 235));
+                    Color.WHITE);
         }
+    }
+
+    private void drawGlassDark(MatrixStack ms, float x, float y, float w, float h, float round) {
+        Color basePanel = UIColors.panel(220);
+        Color darkPanel = new Color(
+                (int)(basePanel.getRed() * 0.6f),
+                (int)(basePanel.getGreen() * 0.6f),
+                (int)(basePanel.getBlue() * 0.6f),
+                basePanel.getAlpha()
+        );
+
+        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, UIColors.blur(220), 0.08f);
+        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, UIColors.backgroundBlur(220), 0.06f);
+        RenderUtil.RECT.draw(ms, x, y, w, h, round, darkPanel);
+        RenderUtil.RECT.draw(ms, x, y, w, h, round, UIColors.overlay(30));
+        RenderUtil.RECT.draw(ms, x, y, w, h, round, UIColors.stroke(255));
     }
 
     private record ItemLabel(float x, float y, String text, float distance) {}

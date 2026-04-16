@@ -28,10 +28,8 @@ public class SprintModule extends Module {
 
     @Override
     public void onEvent() {
-        // Приоритет 0 — выполняется первым, до других подписчиков
         EventListener sprintEvent = SprintEvent.getInstance().subscribe(new Listener<>(0, event -> {
             if (isWTapSuppressing()) {
-                // WTap активен — строго блокируем спринт
                 event.setSprint(false);
             } else if (shouldForceSprint()) {
                 event.setSprint(true);
@@ -40,17 +38,14 @@ public class SprintModule extends Module {
         addEvents(sprintEvent);
     }
 
-    /** WTap сейчас глушит спринт */
     private boolean isWTapSuppressing() {
-        return WTapModule.getInstance().isEnabled()
-                && WTapModule.getInstance().isSuppressing();
+        return WTapModule.getInstance().isEnabled() && WTapModule.getInstance().isSuppressing();
     }
 
     public boolean shouldForceSprint() {
         if (mc.player == null) return false;
         if (mc.player.isSneaking()) return false;
         if (mc.player.horizontalCollision) return false;
-        // Пока WTap активен — не трогаем спринт
         if (isWTapSuppressing()) return false;
 
         AuraModule aura = AuraModule.getInstance();

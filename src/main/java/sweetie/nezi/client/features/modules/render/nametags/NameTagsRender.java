@@ -6,16 +6,19 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.Arm;
+import net.minecraft.item.Items;
+import net.minecraft.text.Text;
 import org.joml.Vector2f;
 import sweetie.nezi.api.event.events.render.Render2DEvent;
 import sweetie.nezi.api.system.configs.FriendManager;
 import sweetie.nezi.api.system.interfaces.QuickImports;
+import sweetie.nezi.api.utils.color.UIColors;
 import sweetie.nezi.api.utils.math.MathUtil;
 import sweetie.nezi.api.utils.math.ProjectionUtil;
 import sweetie.nezi.api.utils.other.ReplaceUtil;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
+import sweetie.nezi.client.features.modules.other.StreamerModule;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -26,20 +29,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 public class NameTagsRender implements QuickImports {
     private static final long PLAYER_SNAPSHOT_CACHE_MS = 200L;
     private static final float SCREEN_PADDING = 100f;
-    private static final Pattern LEGACY_GHOST_TOKEN = Pattern.compile("(?i)(^|\\s)[0-9A-FK-ORX](?=\\s|$)");
-    private static final Pattern NOISE_EDGE_TOKEN = Pattern.compile("(?i)(^|\\s)[a-z0-9](?=\\s|$)");
 
     private final NameTagsModule module;
     private final NameTagsPotions nameTagsPotions;
     private final List<RenderEntry> renderQueue = new ArrayList<>(64);
     private final Map<UUID, PlayerSnapshot> playerSnapshots = new HashMap<>(32);
 
-    private final Color bgColor = new Color(0, 0, 0, 120);
     private final Color friendColor = new Color(132, 229, 121);
 
     public NameTagsRender(NameTagsModule module) {
@@ -128,6 +127,14 @@ public class NameTagsRender implements QuickImports {
         renderSimpleTag(entity.getName().getString(), entry.topX(), entry.topY(), context);
     }
 
+    private void drawGlass(MatrixStack ms, float x, float y, float w, float h, float round, Color strokeColor) {
+        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, UIColors.blur(220), 0.08f);
+        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, UIColors.backgroundBlur(220), 0.06f);
+        RenderUtil.RECT.draw(ms, x, y, w, h, round, UIColors.panel(220));
+        RenderUtil.RECT.draw(ms, x, y, w, h, round, UIColors.overlay(30));
+        RenderUtil.RECT.draw(ms, x, y, w, h, round, strokeColor);
+    }
+
     private void renderPlayerTag(PlayerEntity player, RenderEntry entry, DrawContext context) {
         MatrixStack matrices = context.getMatrices();
         float scale = module.scale.getValue();
@@ -136,6 +143,7 @@ public class NameTagsRender implements QuickImports {
         float padding = 3.5f * scale;
         float rowGap = 1.5f * scale;
         float sideGap = 4f * scale;
+        float round = 3.5f * scale;
 
         PlayerSnapshot snapshot = getPlayerSnapshot(player);
 
@@ -150,24 +158,53 @@ public class NameTagsRender implements QuickImports {
         float cardX = entry.topX() - cardWidth / 2f;
         float cardY = entry.topY();
 
-        // Минималистичный фон основного неймтега
-        RenderUtil.RECT.draw(matrices, cardX, cardY, cardWidth, cardHeight, 0f, bgColor);
+        List<ItemStack> topItems = new ArrayList<>();
+        if (!snapshot.armor[3].isEmpty()) topItems.add(snapshot.armor[3]);
+        if (!snapshot.armor[2].isEmpty()) topItems.add(snapshot.armor[2]);
+        if (!snapshot.armor[1].isEmpty()) topItems.add(snapshot.armor[1]);
+        if (!snapshot.armor[0].isEmpty()) topItems.add(snapshot.armor[0]);
+        if (!snapshot.mainHand.isEmpty()) topItems.add(snapshot.mainHand);
+        if (!snapshot.offHand.isEmpty()) topItems.add(snapshot.offHand);
+
+        Color cardStroke = snapshot.friend ? friendColor : UIColors.stroke(255);
+
+        if (!topItems.isEmpty()) {
+            float slotSize = 12f * scale;
+            float slotGap = 2.5f * scale;
+            float totalTopW = topItems.size() * slotSize + (topItems.size() - 1) * slotGap;
+            float startTopX = entry.topX() - totalTopW / 2f;
+            float topY = cardY - slotSize - (3.5f * scale);
+
+            for (ItemStack stack : topItems) {
+                drawGlass(matrices, startTopX, topY, slotSize, slotSize, round, cardStroke);
+
+                matrices.push();
+                matrices.translate(startTopX, topY, 0f);
+                float itemScale = slotSize / 16f;
+                matrices.scale(itemScale, itemScale, 1f);
+                context.drawItem(stack, 0, 0);
+                matrices.pop();
+
+                startTopX += slotSize + slotGap;
+            }
+        }
+
+        drawGlass(matrices, cardX, cardY, cardWidth, cardHeight, round, cardStroke);
 
         float textY = cardY + padding;
         float textX = entry.topX() - textWidth / 2f;
-        Color nameColor = snapshot.friend ? friendColor : Color.WHITE;
-        Fonts.PS_BOLD.drawText(matrices, snapshot.displayName, textX, textY, nameSize, nameColor);
+
+        Fonts.PS_BOLD.drawText(matrices, snapshot.displayName, textX, textY, nameSize);
 
         Color hpColor = getHealthColor(hp, player.getMaxHealth() + player.getAbsorptionAmount());
         Fonts.PS_BOLD.drawText(matrices, hpText, textX + snapshot.nameWidth, textY, nameSize, hpColor);
 
-        // Рендер зелий (если включено)
         if (!snapshot.potionLines.isEmpty()) {
             float sideX = cardX + cardWidth + sideGap;
             float sideY = cardY + Math.max(0f, (cardHeight - snapshot.effectBlockHeight) / 2f);
             float sidePad = 2.6f * scale;
 
-            RenderUtil.RECT.draw(matrices, sideX, sideY, snapshot.effectBlockWidth, snapshot.effectBlockHeight, 0f, bgColor);
+            drawGlass(matrices, sideX, sideY, snapshot.effectBlockWidth, snapshot.effectBlockHeight, round, cardStroke);
 
             float effectY = sideY + sidePad;
             for (NameTagsPotions.PotionLine line : snapshot.potionLines) {
@@ -180,42 +217,59 @@ public class NameTagsRender implements QuickImports {
             }
         }
 
-        // Рендер предметов в руках под игроком
         if (module.showHands.getValue()) {
-            drawHandsText(matrices, snapshot, entry.bottomX(), entry.bottomY(), scale);
+            drawHandsText(matrices, snapshot, entry.bottomX(), entry.bottomY(), scale, round, cardStroke);
         }
     }
 
-    private void drawHandsText(MatrixStack matrices, PlayerSnapshot snapshot, float centerX, float bottomY, float scale) {
+    private void drawHandsText(MatrixStack matrices, PlayerSnapshot snapshot, float centerX, float bottomY, float scale, float round, Color stroke) {
         float textSize = 6f * scale;
-        float padding = 2f * scale;
+        float padding = 2.5f * scale;
         float gap = 1f * scale;
 
-        List<String> lines = new ArrayList<>(2);
-        if (!snapshot.rightHandItem.isEmpty()) lines.add(snapshot.rightHandItem);
-        if (!snapshot.leftHandItem.isEmpty()) lines.add(snapshot.leftHandItem);
+        List<ColoredItemText> lines = new ArrayList<>(2);
+
+        addHandText(lines, snapshot.mainHand);
+        addHandText(lines, snapshot.offHand);
 
         if (lines.isEmpty()) return;
 
         float blockHeight = lines.size() * textSize + Math.max(0, lines.size() - 1) * gap + padding * 2f;
         float maxWidth = 0f;
-        for (String line : lines) {
-            maxWidth = Math.max(maxWidth, Fonts.PS_MEDIUM.getWidth(line, textSize));
+        for (ColoredItemText line : lines) {
+            maxWidth = Math.max(maxWidth, Fonts.PS_MEDIUM.getWidth(line.text, textSize));
         }
         float blockWidth = maxWidth + padding * 2f;
 
         float startX = centerX - blockWidth / 2f;
-        // Смещение чуть ниже ног
         float startY = bottomY + (4f * scale);
 
-        RenderUtil.RECT.draw(matrices, startX, startY, blockWidth, blockHeight, 0f, bgColor);
+        drawGlass(matrices, startX, startY, blockWidth, blockHeight, round, stroke);
 
         float textY = startY + padding;
-        for (String line : lines) {
-            float textX = centerX - Fonts.PS_MEDIUM.getWidth(line, textSize) / 2f;
-            Fonts.PS_MEDIUM.drawText(matrices, line, textX, textY, textSize, Color.WHITE);
+        for (ColoredItemText line : lines) {
+            float textX = centerX - Fonts.PS_MEDIUM.getWidth(line.text, textSize) / 2f;
+            Fonts.PS_MEDIUM.drawText(matrices, line.text, textX, textY, textSize, line.color);
             textY += textSize + gap;
         }
+    }
+
+    private void addHandText(List<ColoredItemText> lines, ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return;
+
+        String name = stack.getName().getString();
+        Color color = Color.WHITE;
+
+        if (stack.isOf(Items.TOTEM_OF_UNDYING) && stack.hasEnchantments()) {
+            name = "Зачарованный тотем";
+            color = new Color(85, 255, 255);
+        }
+
+        if (stack.getCount() > 1) {
+            name += " x" + stack.getCount();
+        }
+
+        lines.add(new ColoredItemText(name, color));
     }
 
     private void renderSimpleTag(String displayName, float centerX, float baseY, DrawContext context) {
@@ -223,12 +277,13 @@ public class NameTagsRender implements QuickImports {
         float scale = module.scale.getValue();
         float nameSize = 7f * scale;
         float padding = 3f * scale;
+        float round = 3.5f * scale;
         float nameWidth = Fonts.PS_BOLD.getWidth(displayName, nameSize);
         float cardWidth = nameWidth + padding * 2f;
         float cardHeight = nameSize + padding * 2f;
         float cardX = centerX - cardWidth / 2f;
 
-        RenderUtil.RECT.draw(matrices, cardX, baseY, cardWidth, cardHeight, 0f, bgColor);
+        drawGlass(matrices, cardX, baseY, cardWidth, cardHeight, round, UIColors.stroke(255));
         Fonts.PS_BOLD.drawText(matrices, displayName, centerX - nameWidth / 2f, baseY + padding, nameSize, Color.WHITE);
     }
 
@@ -259,11 +314,13 @@ public class NameTagsRender implements QuickImports {
         PlayerSnapshot rebuilt = new PlayerSnapshot();
         String baseName = player.getGameProfile().getName();
         rebuilt.friend = FriendManager.getInstance().contains(baseName);
-        rebuilt.displayName = buildDisplayName(player, baseName);
+        rebuilt.displayName = buildDisplayName(player);
 
-        if (module.showHands.getValue()) {
-            rebuilt.rightHandItem = getRightHandName(player);
-            rebuilt.leftHandItem = getLeftHandName(player);
+        rebuilt.mainHand = player.getMainHandStack();
+        rebuilt.offHand = player.getOffHandStack();
+
+        for (int i = 0; i < 4; i++) {
+            rebuilt.armor[i] = player.getInventory().armor.get(i);
         }
 
         rebuilt.potionLines = module.showPotions.getValue() ? nameTagsPotions.collectLines(player) : List.of();
@@ -297,73 +354,18 @@ public class NameTagsRender implements QuickImports {
         return rebuilt;
     }
 
-    private String getRightHandName(PlayerEntity player) {
-        ItemStack stack = player.getMainArm() == Arm.RIGHT ? player.getMainHandStack() : player.getOffHandStack();
-        return stack.isEmpty() ? "" : stack.getName().getString();
-    }
-
-    private String getLeftHandName(PlayerEntity player) {
-        ItemStack stack = player.getMainArm() == Arm.RIGHT ? player.getOffHandStack() : player.getMainHandStack();
-        return stack.isEmpty() ? "" : stack.getName().getString();
-    }
-
-    private String buildDisplayName(PlayerEntity player, String baseName) {
-        String decorated;
-        try {
-            decorated = player.getDisplayName() != null ? player.getDisplayName().getString() : baseName;
-        } catch (Exception ignored) {
-            decorated = baseName;
+    private Text buildDisplayName(PlayerEntity player) {
+        if (StreamerModule.getInstance().isEnabled() && StreamerModule.getInstance().getHideNick().getValue()) {
+            return Text.literal(StreamerModule.getInstance().getProtectedName());
         }
 
-        decorated = stripFormattingCodes(ReplaceUtil.replaceSymbols(decorated));
-        String cleaned = sanitizeDecoratedName(decorated, baseName);
-        return cleaned.isEmpty() ? baseName : cleaned;
-    }
-
-    private String sanitizeDecoratedName(String decorated, String baseName) {
-        String normalized = stripFormattingCodes(LEGACY_GHOST_TOKEN.matcher(decorated).replaceAll(" "));
-        normalized = normalized.replaceAll("[\\p{Cntrl}\\p{Co}]", " ");
-        normalized = normalized.replaceAll("\s{2,}", " ").trim();
-        int nameIndex = normalized.toLowerCase().indexOf(baseName.toLowerCase());
-        if (nameIndex < 0) {
-            return stripNoiseTokens(normalized);
+        Text displayName = player.getDisplayName();
+        if (displayName == null) {
+            displayName = Text.literal(player.getGameProfile().getName());
         }
 
-        String prefix = stripNoiseTokens(normalized.substring(0, nameIndex));
-        String suffix = stripNoiseTokens(normalized.substring(nameIndex + baseName.length()));
-        String combined = ((prefix.isEmpty() ? "" : prefix + " ") + baseName + (suffix.isEmpty() ? "" : " " + suffix)).trim();
-        return combined.replaceAll("\s{2,}", " ").trim();
+        return ReplaceUtil.replaceSymbols(displayName);
     }
-
-    private String stripNoiseTokens(String value) {
-        String cleaned = stripFormattingCodes(value);
-        cleaned = cleaned.replaceAll("[\\p{Cntrl}\\p{Co}]", " ");
-        cleaned = LEGACY_GHOST_TOKEN.matcher(cleaned).replaceAll(" ");
-        cleaned = NOISE_EDGE_TOKEN.matcher(cleaned).replaceAll(" ");
-        cleaned = cleaned.replaceAll("\s{2,}", " ").trim();
-        return cleaned;
-    }
-
-    private String stripFormattingCodes(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replaceAll("(?i)\u00A7[0-9A-FK-ORX]", "").replace(' ', ' ').trim();
-    }
-
-    private static final class PlayerSnapshot {
-        private String displayName = "";
-        private boolean friend;
-        private String rightHandItem = "";
-        private String leftHandItem = "";
-        private List<NameTagsPotions.PotionLine> potionLines = List.of();
-        private float nameWidth;
-        private float effectBlockWidth;
-        private float effectBlockHeight;
-        private long updatedAt;
-    }
-
-    private record RenderEntry(LivingEntity entity, float topX, float topY, float bottomX, float bottomY, double distanceSq) { }
 
     private float getScoreboardHealth(LivingEntity entity) {
         if (mc.world == null || entity == null) return entity.getHealth();
@@ -383,4 +385,20 @@ public class NameTagsRender implements QuickImports {
 
         return entity.getHealth() + entity.getAbsorptionAmount();
     }
+
+    private static final class PlayerSnapshot {
+        private Text displayName;
+        private boolean friend;
+        private ItemStack[] armor = new ItemStack[4];
+        private ItemStack mainHand = ItemStack.EMPTY;
+        private ItemStack offHand = ItemStack.EMPTY;
+        private List<NameTagsPotions.PotionLine> potionLines = List.of();
+        private float nameWidth;
+        private float effectBlockWidth;
+        private float effectBlockHeight;
+        private long updatedAt;
+    }
+
+    private record RenderEntry(LivingEntity entity, float topX, float topY, float bottomX, float bottomY, double distanceSq) { }
+    private record ColoredItemText(String text, Color color) {}
 }
