@@ -41,6 +41,7 @@ public class ModuleManager {
                 NameTagsModule.getInstance(),
                 IRCModule.getInstance(),
                 WaterSpeedModule.getInstance(),
+                BlockFlyModule.getInstance(),
                 AutoToolModule.getInstance(),
                 ChestStealerModule.getInstance(),
                 SpeedModule.getInstance(),

@@ -6,6 +6,7 @@ import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.math.MathHelper;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -16,10 +17,15 @@ import lombok.Getter;
 import net.minecraft.util.math.Vec3d;
 import sweetie.nezi.api.system.configs.FriendManager;
 import sweetie.nezi.api.system.interfaces.QuickImports;
+import sweetie.nezi.api.utils.rotation.RaytracingUtil;
 import sweetie.nezi.api.utils.rotation.RotationUtil;
+import sweetie.nezi.api.utils.rotation.manager.Rotation;
+import sweetie.nezi.api.utils.rotation.manager.RotationManager;
+import sweetie.nezi.api.utils.rotation.misc.PointFinder;
 
 public class TargetManager implements QuickImports {
     private static final Pattern STATIONARY_NUMERIC_NAME = Pattern.compile("\\d{3,5}");
+    private final PointFinder pointFinder = new PointFinder();
     @Getter private LivingEntity currentTarget;
     private Stream<LivingEntity> potentialTargets;
 
@@ -42,33 +48,61 @@ public class TargetManager implements QuickImports {
     }
 
     public void searchTargets(Iterable<Entity> entities, float maxDistance) {
-        if (isTargetOutOfRange(maxDistance)) {
+        searchTargets(entities, maxDistance, 360.0F, false);
+    }
+
+    public void searchTargets(Iterable<Entity> entities, float maxDistance, float maxFov, boolean ignoreWalls) {
+        if (currentTarget != null && (!pointFinder.hasValidPoint(currentTarget, maxDistance, ignoreWalls)
+                || getFov(currentTarget, maxDistance, ignoreWalls) > maxFov)) {
             releaseTarget();
         }
 
-        potentialTargets = createStreamFromEntities(entities, maxDistance);
+        potentialTargets = createStreamFromEntities(entities, maxDistance, maxFov, ignoreWalls);
     }
 
-    private boolean isTargetOutOfRange(float maxDistance) {
-        return currentTarget != null && RotationUtil.getSpot(currentTarget).distanceTo(mc.player.getEyePos()) > maxDistance;
+    private double getFov(LivingEntity entity, float maxDistance, boolean ignoreWalls) {
+        if (mc.player == null || entity == null) {
+            return Double.POSITIVE_INFINITY;
+        }
+
+        Rotation currentRotation = RotationManager.getInstance().getCurrentRotation();
+        Rotation baseRotation = currentRotation != null ? currentRotation : RotationManager.getInstance().getRotation();
+        Vec3d attackVector = pointFinder.computeVector(entity, maxDistance, baseRotation, Vec3d.ZERO, ignoreWalls).getLeft();
+        if (attackVector == null) {
+            return Double.POSITIVE_INFINITY;
+        }
+
+        Rotation targetRotation = RotationUtil.fromVec3d(attackVector.subtract(mc.player.getEyePos()));
+        return RaytracingUtil.rayTrace(targetRotation.getVector(), maxDistance, entity.getBoundingBox())
+                ? 0.0D
+                : computeRotationDifference(baseRotation, targetRotation);
     }
 
-    private Stream<LivingEntity> createStreamFromEntities(Iterable<Entity> entities, float maxDistance) {
+    private Stream<LivingEntity> createStreamFromEntities(Iterable<Entity> entities, float maxDistance, float maxFov, boolean ignoreWalls) {
+        double maxDistanceSq = maxDistance * maxDistance;
         return StreamSupport.stream(entities.spliterator(), false)
                 .filter(LivingEntity.class::isInstance)
                 .map(LivingEntity.class::cast)
-                .filter(it -> {
-                    Vec3d spot = RotationUtil.getSpot(it);
-                    return mc.player.getEyePos().distanceTo(spot) <= maxDistance;
-                })
-                .sorted(java.util.Comparator.comparingDouble(it -> {
-                    Vec3d spot = RotationUtil.getSpot(it);
-                    return mc.player.getEyePos().distanceTo(spot);
-                }));
+                .filter(entity -> entity != mc.player)
+                .filter(LivingEntity::isAlive)
+                .filter(entity -> entity.squaredDistanceTo(mc.player) <= maxDistanceSq)
+                .filter(entity -> pointFinder.hasValidPoint(entity, maxDistance, ignoreWalls) && getFov(entity, maxDistance, ignoreWalls) < maxFov)
+                .sorted(java.util.Comparator.comparingDouble(entity -> entity.distanceTo(mc.player)));
     }
 
     private java.util.Optional<LivingEntity> findFirstMatch(java.util.function.Predicate<LivingEntity> predicate) {
         return potentialTargets != null ? potentialTargets.filter(predicate).findFirst() : java.util.Optional.empty();
+    }
+
+    private double computeRotationDifference(Rotation a, Rotation b) {
+        return Math.hypot(
+                Math.abs(computeAngleDifference(a.getYaw(), b.getYaw())),
+                Math.abs(computeAngleDifference(a.getPitch(), b.getPitch()))
+        );
+    }
+
+    private float computeAngleDifference(float a, float b) {
+        return MathHelper.wrapDegrees(a - b);
     }
 
     public static boolean isStationaryNumericNamePlayer(PlayerEntity player) {

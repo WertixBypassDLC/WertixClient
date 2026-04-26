@@ -2,6 +2,7 @@ package sweetie.nezi.inject.entity;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -14,6 +15,8 @@ import sweetie.nezi.api.system.backend.SharedClass;
 import sweetie.nezi.api.utils.rotation.manager.Rotation;
 import sweetie.nezi.api.utils.rotation.manager.RotationManager;
 import sweetie.nezi.api.utils.rotation.manager.RotationPlan;
+import sweetie.nezi.api.utils.rotation.rotations.FunTimeRotation;
+import sweetie.nezi.client.features.modules.combat.AuraModule;
 import sweetie.nezi.client.features.modules.combat.VelocityModule;
 import sweetie.nezi.client.features.modules.render.SwingAnimationModule;
 
@@ -21,6 +24,9 @@ import sweetie.nezi.client.features.modules.render.SwingAnimationModule;
 public abstract class MixinLivingEntity extends MixinEntity {
     @Shadow
     public abstract boolean isGliding();
+
+    @Shadow
+    public float bodyYaw;
 
     @Shadow
     public int jumpingCooldown;
@@ -98,5 +104,33 @@ public abstract class MixinLivingEntity extends MixinEntity {
         }
 
         return rotation.getVector();
+    }
+
+    @ModifyExpressionValue(method = "turnHead", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;wrapDegrees(F)F", ordinal = 1))
+    private float hookBodyYawDelta(float original) {
+        if ((Object) this != SharedClass.player()) {
+            return original;
+        }
+
+        RotationManager rotationManager = RotationManager.getInstance();
+        RotationPlan currentRotationPlan = rotationManager.getCurrentRotationPlan();
+        if (currentRotationPlan == null) {
+            return original;
+        }
+
+        float headYaw = rotationManager.getRotation().getYaw();
+        if (shouldUseFunTimeVisualOverride()) {
+            Rotation visualRotation = FunTimeRotation.getVisualRotation();
+            if (visualRotation != null) {
+                headYaw = visualRotation.getYaw();
+            }
+        }
+
+        return MathHelper.wrapDegrees(headYaw - bodyYaw);
+    }
+
+    private boolean shouldUseFunTimeVisualOverride() {
+        AuraModule aura = AuraModule.getInstance();
+        return aura != null && aura.isEnabled() && aura.getAimMode().is("Fun Time") && FunTimeRotation.hasVisualRotation();
     }
 }

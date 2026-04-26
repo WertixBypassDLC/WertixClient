@@ -11,7 +11,7 @@ import sweetie.nezi.client.features.modules.movement.SprintModule;
 
 public class ShieldBreakManager implements QuickImports {
     public boolean shouldBreakShield(PlayerEntity entity) {
-        if (entity.isBlocking() && isLookingAtMe(entity)) {
+        if (canBreakShield(entity)) {
             boolean slowness = SlownessManager.isEnabled();
             int invSlot = InventoryUtil.findAxeInInventory(false);
             int hotBarSlot = InventoryUtil.findAxeInInventory(true);
@@ -40,6 +40,20 @@ public class ShieldBreakManager implements QuickImports {
         }
 
         return false;
+    }
+
+    public boolean canBreakShield(PlayerEntity entity) {
+        if (entity == null) {
+            return false;
+        }
+
+        if (!entity.isBlocking() || !isLookingAtMe(entity)) {
+            return false;
+        }
+
+        int invSlot = InventoryUtil.findAxeInInventory(false);
+        int hotBarSlot = InventoryUtil.findAxeInInventory(true);
+        return hotBarSlot != -1 || invSlot != -1;
     }
 
     private boolean shieldBreakAction(String action, int hotBarSlot, int invSlot, PlayerEntity entity) {

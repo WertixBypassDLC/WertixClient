@@ -33,6 +33,12 @@ public class KeybindsWidget extends ContainerWidget {
             return true;
         }
 
+        for (float animation : animMap.values()) {
+            if (animation > 0.01f) {
+                return true;
+            }
+        }
+
         for (Module module : ModuleManager.getInstance().getModules()) {
             if (module.isEnabled() && module.hasBind()) {
                 return true;
@@ -50,7 +56,7 @@ public class KeybindsWidget extends ContainerWidget {
             float current = animMap.getOrDefault(module, 0f);
             animMap.put(module, current + ((active ? 1f : 0f) - current) * 0.15f);
 
-            if (active && animMap.getOrDefault(module, 0f) > 0.01f) {
+            if (animMap.getOrDefault(module, 0f) > 0.01f) {
                 visibleModules.add(module);
             }
         }
@@ -60,7 +66,7 @@ public class KeybindsWidget extends ContainerWidget {
         visibleModules.sort(Comparator.comparing(Module::getLocalizedName));
 
         boolean isChatPreview = mc.currentScreen instanceof ChatScreen && visibleModules.isEmpty();
-        if (visibleModules.isEmpty() && !isChatPreview) {
+        if (visibleModules.isEmpty() && !isChatPreview && getAppearProgress() <= 0.01f) {
             return;
         }
 
@@ -100,9 +106,9 @@ public class KeybindsWidget extends ContainerWidget {
             maxKeyW = Math.max(maxKeyW, keyWidth);
         }
 
-        float hdrContentW = sqS + scaled(3f) + Fonts.PS_BOLD.getWidth("Hotkeys", fTit);
+        float hdrContentW = Fonts.PS_BOLD.getWidth("Hotkeys", fTit) + scaled(34f);
         float rowInnW = maxNameW + nameKeyGap + maxKeyW;
-        float cardW = Math.max(hdrContentW, rowInnW) + p * 2f + scaled(2f);
+        float cardW = Math.max(hdrContentW, rowInnW + scaled(20f));
 
         float totalRows = 0f;
         for (Module module : visibleModules) {

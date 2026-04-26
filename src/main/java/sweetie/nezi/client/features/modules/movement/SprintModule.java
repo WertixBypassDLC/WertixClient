@@ -1,6 +1,7 @@
 package sweetie.nezi.client.features.modules.movement;
 
 import lombok.Getter;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.util.math.MathHelper;
 import sweetie.nezi.api.event.EventListener;
 import sweetie.nezi.api.event.Listener;
@@ -37,18 +38,6 @@ public class SprintModule extends Module {
                 return;
             }
 
-            if (mode.is("Legit")) {
-                boolean horizontal = mc.player.horizontalCollision && !mc.player.collidedSoftly;
-                boolean sneaking = mc.player.isSneaking() && !mc.player.isSwimming();
-
-                if (tickStop > 0 || sneaking || horizontal || isWTapSuppressing()) {
-                    event.setSprint(false);
-                } else if (canStartSprinting() && !mc.options.sprintKey.isPressed()) {
-                    event.setSprint(true);
-                }
-                return;
-            }
-
             if (isWTapSuppressing()) {
                 event.setSprint(false);
             } else if (mode.is("Packet") && shouldForceSprint()) {
@@ -57,9 +46,22 @@ public class SprintModule extends Module {
         }));
 
         EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
-            if (tickStop > 0) {
-                tickStop--;
+            if (mc.player == null) {
+                return;
             }
+
+            if (mode.is("Legit")) {
+                boolean horizontal = mc.player.horizontalCollision && !mc.player.collidedSoftly;
+                boolean sneaking = mc.player.isSneaking() && !mc.player.isSwimming();
+
+                if (tickStop > 0 || sneaking || isWTapSuppressing()) {
+                    mc.player.setSprinting(false);
+                } else if (canStartSprinting() && !horizontal && !mc.options.sprintKey.isPressed()) {
+                    mc.player.setSprinting(true);
+                }
+            }
+
+            tickStop--;
         }));
 
         addEvents(sprintEvent, updateEvent);
@@ -74,8 +76,9 @@ public class SprintModule extends Module {
             return false;
         }
 
+        boolean hasBlindness = mc.player.hasStatusEffect(StatusEffects.BLINDNESS);
         boolean hasForwardMovement = mc.player.input != null && mc.player.input.hasForwardMovement();
-        return hasForwardMovement && !mc.player.isSprinting() && !mc.player.isGliding();
+        return !mc.player.isSprinting() && hasForwardMovement && !hasBlindness && !mc.player.isGliding();
     }
 
     public boolean shouldForceSprint() {

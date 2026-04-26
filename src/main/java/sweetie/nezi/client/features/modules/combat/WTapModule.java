@@ -2,6 +2,7 @@ package sweetie.nezi.client.features.modules.combat;
 
 import lombok.Getter;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket;
 import sweetie.nezi.api.event.EventListener;
 import sweetie.nezi.api.event.Listener;
 import sweetie.nezi.api.event.events.player.other.UpdateEvent;
@@ -19,8 +20,7 @@ public class WTapModule extends Module {
     private volatile Phase phase = Phase.IDLE;
     private final TimerUtil phaseTimer = new TimerUtil();
 
-    // Сколько миллисекунд удерживать отжатым спринт для создания Knockback-эффекта
-    private static final long SUPPRESS_MS = 100L;
+    private static final long SUPPRESS_MS = 60L;
 
     public WTapModule() {
         setEnabled(true);
@@ -31,39 +31,46 @@ public class WTapModule extends Module {
         cancel();
     }
 
-    /** Активен ли цикл подавления спринта прямо сейчас */
     public boolean isSuppressing() {
         return phase == Phase.SUPPRESSING;
     }
 
-    /**
-     * Вызывается из TriggerBot / Aura перед атакой.
-     * Запускает классический WTap (сброс спринта на короткое время)
-     * и сразу вызывает саму атаку.
-     */
     public boolean requestCritAttack(Runnable onAttack) {
         if (!isEnabled() || mc.player == null) return false;
+
+        if (mc.player.isSprinting() || mc.options.forwardKey.isPressed()) {
+            mc.options.forwardKey.setPressed(false);
+            mc.options.sprintKey.setPressed(false);
+            mc.player.setSprinting(false);
+
+            if (mc.getNetworkHandler() != null) {
+                mc.getNetworkHandler().sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING));
+            }
+        }
 
         phase = Phase.SUPPRESSING;
         phaseTimer.reset();
 
-        // Глушим спринт перед ударом
-        suppressSprint();
-
-        // Сразу вызываем атаку, прыжок больше не инициируется
         onAttack.run();
 
         return true;
     }
 
-    /**
-     * Вызывается из старых систем для ручного сброса спринта.
-     */
     public void requestReset() {
         if (!isEnabled() || mc.player == null) return;
+
+        if (mc.player.isSprinting() || mc.options.forwardKey.isPressed()) {
+            mc.options.forwardKey.setPressed(false);
+            mc.options.sprintKey.setPressed(false);
+            mc.player.setSprinting(false);
+
+            if (mc.getNetworkHandler() != null) {
+                mc.getNetworkHandler().sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING));
+            }
+        }
+
         phase = Phase.SUPPRESSING;
         phaseTimer.reset();
-        suppressSprint();
     }
 
     @Override
@@ -72,8 +79,9 @@ public class WTapModule extends Module {
             if (mc.player == null) return;
 
             if (phase == Phase.SUPPRESSING) {
-                // Продолжаем глушить спринт заданное время
-                suppressSprint();
+                mc.options.forwardKey.setPressed(false);
+                mc.options.sprintKey.setPressed(false);
+                mc.player.setSprinting(false);
 
                 if (phaseTimer.finished(SUPPRESS_MS)) {
                     cancel();
@@ -83,12 +91,6 @@ public class WTapModule extends Module {
         addEvents(update);
     }
 
-    /** Сбросить спринт без пакетов */
-    private void suppressSprint() {
-        if (mc.player == null) return;
-        mc.player.setSprinting(false);
-    }
-
     private void cancel() {
         phase = Phase.IDLE;
         restoreKey();
@@ -96,9 +98,16 @@ public class WTapModule extends Module {
 
     private void restoreKey() {
         if (mc.player == null || mc.getWindow() == null) return;
-        int keyCode = mc.options.forwardKey.getDefaultKey().getCode();
-        if (InputUtil.isKeyPressed(mc.getWindow().getHandle(), keyCode)) {
+
+        long handle = mc.getWindow().getHandle();
+        int forwardCode = mc.options.forwardKey.getDefaultKey().getCode();
+        int sprintCode = mc.options.sprintKey.getDefaultKey().getCode();
+
+        if (InputUtil.isKeyPressed(handle, forwardCode)) {
             mc.options.forwardKey.setPressed(true);
+        }
+        if (InputUtil.isKeyPressed(handle, sprintCode)) {
+            mc.options.sprintKey.setPressed(true);
         }
     }
 }

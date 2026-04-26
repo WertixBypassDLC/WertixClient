@@ -56,10 +56,10 @@ public class ArrayListWidget extends Widget {
         sideAnim = Math.min(1f, sideAnim + 0.08f);
         float sideEase = sideAnim * sideAnim * (3f - 2f * sideAnim);
 
-        float rowH = scaled(10.5f);
+        float rowH = scaled(10.8f);
         float gap  = scaled(1.5f);
         float p    = scaled(5f);
-        float round = rowH;
+        float round = scaled(2.5f);
         float mix  = InterfaceModule.getGlassy();
 
         float maxW = 0f;
@@ -90,13 +90,13 @@ public class ArrayListWidget extends Widget {
             int   al    = Math.max(5, (int)(255f * anim));
             String name = m.getLocalizedName();
             float textW = Fonts.PS_MEDIUM.getWidth(name, fS);
-            float w     = textW + p * 2f;
+            float w     = maxW;
 
-            float cardX  = rightSide ? (x + maxW - w) : x;
-            float pivotX = rightSide ? (x + maxW)     : x;
+            float cardX  = x;
+            float pivotX = rightSide ? (x + maxW) : x;
 
             float slideOffset = (1f - sideEase) * maxW * (rightSide ? 1f : -1f);
-            cardX  += slideOffset;
+            cardX += slideOffset;
             pivotX += slideOffset;
 
             ms.push();
@@ -104,7 +104,7 @@ public class ArrayListWidget extends Widget {
             ms.scale(anim, 1f, 1f);
             ms.translate(-pivotX, -(drawY + rowH / 2f), 0f);
 
-            drawStrokeCard(ms, cardX, drawY, w, rowH, round, Math.max(5, al / 3), mix);
+            drawStrokeCard(ms, cardX, drawY, w, rowH, round, Math.max(10, al / 2), mix);
 
             float textX = rightSide ? (x + maxW - p - textW + slideOffset) : (x + p + slideOffset);
             Fonts.PS_MEDIUM.drawText(ms, name, textX,

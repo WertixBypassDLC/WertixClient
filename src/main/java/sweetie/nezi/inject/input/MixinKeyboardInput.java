@@ -34,29 +34,19 @@ public class MixinKeyboardInput extends MixinInput {
         RotationPlan plan = RotationManager.getInstance().getCurrentRotationPlan();
         AuraModule aura = AuraModule.getInstance();
 
+        if (AuraModule.moveFixEnabled() && aura.getMove().is("Focus") && aura.target != null && aura.target.isAlive()) {
+            Rotation referenceRotation = currentRotation != null ? currentRotation : RotationManager.getInstance().getRotation();
+            return createInput(original, buildTargetApproachInput(referenceRotation.getYaw(), aura.target.getPos(), mc.player.getPos()));
+        }
+
         if (AuraModule.moveFixEnabled() && plan != null && currentRotation != null && plan.moveCorrection()) {
             float forward = original.forward() ? 1f : (original.backward() ? -1f : 0f);
             float strafe = original.left() ? 1f : (original.right() ? -1f : 0f);
             float serverYaw = currentRotation.getYaw();
             DirectionalInput fixed = null;
 
-            switch (aura.getMove().getValue()) {
-                case "Focus", "Free" -> {
-                    if (forward != 0f || strafe != 0f) {
-                        fixed = MoveUtil.getFixedInput(forward, strafe, mc.player.getYaw(), serverYaw);
-                    }
-                }
-
-                case "Target" -> {
-                    if (aura.target != null) {
-                        fixed = (forward == 0f && strafe == 0f)
-                                ? buildTargetApproachInput(serverYaw, aura.target.getPos(), mc.player.getPos())
-                                : MoveUtil.getFixedInput(forward, strafe, mc.player.getYaw(), serverYaw);
-                    }
-                }
-
-                default -> {
-                }
+            if (aura.getMove().is("Free") && (forward != 0f || strafe != 0f)) {
+                fixed = MoveUtil.getFixedInput(forward, strafe, mc.player.getYaw(), serverYaw);
             }
 
             if (fixed != null) {
@@ -103,39 +93,43 @@ public class MixinKeyboardInput extends MixinInput {
     private DirectionalInput buildTargetApproachInput(float serverYaw, Vec3d targetPos, Vec3d playerPos) {
         double dx = targetPos.x - playerPos.x;
         double dz = targetPos.z - playerPos.z;
-        double dist = Math.sqrt(dx * dx + dz * dz);
+        double distSq = dx * dx + dz * dz;
 
-        if (dist < 0.3D) {
-            return new DirectionalInput(0, 0);
+        if (distSq < 1.0E-6D) {
+            return DirectionalInput.NONE;
         }
 
         float angleToTarget = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
         float angleDiff = MathHelper.wrapDegrees(angleToTarget - serverYaw);
 
-        float forward = 0.0F;
-        float strafe = 0.0F;
+        boolean forward = false;
+        boolean backward = false;
+        boolean left = false;
+        boolean right = false;
 
-        if (angleDiff >= -45.0F && angleDiff < 45.0F) {
-            forward = 1.0F;
-        } else if (angleDiff >= 45.0F && angleDiff < 135.0F) {
-            strafe = 1.0F;
-        } else if (angleDiff >= -135.0F && angleDiff < -45.0F) {
-            strafe = -1.0F;
+        if (angleDiff >= -22.5F && angleDiff < 22.5F) {
+            forward = true;
+        } else if (angleDiff >= 22.5F && angleDiff < 67.5F) {
+            forward = true;
+            right = true;
+        } else if (angleDiff >= 67.5F && angleDiff < 112.5F) {
+            right = true;
+        } else if (angleDiff >= 112.5F && angleDiff < 157.5F) {
+            backward = true;
+            right = true;
+        } else if (angleDiff >= -67.5F && angleDiff < -22.5F) {
+            forward = true;
+            left = true;
+        } else if (angleDiff >= -112.5F && angleDiff < -67.5F) {
+            left = true;
+        } else if (angleDiff >= -157.5F && angleDiff < -112.5F) {
+            backward = true;
+            left = true;
         } else {
-            forward = -1.0F;
+            backward = true;
         }
 
-        if (dist > 1.5D) {
-            if (angleDiff >= -67.5F && angleDiff < -22.5F) {
-                forward = 1.0F;
-                strafe = -1.0F;
-            } else if (angleDiff >= 22.5F && angleDiff < 67.5F) {
-                forward = 1.0F;
-                strafe = 1.0F;
-            }
-        }
-
-        return new DirectionalInput(forward, strafe);
+        return new DirectionalInput(forward, backward, left, right);
     }
 
     @Unique

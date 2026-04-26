@@ -31,7 +31,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class TriggerBotModule extends Module {
     @Getter private static final TriggerBotModule instance = new TriggerBotModule();
 
-    private final SliderSetting distance       = new SliderSetting("Distance").value(3.1f).range(2.0f, 5.0f).step(0.05f);
+    private final SliderSetting distance       = new SliderSetting("Distance").value(2.9997f).range(2.0f, 5.0f).step(0.05f);
     private final BooleanSetting onlyCrits     = new BooleanSetting("Only Crits").value(true);
     private final BooleanSetting smartCrits    = new BooleanSetting("Smart Crits").value(true).setVisible(onlyCrits::getValue);
     private final BooleanSetting shieldBreak   = new BooleanSetting("Shield Break").value(true);
@@ -48,7 +48,6 @@ public class TriggerBotModule extends Module {
     private final TimerUtil attackTimer = new TimerUtil();
     private long nextDelay = 0L;
 
-    // Флаг: мы уже передали атаку WTap и ждём выполнения
     private volatile boolean pendingWtapAttack = false;
 
     public TriggerBotModule() {
@@ -71,7 +70,6 @@ public class TriggerBotModule extends Module {
             if (target instanceof LivingEntity livingTarget) {
                 AuraModule.getInstance().target = livingTarget;
 
-                // Если WTap уже обрабатывает атаку — не инициируем новую
                 if (pendingWtapAttack) return;
 
                 if (shouldAttack(livingTarget)) {
@@ -116,10 +114,8 @@ public class TriggerBotModule extends Module {
         if (!new sweetie.nezi.api.utils.combat.TargetManager.EntityFilter(targets.getList()).isValid(target)) return false;
         if (noAttackIfEat.getValue() && PlayerUtil.isEating()) return false;
 
-        // Проверка кулдауна между атаками
         if (!attackTimer.finished(nextDelay)) return false;
 
-        // Проверка оружия и зарядки
         net.minecraft.item.Item mainHand = mc.player.getMainHandStack().getItem();
         boolean isWeapon = mainHand instanceof net.minecraft.item.SwordItem
                 || mainHand instanceof net.minecraft.item.AxeItem
@@ -129,20 +125,15 @@ public class TriggerBotModule extends Module {
         if (!isWeapon) {
             if (!attackTimer.finished(100L)) return false;
         } else {
-            // Ждём полного кулдауна оружия (93-95%)
             float cooldownReq = 0.93f + ThreadLocalRandom.current().nextFloat() * 0.02f;
             if (mc.player.getAttackCooldownProgress(0.5f) < cooldownReq) return false;
         }
 
-        // Пробивание щита — атакуем сразу (крит по щиту всё равно считается)
         if (target.isBlocking() && shieldBreak.getValue()) return true;
 
-        // Если крит не нужен — атакуем
         if (!onlyCrits.getValue()) return true;
 
-        // === Логика крита ===
         if (smartCrits.getValue() && mc.player.isOnGround() && !mc.options.jumpKey.isPressed()) {
-            // SmartCrits: атакуем на земле
             return true;
         }
 
@@ -152,11 +143,6 @@ public class TriggerBotModule extends Module {
         return falling && !inLiquid && !climbing;
     }
 
-    /**
-     * Инициируем атаку:
-     * - Если WTap включён → передаём атаку ему как колбэк (он сбросит спринт и сразу ударит)
-     * - Если WTap выключен → атакуем напрямую
-     */
     private void initiateAttack(LivingEntity target) {
         if (WTapModule.getInstance().isEnabled()) {
             pendingWtapAttack = true;
@@ -173,7 +159,6 @@ public class TriggerBotModule extends Module {
         }
     }
 
-    /** Выполняет саму атаку. Без пакетов спринта. */
     private void doAttack(LivingEntity target) {
         mc.interactionManager.attackEntity(mc.player, target);
         mc.player.swingHand(Hand.MAIN_HAND);

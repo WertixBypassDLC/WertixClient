@@ -13,6 +13,7 @@ import sweetie.nezi.api.utils.rotation.manager.Rotation;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -22,6 +23,11 @@ public class PointFinder implements QuickImports {
     private Vec3d offset = Vec3d.ZERO;
     private Vec3d smoothedPoint = null;
     private int lastTargetId = Integer.MIN_VALUE;
+    private int cachedCandidateTargetId = Integer.MIN_VALUE;
+    private int cachedCandidateTick = Integer.MIN_VALUE;
+    private float cachedCandidateDistance = Float.NaN;
+    private boolean cachedCandidateIgnoreWalls = false;
+    private Pair<List<Vec3d>, Box> cachedCandidateData = new Pair<>(List.of(), null);
     private long selectorSeed = 0L;
 
     public Pair<Vec3d, Box> computeVector(LivingEntity entity, float maxDistance, Rotation initialRotation, Vec3d velocity, boolean ignoreWalls) {
@@ -38,6 +44,10 @@ public class PointFinder implements QuickImports {
 
         Pair<List<Vec3d>, Box> candidatePoints = generateCandidatePoints(entity, maxDistance, ignoreWalls);
         Box entityBox = candidatePoints.getRight();
+        if (candidatePoints.getLeft().isEmpty()) {
+            return new Pair<>(null, entityBox);
+        }
+
         Vec3d bestVector = findBestVector(candidatePoints.getLeft(), initialRotation);
         Vec3d fallbackPoint = clampToBox(mc.player.getEyePos(), entityBox, 0.03D);
         Vec3d base = bestVector == null ? fallbackPoint : bestVector;
@@ -50,11 +60,23 @@ public class PointFinder implements QuickImports {
     }
 
     public Pair<List<Vec3d>, Box> generateCandidatePoints(LivingEntity entity, float maxDistance, boolean ignoreWalls) {
+        if (entity == null || mc.player == null) {
+            return new Pair<>(List.of(), entity == null ? null : entity.getBoundingBox());
+        }
+
+        int currentTick = mc.player.age;
+        if (entity.getId() == cachedCandidateTargetId
+                && currentTick == cachedCandidateTick
+                && Float.compare(maxDistance, cachedCandidateDistance) == 0
+                && ignoreWalls == cachedCandidateIgnoreWalls) {
+            return cachedCandidateData;
+        }
+
         Box entityBox = entity.getBoundingBox();
         List<Vec3d> points = new ArrayList<>();
-        int stepsX = 5;
-        int stepsY = 9;
-        int stepsZ = 5;
+        int stepsX = 4;
+        int stepsY = 7;
+        int stepsZ = 4;
         double marginX = Math.min(0.07D, entityBox.getLengthX() * 0.14D);
         double marginY = Math.min(0.06D, entityBox.getLengthY() * 0.06D);
         double marginZ = Math.min(0.07D, entityBox.getLengthZ() * 0.14D);
@@ -74,7 +96,20 @@ public class PointFinder implements QuickImports {
             }
         }
 
-        return new Pair<>(points, entityBox);
+        cachedCandidateTargetId = entity.getId();
+        cachedCandidateTick = currentTick;
+        cachedCandidateDistance = maxDistance;
+        cachedCandidateIgnoreWalls = ignoreWalls;
+        cachedCandidateData = new Pair<>(List.copyOf(points), entityBox);
+        return cachedCandidateData;
+    }
+
+    public boolean hasValidPoint(LivingEntity entity, float maxDistance, boolean ignoreWalls) {
+        if (entity == null || mc.player == null) {
+            return false;
+        }
+
+        return !generateCandidatePoints(entity, maxDistance, ignoreWalls).getLeft().isEmpty();
     }
 
     private boolean isValidPoint(Vec3d startPoint, Vec3d endPoint, float maxDistance, boolean ignoreWalls) {
@@ -100,20 +135,26 @@ public class PointFinder implements QuickImports {
         }
 
         if (initialRotation == null) {
-            return candidatePoints.stream()
-                    .min(Comparator.comparingDouble(point -> point.squaredDistanceTo(mc.player.getEyePos())))
-                    .orElse(candidatePoints.get(0));
+            List<Vec3d> randomized = new ArrayList<>(candidatePoints);
+            Collections.shuffle(randomized, random);
+            int poolSize = Math.min(12, randomized.size());
+            return randomized.get(random.nextInt(poolSize));
         }
 
-        List<Vec3d> sorted = new ArrayList<>(candidatePoints);
-        sorted.sort(Comparator.comparingDouble(point -> calculateRotationDifference(mc.player.getEyePos(), point, initialRotation)));
+        List<Vec3d> randomized = new ArrayList<>(candidatePoints);
+        Collections.shuffle(randomized, random);
 
-        int poolSize = Math.min(6, sorted.size());
+        List<Vec3d> sorted = new ArrayList<>(randomized);
+        sorted.sort(Comparator.comparingDouble(point ->
+                calculateRotationDifference(mc.player.getEyePos(), point, initialRotation) + random.nextDouble() * 7.5D
+        ));
+
+        int poolSize = Math.min(12, sorted.size());
         if (poolSize == 1) {
             return sorted.get(0);
         }
 
-        int index = (int) (((System.currentTimeMillis() + selectorSeed) / 105L) % poolSize);
+        int index = random.nextInt(poolSize);
         return sorted.get(index);
     }
 
@@ -150,7 +191,7 @@ public class PointFinder implements QuickImports {
     }
 
     private Vec3d smoothPoint(Vec3d from, Vec3d to, Box box) {
-        Vec3d lerped = from.lerp(to, 0.38D);
+        Vec3d lerped = from.lerp(to, 0.52D);
         return clampToBox(lerped, box, 0.03D);
     }
 

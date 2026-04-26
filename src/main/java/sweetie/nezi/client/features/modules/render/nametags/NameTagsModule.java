@@ -26,6 +26,7 @@ public class NameTagsModule extends Module {
     );
     public final SliderSetting scale = new SliderSetting("Масштаб").value(1f).range(0.1f, 2f).step(0.1f);
     public final BooleanSetting showPotions = new BooleanSetting("Показывать зелья").value(true);
+    public final BooleanSetting showArmor = new BooleanSetting("Armor").value(true);
     public final BooleanSetting showHands = new BooleanSetting("Предметы в руках").value(true);
 
     public final TargetManager.EntityFilter entityFilter = new TargetManager.EntityFilter(targets.getList());
@@ -33,7 +34,7 @@ public class NameTagsModule extends Module {
     private final NameTagsRender nameTagsRender = new NameTagsRender(this);
 
     public NameTagsModule() {
-        addSettings(targets, scale, showPotions, showHands);
+        addSettings(targets, scale, showPotions, showArmor, showHands);
     }
 
     @Override

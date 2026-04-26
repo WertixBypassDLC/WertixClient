@@ -38,6 +38,11 @@ public class TaskProcessor<T> {
         return activeTasks.peek().value;
     }
 
+    public void clear() {
+        activeTasks.clear();
+        tickCounter = 0;
+    }
+
     public static class Task<T> {
         public int expiresIn;
         public final int priority;

@@ -20,10 +20,27 @@ import sweetie.nezi.api.system.backend.SharedClass;
 import sweetie.nezi.api.utils.rotation.manager.Rotation;
 import sweetie.nezi.api.utils.rotation.manager.RotationManager;
 import sweetie.nezi.api.utils.rotation.manager.RotationPlan;
-import sweetie.nezi.api.utils.rotation.rotations.FunTimeRotation;
 
 @Mixin(LivingEntityRenderer.class)
 public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> {
+    @ModifyExpressionValue(method = "updateRenderState*", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/MathHelper;lerpAngleDegrees(FFF)F"))
+    private float updateVisualYaw(float original, LivingEntity entity, S state, float tickDelta) {
+        if (entity != SharedClass.player()) {
+            return original;
+        }
+
+        RotationManager rotationManager = RotationManager.getInstance();
+        Rotation rotation = rotationManager.getRotation();
+        Rotation rotationPrev = rotationManager.getPreviousRotation();
+        RotationPlan currentRotationPlan = rotationManager.getCurrentRotationPlan();
+
+        if (currentRotationPlan == null) {
+            return original;
+        }
+
+        return MathHelper.lerpAngleDegrees(tickDelta, rotationPrev.getYaw(), rotation.getYaw());
+    }
+
     @ModifyExpressionValue(method = "updateRenderState*", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;getLerpedPitch(F)F"))
     private float updateVisalPitch(float original, LivingEntity entity, S state, float tickDelta) {
         if (entity != SharedClass.player()) {
@@ -39,14 +56,7 @@ public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extend
             return original;
         }
 
-        if (!currentRotationPlan.clientLook() && FunTimeRotation.MODE_NAME.equals(currentRotationPlan.rotationMode().getName())) {
-            if (FunTimeRotation.shouldVisualSnap()) {
-                return MathHelper.lerpAngleDegrees(tickDelta, rotationPrev.getPitch(), rotation.getPitch());
-            }
-            return FunTimeRotation.getFrozenVisualPitch(original);
-        }
-
-        return MathHelper.lerpAngleDegrees(tickDelta, rotationPrev.getPitch(), rotation.getPitch());
+        return MathHelper.lerp(tickDelta, rotationPrev.getPitch(), rotation.getPitch());
     }
 
     @Shadow

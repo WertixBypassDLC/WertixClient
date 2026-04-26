@@ -72,7 +72,7 @@ public abstract class TargetEspMode implements QuickImports {
             currentTarget = triggerTarget;
         } else if (aimTarget != null) {
             currentTarget = aimTarget;
-        } else if (!reason()) {
+        } else if (!reason() && showAnimation.getValue() <= 0.01 && showAnimation.getToValue() == 0.0) {
             currentTarget = null;
         }
 
@@ -90,7 +90,7 @@ public abstract class TargetEspMode implements QuickImports {
                     transitionAnimation.run(0.0, 750, Easing.QUART_OUT);
                 }
             }
-        } else if (showAnimation.getToValue() == 0.0) {
+        } else if (currentTarget == null && showAnimation.getToValue() == 0.0) {
             currentTargetId = Integer.MIN_VALUE;
         }
     }

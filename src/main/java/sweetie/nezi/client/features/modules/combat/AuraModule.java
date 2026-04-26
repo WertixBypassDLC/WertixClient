@@ -1,17 +1,29 @@
 package sweetie.nezi.client.features.modules.combat;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import lombok.Getter;
+import net.minecraft.client.gl.ShaderProgramKeys;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BufferRenderer;
+import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexFormat;
+import net.minecraft.client.render.VertexFormats;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.network.packet.s2c.play.EntityStatusS2CPacket;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import org.joml.Matrix4f;
 import sweetie.nezi.api.event.EventListener;
 import sweetie.nezi.api.event.Listener;
+import sweetie.nezi.api.event.events.client.PacketEvent;
 import sweetie.nezi.api.event.events.other.RotationUpdateEvent;
 import sweetie.nezi.api.event.events.player.other.UpdateEvent;
 import sweetie.nezi.api.event.events.player.world.AttackEvent;
+import sweetie.nezi.api.event.events.render.Render2DEvent;
 import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
@@ -21,7 +33,7 @@ import sweetie.nezi.api.module.setting.MultiBooleanSetting;
 import sweetie.nezi.api.module.setting.SliderSetting;
 import sweetie.nezi.api.utils.combat.CombatExecutor;
 import sweetie.nezi.api.utils.combat.TargetManager;
-import sweetie.nezi.api.utils.predict.PredictUtils;
+import sweetie.nezi.api.utils.notification.NotificationUtil;
 import sweetie.nezi.api.utils.rotation.RotationUtil;
 import sweetie.nezi.api.utils.rotation.manager.Rotation;
 import sweetie.nezi.api.utils.rotation.manager.RotationManager;
@@ -31,11 +43,11 @@ import sweetie.nezi.api.utils.rotation.misc.AuraUtil;
 import sweetie.nezi.api.utils.rotation.misc.PointFinder;
 import sweetie.nezi.api.utils.rotation.rotations.FunTimeRotation;
 import sweetie.nezi.api.utils.rotation.rotations.MatrixRotation;
-import sweetie.nezi.api.utils.rotation.rotations.SmoothRotation;
-import sweetie.nezi.api.utils.rotation.rotations.UniversalRotation;
+import sweetie.nezi.api.utils.rotation.rotations.SnapRotation;
 import sweetie.nezi.api.utils.task.TaskPriority;
 import sweetie.nezi.client.features.modules.combat.elytratarget.ElytraTargetModule;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @ModuleRegister(name = "Aura", category = Category.COMBAT)
@@ -46,31 +58,23 @@ public class AuraModule extends Module {
     private final PointFinder pointFinder = new PointFinder();
     public final CombatExecutor combatExecutor = new CombatExecutor();
 
-    @Getter private final ModeSetting aimMode = new ModeSetting("Aim mode").value("Smooth").values(
-            "Smooth", "Snap",
-            "Matrix", "Vulcan",
-            "Fun Time"
+    @Getter private final ModeSetting aimMode = new ModeSetting("Aim mode").value("Snap").values(
+            "Fun Time", "Snap", "Legit Snap", "Matrix"
     );
-    @Getter private final ModeSetting move = new ModeSetting("Move").value("Focus").values("Focus", "Free", "Target", "None");
+    @Getter private final ModeSetting move = new ModeSetting("Move").value("Free").values("Free", "Focus");
 
-    private final SliderSetting distance = new SliderSetting("Distance").value(3f).range(2.5f, 5f).step(0.1f);
+    private final SliderSetting distance = new SliderSetting("Distance").value(3.3f).range(2.5f, 5f).step(0.1f);
     private final SliderSetting preDistance = new SliderSetting("Pre distance").value(0.3f).range(0f, 3f).step(0.1f);
+    private final SliderSetting legitFov = new SliderSetting("Legit FOV").value(50f).range(30f, 90f).step(1f)
+            .setVisible(() -> aimMode.is("Legit Snap"));
     private final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
-            new BooleanSetting("Игроки").value(true),
-            new BooleanSetting("Голые").value(true),
-            new BooleanSetting("Мобы").value(false),
-            new BooleanSetting("Животные").value(false),
-            new BooleanSetting("Жители").value(false)
+            new BooleanSetting("Players").value(true),
+            new BooleanSetting("Friends").value(false),
+            new BooleanSetting("Mobs").value(false),
+            new BooleanSetting("Animals").value(false),
+            new BooleanSetting("Villagers").value(false),
+            new BooleanSetting("Naked").value(false)
     );
-
-    // Bypasses are always enabled, no UI setting exposed
-
-    private final BooleanSetting clientLook = new BooleanSetting("Client look").value(false);
-    private final BooleanSetting elytraOverride = new BooleanSetting("Elytra override").value(false);
-    private final SliderSetting elytraDistance = new SliderSetting("Elytra distance").value(4f).range(2.5f, 5f).step(0.1f).setVisible(elytraOverride::getValue);
-    private final SliderSetting elytraPreDistance = new SliderSetting("Elytra pre distance").value(16f).range(0f, 32f).step(0.1f).setVisible(elytraOverride::getValue);
-    private final BooleanSetting predictOnElytra = new BooleanSetting("Predict on elytra").value(true);
-    private final SliderSetting predictTicks = new SliderSetting("Predict ticks").value(2f).range(1f, 4f).step(0.1f).setVisible(predictOnElytra::getValue);
 
     public LivingEntity target;
     private int cachedAimTick = -1;
@@ -79,48 +83,30 @@ public class AuraModule extends Module {
     private Box cachedAimBox;
 
     public AuraModule() {
-        // Enable all bypass options by default (they stay hidden from UI)
-        combatExecutor.options().forceEnable("Only crits");
-        combatExecutor.options().forceEnable("Smart crits");
-        combatExecutor.options().forceEnable("Raytrace");
-        combatExecutor.options().forceEnable("Shield break");
-        combatExecutor.options().forceEnable("Always shield");
-        combatExecutor.options().forceEnable("Ignore walls");
-
         addSettings(
-                aimMode, move, distance, preDistance, targets, clientLook,
-                elytraOverride, elytraDistance, elytraPreDistance,
-                predictOnElytra, predictTicks
+                aimMode, move, distance, preDistance, legitFov, targets, combatExecutor.options(), combatExecutor.sprintResetTicks()
         );
     }
 
     public static boolean moveFixEnabled() {
-        return instance.isEnabled() && !instance.move.is("None");
+        return instance.isEnabled();
     }
 
     public float getMovementYaw() {
         if (mc.player == null) {
-            return 0;
+            return 0.0F;
         }
 
         Rotation rotation = RotationManager.getInstance().getCurrentRotation();
-        if (rotation != null) {
-            return rotation.getYaw();
-        }
-
-        return mc.player.getYaw();
-    }
-
-    public float getPredictTicks() {
-        return predictTicks.getValue();
+        return rotation != null ? rotation.getYaw() : mc.player.getYaw();
     }
 
     public float getPreDistance() {
-        return (mc.player.isGliding() && elytraOverride.getValue()) ? elytraPreDistance.getValue() : preDistance.getValue();
+        return preDistance.getValue();
     }
 
     public float getAttackDistance() {
-        return (mc.player.isGliding() && elytraOverride.getValue()) ? elytraDistance.getValue() : distance.getValue();
+        return distance.getValue();
     }
 
     @Override
@@ -143,14 +129,16 @@ public class AuraModule extends Module {
 
     @Override
     public void onEvent() {
-        EventListener eventUpdate = UpdateEvent.getInstance().subscribe(new Listener<>(event -> updateEventHandler()));
-        EventListener rotationUpdateEvent = RotationUpdateEvent.getInstance().subscribe(new Listener<>(event -> postRotMoveEventHandler()));
+        EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> updateEventHandler()));
+        EventListener rotationUpdateEvent = RotationUpdateEvent.getInstance().subscribe(new Listener<>(event -> rotationUpdateHandler()));
         EventListener attackEvent = AttackEvent.getInstance().subscribe(new Listener<>(event -> AuraUtil.onAttack(aimMode.getValue())));
-        addEvents(eventUpdate, rotationUpdateEvent, attackEvent);
+        EventListener render2DEvent = Render2DEvent.getInstance().subscribe(new Listener<>(event -> handleRender2D(event.context())));
+        EventListener packetEvent = PacketEvent.getInstance().subscribe(new Listener<>(this::handlePacket));
+        addEvents(updateEvent, rotationUpdateEvent, attackEvent, render2DEvent, packetEvent);
     }
 
-    private void postRotMoveEventHandler() {
-        if (target == null) {
+    private void rotationUpdateHandler() {
+        if (mc.player == null || target == null) {
             return;
         }
 
@@ -161,16 +149,26 @@ public class AuraModule extends Module {
     }
 
     private void updateEventHandler() {
+        if (mc.player == null || mc.world == null) {
+            target = null;
+            resetAimCache();
+            combatExecutor.combatManager().releaseSprintReset();
+            return;
+        }
+
         target = updateTarget();
         if (target == null) {
             resetAimCache();
+            combatExecutor.combatManager().releaseSprintReset();
             return;
         }
 
         AimData aimData = getAimData(target);
         if (aimData.point().distanceTo(mc.player.getEyePos()) > getAttackDistance() + getPreDistance()) {
             targetManager.releaseTarget();
+            target = null;
             resetAimCache();
+            combatExecutor.combatManager().releaseSprintReset();
             return;
         }
 
@@ -179,27 +177,41 @@ public class AuraModule extends Module {
 
     private LivingEntity updateTarget() {
         TargetManager.EntityFilter filter = new TargetManager.EntityFilter(targets.getList());
-        targetManager.searchTargets(mc.world.getEntities(), getAttackDistance() + getPreDistance());
-        targetManager.validateTarget(filter::isValid);
+        filter.needFriends = targets.isEnabled("Friends");
+
+        float maxDistance = getAttackDistance() + getPreDistance();
+        boolean ignoreWalls = combatExecutor.options().isEnabled("Ignore walls");
+        targetManager.searchTargets(mc.world.getEntities(), maxDistance, 360.0F, ignoreWalls);
+
+        if (aimMode.is("Legit Snap")) {
+            targetManager.validateTarget(entity -> filter.isValid(entity) && isTargetInsideLegitCircle(entity));
+        } else {
+            targetManager.validateTarget(filter::isValid);
+        }
+
         return targetManager.getCurrentTarget();
     }
 
     private void attackTarget(LivingEntity target) {
         AimData aimData = getAimData(target);
-
         combatExecutor.combatManager().configurable(
                 new CombatExecutor.CombatConfigurable(
                         target,
                         RotationManager.getInstance().getRotation(),
-                        distance.getValue(),
+                        getAttackDistance(),
                         aimData.box(),
-                        true, true, true, true, true, true, false
+                        combatExecutor.options().getList(),
+                        combatExecutor.sprintResetTicks().getValue()
                 )
         );
 
-        if (mc.player.getEyePos().distanceTo(
-                RotationUtil.rayCastBox(target, aimData.point())
-        ) > getAttackDistance()) {
+        if (mc.player.getEyePos().distanceTo(RotationUtil.rayCastBox(target, aimData.point())) > getAttackDistance()) {
+            combatExecutor.combatManager().releaseSprintReset();
+            return;
+        }
+
+        if (aimMode.is("Legit Snap") && !isTargetInsideLegitCircle(target)) {
+            combatExecutor.combatManager().releaseSprintReset();
             return;
         }
 
@@ -207,43 +219,44 @@ public class AuraModule extends Module {
     }
 
     private void rotateToTarget(LivingEntity target, Vec3d targetVec, Rotation rotation) {
-        RotationStrategy configurable = new RotationStrategy(getRotationMode(),
-                !move.is("None"), move.is("Free")).clientLook(clientLook.getValue());
-
-        boolean canAttack = combatExecutor.combatManager().canAttack();
-        boolean noHitRule = !canAttack;
-
         if (usingElytraTarget() && ElytraTargetModule.getInstance().elytraRotationProcessor.customRotations.getValue()) {
             return;
         }
 
-        if (noHitRule && aimMode.is("Snap")) {
-            return;
-        }
+        RotationStrategy strategy = new RotationStrategy(getRotationMode(), true, move.is("Free"));
 
-        if (aimMode.is("Fun Time")) {
-            boolean canAttackSoon = canAttack || combatExecutor.combatManager().clickScheduler().willClickAt(3);
-            configurable.clientLook(false);
-            if (canAttackSoon) {
-                FunTimeRotation.primeSnapWindow(canAttack);
+        boolean canAttack = combatExecutor.combatManager().canAttackPreview();
+        long sinceLastClick = combatExecutor.combatManager().clickScheduler().lastClickPassed();
+
+        if (aimMode.is("Snap")) {
+            if (!canAttack && sinceLastClick >= 100L) {
+                return;
             }
-            configurable.ticksUntilReset(40);
+        } else if (aimMode.is("Legit Snap")) {
+            if (!canAttack && sinceLastClick >= 100L) {
+                return;
+            }
+            RotationManager.getInstance().clear();
+        } else if (aimMode.is("Fun Time")) {
+            if (!canAttack) {
+                return;
+            }
+
+            strategy.ticksUntilReset(60);
+            RotationManager.getInstance().clear();
         }
 
-        RotationManager.getInstance().addRotation(new Rotation.VecRotation(rotation, targetVec), target, configurable, TaskPriority.HIGH, this);
+        Vec3d rotationVec = aimMode.is("Fun Time") ? rotation.getVector() : targetVec;
+        RotationManager.getInstance().addRotation(new Rotation.VecRotation(rotation, rotationVec), target, strategy, TaskPriority.HIGH, this);
     }
 
     private RotationMode getRotationMode() {
         return switch (aimMode.getValue()) {
-            case "Vulcan" -> new UniversalRotation(160, 80, false, false);
             case "Fun Time" -> new FunTimeRotation();
             case "Matrix" -> new MatrixRotation();
-            default -> new SmoothRotation();
+            case "Legit Snap", "Snap" -> new SnapRotation();
+            default -> new SnapRotation();
         };
-    }
-
-    private Vec3d getTargetVector(LivingEntity target) {
-        return getAimData(target).point();
     }
 
     private AimData getAimData(LivingEntity target) {
@@ -273,46 +286,168 @@ public class AuraModule extends Module {
             return new AimData(ElytraTargetModule.getInstance().elytraRotationProcessor.getPredictedPos(target), target.getBoundingBox());
         }
 
-        if (aimMode.is("Fun Time")) {
-            Rotation initialRotation = RotationManager.getInstance().getRotation();
-            Pair<Vec3d, Box> pair = pointFinder.computeVector(
-                    target,
-                    getAttackDistance() + getPreDistance(),
-                    initialRotation,
-                    FunTimeRotation.getRandomOffsetVelocity(),
-                    combatExecutor.options().isEnabled("Ignore walls")
-            );
-            return new AimData(pair.getLeft(), pair.getRight());
+        Rotation initialRotation = RotationManager.getInstance().getRotation();
+        Pair<Vec3d, Box> pair = pointFinder.computeVector(
+                target,
+                getAttackDistance() + getPreDistance(),
+                initialRotation,
+                getOffsetVelocity(),
+                combatExecutor.options().isEnabled("Ignore walls")
+        );
+
+        Vec3d point = pair.getLeft();
+        if (point == null || point.equals(Vec3d.ZERO)) {
+            point = getRandomBodyToHeadPoint(target);
         }
-
-        Vec3d aimpoint = getRandomBodyToHeadPoint(target);
-
-        if (predictOnElytra.getValue() && target instanceof PlayerEntity
-                && mc.player.isGliding() && target.isGliding()) {
-            float ticks = mc.player.getEyePos().distanceTo(target.getBoundingBox().getCenter()) > 8.0
-                    ? 8.0f : predictTicks.getValue();
-            aimpoint = PredictUtils.predict(target, target.getPos(), ticks);
-        }
-
-        return new AimData(aimpoint, target.getBoundingBox());
+        return new AimData(point, pair.getRight());
     }
 
-    /**
-     * Returns a random aim point between the entity's body center and head top.
-     * This provides natural-looking aim variation while keeping accuracy.
-     */
+    private Vec3d getOffsetVelocity() {
+        return switch (aimMode.getValue()) {
+            case "Fun Time" -> FunTimeRotation.getRandomOffsetVelocity();
+            case "Matrix" -> new Vec3d(0.1D, 0.1D, 0.1D);
+            case "Snap" -> new Vec3d(0.12D, 0.12D, 0.12D);
+            case "Legit Snap" -> Vec3d.ZERO;
+            default -> Vec3d.ZERO;
+        };
+    }
+
     private Vec3d getRandomBodyToHeadPoint(LivingEntity target) {
         Box box = target.getBoundingBox();
-        double bodyCenter = box.minY + target.getHeight() * 0.45;
-        double headTop = box.maxY - 0.1;
+        double bodyCenter = box.minY + target.getHeight() * 0.45D;
+        double headTop = box.maxY - 0.1D;
         double randomY = bodyCenter + ThreadLocalRandom.current().nextDouble() * (headTop - bodyCenter);
-        double randomX = MathHelper.lerp(ThreadLocalRandom.current().nextDouble() * 0.3 - 0.15, box.getCenter().x, box.getCenter().x);
-        double randomZ = MathHelper.lerp(ThreadLocalRandom.current().nextDouble() * 0.3 - 0.15, box.getCenter().z, box.getCenter().z);
+        double randomX = MathHelper.lerp(ThreadLocalRandom.current().nextDouble() * 0.3D - 0.15D, box.getCenter().x, box.getCenter().x);
+        double randomZ = MathHelper.lerp(ThreadLocalRandom.current().nextDouble() * 0.3D - 0.15D, box.getCenter().z, box.getCenter().z);
         return new Vec3d(
-                MathHelper.clamp(randomX, box.minX + 0.05, box.maxX - 0.05),
-                MathHelper.clamp(randomY, box.minY + 0.1, box.maxY - 0.1),
-                MathHelper.clamp(randomZ, box.minZ + 0.05, box.maxZ - 0.05)
+                MathHelper.clamp(randomX, box.minX + 0.05D, box.maxX - 0.05D),
+                MathHelper.clamp(randomY, box.minY + 0.1D, box.maxY - 0.1D),
+                MathHelper.clamp(randomZ, box.minZ + 0.05D, box.maxZ - 0.05D)
         );
+    }
+
+    private boolean isTargetInsideLegitCircle(LivingEntity entity) {
+        if (mc.player == null || entity == null) {
+            return false;
+        }
+
+        boolean ignoreWalls = combatExecutor.options().isEnabled("Ignore walls");
+        List<Vec3d> points = pointFinder.generateCandidatePoints(entity, getAttackDistance(), ignoreWalls).getLeft();
+        if (points.isEmpty()) {
+            points = List.of(entity.getBoundingBox().getCenter());
+        }
+
+        for (Vec3d point : points) {
+            if (isPointInsideLegitCircle(point)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isPointInsideLegitCircle(Vec3d targetPoint) {
+        var camera = mc.getEntityRenderDispatcher().camera;
+        if (camera == null) {
+            return false;
+        }
+
+        Vec3d cameraPos = camera.getPos();
+        Vec3d direction = targetPoint.subtract(cameraPos);
+        double flat = Math.hypot(direction.x, direction.z);
+        if (flat < 1.0E-6D) {
+            return true;
+        }
+
+        float yawToTarget = MathHelper.wrapDegrees((float) Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90.0F);
+        float pitchToTarget = MathHelper.wrapDegrees((float) -Math.toDegrees(Math.atan2(direction.y, flat)));
+        float yawDelta = MathHelper.wrapDegrees(yawToTarget - camera.getYaw());
+        float pitchDelta = MathHelper.wrapDegrees(pitchToTarget - camera.getPitch());
+        double angularDelta = Math.hypot(yawDelta, pitchDelta);
+
+        return angularDelta <= legitFov.getValue();
+    }
+
+    private void handleRender2D(DrawContext context) {
+        if (!isEnabled() || !aimMode.is("Legit Snap") || mc.options.hudHidden) {
+            return;
+        }
+
+        float radius = MathHelper.clamp(legitFov.getValue(), 30.0F, 90.0F) * 1.8F;
+        float centerX = mc.getWindow().getScaledWidth() / 2.0F;
+        float centerY = mc.getWindow().getScaledHeight() / 2.0F;
+        int color = withAlpha(0x00FFFFFF, 214);
+        int segments = Math.max(140, Math.round(radius * 4.2F));
+        drawSmoothLegitRing(context, centerX, centerY, radius, 1.05F, color, segments);
+    }
+
+    private void drawSmoothLegitRing(DrawContext context, float centerX, float centerY, float radius, float thickness, int color, int segments) {
+        Matrix4f matrix = context.getMatrices().peek().getPositionMatrix();
+        float halfThickness = thickness / 2.0F;
+        float innerRadius = Math.max(1.0F, radius - halfThickness);
+        float outerRadius = radius + halfThickness;
+
+        int solidColor = withAlpha(color, 235);
+        int fadeColor = withAlpha(color, 0);
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
+
+        BufferBuilder coreRing = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
+        for (int i = 0; i <= segments; i++) {
+            double angle = (Math.PI * 2.0D * i) / segments;
+            float cos = (float) Math.cos(angle);
+            float sin = (float) Math.sin(angle);
+            coreRing.vertex(matrix, centerX + cos * outerRadius, centerY + sin * outerRadius, 0.0F).color(solidColor);
+            coreRing.vertex(matrix, centerX + cos * innerRadius, centerY + sin * innerRadius, 0.0F).color(solidColor);
+        }
+        BufferRenderer.drawWithGlobalProgram(coreRing.end());
+
+        float outerFadeRadius = outerRadius + 0.75F;
+        BufferBuilder outerFade = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
+        for (int i = 0; i <= segments; i++) {
+            double angle = (Math.PI * 2.0D * i) / segments;
+            float cos = (float) Math.cos(angle);
+            float sin = (float) Math.sin(angle);
+            outerFade.vertex(matrix, centerX + cos * outerFadeRadius, centerY + sin * outerFadeRadius, 0.0F).color(fadeColor);
+            outerFade.vertex(matrix, centerX + cos * outerRadius, centerY + sin * outerRadius, 0.0F).color(withAlpha(color, 158));
+        }
+        BufferRenderer.drawWithGlobalProgram(outerFade.end());
+
+        float innerFadeRadius = Math.max(0.8F, innerRadius - 0.65F);
+        BufferBuilder innerFade = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
+        for (int i = 0; i <= segments; i++) {
+            double angle = (Math.PI * 2.0D * i) / segments;
+            float cos = (float) Math.cos(angle);
+            float sin = (float) Math.sin(angle);
+            innerFade.vertex(matrix, centerX + cos * innerRadius, centerY + sin * innerRadius, 0.0F).color(withAlpha(color, 158));
+            innerFade.vertex(matrix, centerX + cos * innerFadeRadius, centerY + sin * innerFadeRadius, 0.0F).color(fadeColor);
+        }
+        BufferRenderer.drawWithGlobalProgram(innerFade.end());
+
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+    }
+
+    private int withAlpha(int color, int alpha) {
+        return (color & 0x00FFFFFF) | (MathHelper.clamp(alpha, 0, 255) << 24);
+    }
+
+    private void handlePacket(PacketEvent.PacketEventData event) {
+        if (!event.isReceive() || !(event.packet() instanceof EntityStatusS2CPacket statusPacket) || statusPacket.getStatus() != 30) {
+            return;
+        }
+
+        if (!combatExecutor.options().isEnabled("Shield break")) {
+            return;
+        }
+
+        Entity entity = statusPacket.getEntity(mc.world);
+        if (entity != null && entity.equals(target)) {
+            NotificationUtil.add("Shield broken: " + entity.getDisplayName().getString());
+        }
     }
 
     private boolean usingElytraTarget() {

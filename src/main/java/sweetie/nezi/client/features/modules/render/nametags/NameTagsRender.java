@@ -181,6 +181,10 @@ public class NameTagsRender implements QuickImports {
         }
 
         // Рендер предметов в руках под игроком
+        if (module.showArmor.getValue() && !snapshot.armorItems.isEmpty()) {
+            drawArmorRow(context, snapshot, entry.topX(), cardY + cardHeight + (2f * scale), scale);
+        }
+
         if (module.showHands.getValue()) {
             drawHandsText(matrices, snapshot, entry.bottomX(), entry.bottomY(), scale);
         }
@@ -215,6 +219,31 @@ public class NameTagsRender implements QuickImports {
             float textX = centerX - Fonts.PS_MEDIUM.getWidth(line, textSize) / 2f;
             Fonts.PS_MEDIUM.drawText(matrices, line, textX, textY, textSize, Color.WHITE);
             textY += textSize + gap;
+        }
+    }
+
+    private void drawArmorRow(DrawContext context, PlayerSnapshot snapshot, float centerX, float startY, float scale) {
+        MatrixStack matrices = context.getMatrices();
+        float iconSize = 12f * scale;
+        float gap = 1.5f * scale;
+        float padding = 2f * scale;
+        float blockWidth = snapshot.armorItems.size() * iconSize + Math.max(0, snapshot.armorItems.size() - 1) * gap + padding * 2f;
+        float blockHeight = iconSize + padding * 2f;
+        float blockX = centerX - blockWidth / 2f;
+
+        RenderUtil.RECT.draw(matrices, blockX, startY, blockWidth, blockHeight, 0f, bgColor);
+
+        float drawX = blockX + padding;
+        float drawY = startY + padding;
+        float itemScale = iconSize / 16f;
+
+        for (ItemStack stack : snapshot.armorItems) {
+            matrices.push();
+            matrices.translate(drawX, drawY, 0f);
+            matrices.scale(itemScale, itemScale, 1f);
+            context.drawItem(stack, 0, 0);
+            matrices.pop();
+            drawX += iconSize + gap;
         }
     }
 
@@ -266,6 +295,7 @@ public class NameTagsRender implements QuickImports {
             rebuilt.leftHandItem = getLeftHandName(player);
         }
 
+        rebuilt.armorItems = module.showArmor.getValue() ? collectArmorItems(player) : List.of();
         rebuilt.potionLines = module.showPotions.getValue() ? nameTagsPotions.collectLines(player) : List.of();
 
         float scale = module.scale.getValue();
@@ -295,6 +325,21 @@ public class NameTagsRender implements QuickImports {
 
         playerSnapshots.put(player.getUuid(), rebuilt);
         return rebuilt;
+    }
+
+    private List<ItemStack> collectArmorItems(PlayerEntity player) {
+        List<ItemStack> armorItems = new ArrayList<>(4);
+        addArmorItem(armorItems, player.getInventory().armor.get(3));
+        addArmorItem(armorItems, player.getInventory().armor.get(2));
+        addArmorItem(armorItems, player.getInventory().armor.get(1));
+        addArmorItem(armorItems, player.getInventory().armor.get(0));
+        return armorItems;
+    }
+
+    private void addArmorItem(List<ItemStack> armorItems, ItemStack stack) {
+        if (!stack.isEmpty()) {
+            armorItems.add(stack.copy());
+        }
     }
 
     private String getRightHandName(PlayerEntity player) {
@@ -356,6 +401,7 @@ public class NameTagsRender implements QuickImports {
         private boolean friend;
         private String rightHandItem = "";
         private String leftHandItem = "";
+        private List<ItemStack> armorItems = List.of();
         private List<NameTagsPotions.PotionLine> potionLines = List.of();
         private float nameWidth;
         private float effectBlockWidth;

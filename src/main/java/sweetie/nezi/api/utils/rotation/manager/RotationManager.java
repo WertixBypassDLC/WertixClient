@@ -109,6 +109,10 @@ public class RotationManager implements QuickImports {
         rotationPlanRequestProcessor.addTask(new TaskProcessor.Task<>(plan.ticksUntilReset(), requestPriority.getPriority(), provider, plan));
     }
 
+    public void clear() {
+        rotationPlanRequestProcessor.clear();
+    }
+
     private void update() {
         RotationPlan activePlan = getCurrentRotationPlan();
         if (activePlan == null) {
