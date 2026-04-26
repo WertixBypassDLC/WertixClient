@@ -25,16 +25,13 @@ public class AuraUtil implements QuickImports {
     private float hitCount = 0;
 
     public void onAttack(String mode) {
-        float rotationValue = 0;
-        float lastRotationValue = 0;
         switch (mode) {
             case "Spooky Time" -> {
                 float hits = 0.3f;
                 hitCount += hits;
                 if (hitCount >= hits * 2) hitCount = -hits;
             }
-// Вместо FunTimeRotation.applyGCD();
-            case "Fun Time" -> FunTimeRotation.applyGCD(rotationValue, lastRotationValue);
+            case "Fun Time" -> FunTimeRotation.onAttack();
             default -> {
                 hitCount += 1;
                 if (hitCount >= 3) hitCount = 0;

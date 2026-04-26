@@ -3,6 +3,7 @@ package sweetie.nezi.api.utils.combat;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.util.math.Box;
 import sweetie.nezi.api.module.setting.BooleanSetting;
 import sweetie.nezi.api.module.setting.MultiBooleanSetting;
 import sweetie.nezi.api.utils.rotation.manager.Rotation;
@@ -31,6 +32,7 @@ public class CombatExecutor {
         public final LivingEntity target;
         public final Rotation rotation;
         public final float distance;
+        public final Box hitBox;
 
         public final boolean onlyCrits;
         public final boolean smartCrits;
@@ -44,6 +46,7 @@ public class CombatExecutor {
                 LivingEntity target,
                 Rotation rotation,
                 float distance,
+                Box hitBox,
                 boolean onlyCrits,
                 boolean smartCrits,
                 boolean raytrace,
@@ -55,6 +58,7 @@ public class CombatExecutor {
             this.target = target;
             this.rotation = rotation;
             this.distance = distance;
+            this.hitBox = hitBox;
             this.onlyCrits = onlyCrits;
             this.smartCrits = smartCrits;
             this.raytrace = raytrace;
@@ -68,12 +72,14 @@ public class CombatExecutor {
                 LivingEntity target,
                 Rotation rotation,
                 float distance,
+                Box hitBox,
                 List<String> options
         ) {
             this(
                     target,
                     rotation,
                     distance,
+                    hitBox,
                     options.contains("Only crits"),
                     options.contains("Smart crits"),
                     options.contains("Raytrace"),

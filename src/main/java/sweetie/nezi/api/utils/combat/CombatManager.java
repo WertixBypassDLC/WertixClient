@@ -13,6 +13,7 @@ import sweetie.nezi.api.system.interfaces.QuickImports;
 import sweetie.nezi.api.utils.math.MathUtil;
 import sweetie.nezi.api.utils.player.PlayerUtil;
 import sweetie.nezi.api.utils.rotation.RaytracingUtil;
+import sweetie.nezi.client.features.modules.combat.AuraModule;
 import sweetie.nezi.client.features.modules.movement.SprintModule;
 
 @Getter
@@ -23,7 +24,7 @@ public class CombatManager implements QuickImports {
     private final ShieldBreakManager shieldBreakManager = new ShieldBreakManager();
 
     private int preAttackTicks = 0;
-    private boolean legitBackStop = false;
+    private int attackCount = 0;
 
     public CombatManager() {
         SprintEvent.getInstance().subscribe(new Listener<>(1, event -> {
@@ -48,21 +49,13 @@ public class CombatManager implements QuickImports {
             default -> SprintManager.SprintType.NONE;
         };
 
-        if (legitBackStop) {
-            legitBackStop = false;
-            mc.options.forwardKey.setPressed(
-                    net.minecraft.client.util.InputUtil.isKeyPressed(mc.getWindow().getHandle(), mc.options.forwardKey.getDefaultKey().getCode())
-            );
-        }
-
         if (preAttackTicks > 0) {
             preAttackTicks--;
             if (preAttackTicks > 0) return;
 
             mc.interactionManager.attackEntity(mc.player, configurable.target);
             mc.player.swingHand(Hand.MAIN_HAND);
-            int delay = MathUtil.randomInRange(470, 520);
-            clickScheduler.recalculate(delay);
+            onAttackPerformed();
             return;
         }
 
@@ -73,7 +66,7 @@ public class CombatManager implements QuickImports {
                 mc.interactionManager.stopUsingItem(mc.player);
             }
 
-            if (mc.player.isSprinting() && !mc.player.isSwimming()) {
+            if (sprintManager.sprintType == SprintManager.SprintType.LEGIT && mc.player.isSprinting() && !mc.player.isSwimming()) {
                 preAttackTicks = 1;
                 applyLegitSprintReset();
                 return;
@@ -81,22 +74,20 @@ public class CombatManager implements QuickImports {
 
             mc.interactionManager.attackEntity(mc.player, configurable.target);
             mc.player.swingHand(Hand.MAIN_HAND);
-
-            int delay = MathUtil.randomInRange(470, 520);
-            clickScheduler.recalculate(delay);
+            onAttackPerformed();
         }
     }
 
+    public void resetState() {
+        preAttackTicks = 0;
+        attackCount = 0;
+        clickScheduler.reset();
+    }
+
     private void applyLegitSprintReset() {
-        boolean sprint = mc.options.sprintKey.isPressed();
-        boolean forward = mc.options.forwardKey.isPressed();
-        if (mc.player.isSprinting()) {
-            sprint = false;
-            forward = false;
-            legitBackStop = true;
-        }
-        mc.options.sprintKey.setPressed(sprint);
-        mc.options.forwardKey.setPressed(forward);
+        SprintModule sprintModule = SprintModule.getInstance();
+        sprintModule.tickStop = MathUtil.randomInRange(1, 2);
+        mc.player.setSprinting(false);
     }
 
     public boolean canAttack() {
@@ -117,10 +108,18 @@ public class CombatManager implements QuickImports {
     }
 
     private boolean isRaytraceFailed() {
+        if (!configurable.raytrace) {
+            return false;
+        }
+
+        if (configurable.hitBox != null) {
+            return !RaytracingUtil.rayTrace(configurable.rotation.getVector(), configurable.distance - 0.25F, configurable.hitBox);
+        }
+
         EntityHitResult hitResult = RaytracingUtil.raytraceEntity(
                 configurable.distance,
                 configurable.rotation,
-                true
+                configurable.ignoreWalls
         );
 
         return hitResult == null || hitResult.getEntity() != configurable.target;
@@ -146,5 +145,20 @@ public class CombatManager implements QuickImports {
 
     private boolean shouldDoHit() {
         return (!mc.player.isOnGround() && mc.player.fallDistance > 0.0f) || shouldCancelCrit();
+    }
+
+    private void onAttackPerformed() {
+        attackCount++;
+        clickScheduler.recalculate(nextAttackDelay());
+    }
+
+    private long nextAttackDelay() {
+        AuraModule auraModule = AuraModule.getInstance();
+        if (auraModule != null && auraModule.isEnabled() && auraModule.getAimMode().is("Fun Time")) {
+            int[] funTimeTicks = new int[]{10, 11, 10, 13};
+            int ticks = funTimeTicks[Math.floorMod(attackCount, funTimeTicks.length)];
+            return ticks * 50L;
+        }
+        return MathUtil.randomInRange(470, 520);
     }
 }

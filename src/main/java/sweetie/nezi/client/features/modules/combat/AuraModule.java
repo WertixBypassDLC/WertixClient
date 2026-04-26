@@ -3,6 +3,7 @@ package sweetie.nezi.client.features.modules.combat;
 import lombok.Getter;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.Pair;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -27,6 +28,7 @@ import sweetie.nezi.api.utils.rotation.manager.RotationManager;
 import sweetie.nezi.api.utils.rotation.manager.RotationMode;
 import sweetie.nezi.api.utils.rotation.manager.RotationStrategy;
 import sweetie.nezi.api.utils.rotation.misc.AuraUtil;
+import sweetie.nezi.api.utils.rotation.misc.PointFinder;
 import sweetie.nezi.api.utils.rotation.rotations.FunTimeRotation;
 import sweetie.nezi.api.utils.rotation.rotations.MatrixRotation;
 import sweetie.nezi.api.utils.rotation.rotations.SmoothRotation;
@@ -41,6 +43,7 @@ public class AuraModule extends Module {
     @Getter private static final AuraModule instance = new AuraModule();
 
     private final TargetManager targetManager = new TargetManager();
+    private final PointFinder pointFinder = new PointFinder();
     public final CombatExecutor combatExecutor = new CombatExecutor();
 
     @Getter private final ModeSetting aimMode = new ModeSetting("Aim mode").value("Smooth").values(
@@ -70,6 +73,10 @@ public class AuraModule extends Module {
     private final SliderSetting predictTicks = new SliderSetting("Predict ticks").value(2f).range(1f, 4f).step(0.1f).setVisible(predictOnElytra::getValue);
 
     public LivingEntity target;
+    private int cachedAimTick = -1;
+    private LivingEntity cachedAimTarget;
+    private Vec3d cachedAimPoint = Vec3d.ZERO;
+    private Box cachedAimBox;
 
     public AuraModule() {
         // Enable all bypass options by default (they stay hidden from UI)
@@ -120,6 +127,8 @@ public class AuraModule extends Module {
     public void onDisable() {
         targetManager.releaseTarget();
         target = null;
+        resetAimCache();
+        combatExecutor.combatManager().resetState();
         FunTimeRotation.reset();
     }
 
@@ -127,6 +136,8 @@ public class AuraModule extends Module {
     public void onEnable() {
         targetManager.releaseTarget();
         target = null;
+        resetAimCache();
+        combatExecutor.combatManager().resetState();
         FunTimeRotation.reset();
     }
 
@@ -143,7 +154,8 @@ public class AuraModule extends Module {
             return;
         }
 
-        Vec3d attackVector = getTargetVector(target);
+        AimData aimData = getAimData(target);
+        Vec3d attackVector = aimData.point();
         Rotation rotation = RotationUtil.fromVec3d(attackVector.subtract(mc.player.getEyePos()));
         rotateToTarget(target, attackVector, rotation);
     }
@@ -151,11 +163,14 @@ public class AuraModule extends Module {
     private void updateEventHandler() {
         target = updateTarget();
         if (target == null) {
+            resetAimCache();
             return;
         }
 
-        if (RotationUtil.getSpot(target).distanceTo(mc.player.getEyePos()) > getAttackDistance() + getPreDistance()) {
+        AimData aimData = getAimData(target);
+        if (aimData.point().distanceTo(mc.player.getEyePos()) > getAttackDistance() + getPreDistance()) {
             targetManager.releaseTarget();
+            resetAimCache();
             return;
         }
 
@@ -170,17 +185,20 @@ public class AuraModule extends Module {
     }
 
     private void attackTarget(LivingEntity target) {
+        AimData aimData = getAimData(target);
+
         combatExecutor.combatManager().configurable(
                 new CombatExecutor.CombatConfigurable(
                         target,
                         RotationManager.getInstance().getRotation(),
                         distance.getValue(),
+                        aimData.box(),
                         true, true, true, true, true, true, false
                 )
         );
 
         if (mc.player.getEyePos().distanceTo(
-                RotationUtil.rayCastBox(target, getTargetVector(target))
+                RotationUtil.rayCastBox(target, aimData.point())
         ) > getAttackDistance()) {
             return;
         }
@@ -194,7 +212,6 @@ public class AuraModule extends Module {
 
         boolean canAttack = combatExecutor.combatManager().canAttack();
         boolean noHitRule = !canAttack;
-        long timeSinceLastClick = combatExecutor.combatManager().clickScheduler().lastClickPassed();
 
         if (usingElytraTarget() && ElytraTargetModule.getInstance().elytraRotationProcessor.customRotations.getValue()) {
             return;
@@ -205,13 +222,12 @@ public class AuraModule extends Module {
         }
 
         if (aimMode.is("Fun Time")) {
-            boolean recentAttack = timeSinceLastClick < 380L;
-            if (!canAttack && !recentAttack) {
-                return;
+            boolean canAttackSoon = canAttack || combatExecutor.combatManager().clickScheduler().willClickAt(3);
+            configurable.clientLook(false);
+            if (canAttackSoon) {
+                FunTimeRotation.primeSnapWindow(canAttack);
             }
-
-            FunTimeRotation.primeSnapWindow(canAttack, timeSinceLastClick);
-            configurable.ticksUntilReset(4);
+            configurable.ticksUntilReset(40);
         }
 
         RotationManager.getInstance().addRotation(new Rotation.VecRotation(rotation, targetVec), target, configurable, TaskPriority.HIGH, this);
@@ -227,15 +243,48 @@ public class AuraModule extends Module {
     }
 
     private Vec3d getTargetVector(LivingEntity target) {
+        return getAimData(target).point();
+    }
+
+    private AimData getAimData(LivingEntity target) {
         if (target == null) {
-            return Vec3d.ZERO;
+            return new AimData(Vec3d.ZERO, null);
         }
 
+        if (mc.player == null) {
+            return new AimData(target.getBoundingBox().getCenter(), target.getBoundingBox());
+        }
+
+        int currentTick = mc.player.age;
+        if (target == cachedAimTarget && cachedAimTick == currentTick) {
+            return new AimData(cachedAimPoint, cachedAimBox);
+        }
+
+        AimData computed = computeAimData(target);
+        cachedAimTarget = target;
+        cachedAimTick = currentTick;
+        cachedAimPoint = computed.point();
+        cachedAimBox = computed.box();
+        return computed;
+    }
+
+    private AimData computeAimData(LivingEntity target) {
         if (usingElytraTarget()) {
-            return ElytraTargetModule.getInstance().elytraRotationProcessor.getPredictedPos(target);
+            return new AimData(ElytraTargetModule.getInstance().elytraRotationProcessor.getPredictedPos(target), target.getBoundingBox());
         }
 
-        // Random aim point between body center and head
+        if (aimMode.is("Fun Time")) {
+            Rotation initialRotation = RotationManager.getInstance().getRotation();
+            Pair<Vec3d, Box> pair = pointFinder.computeVector(
+                    target,
+                    getAttackDistance() + getPreDistance(),
+                    initialRotation,
+                    FunTimeRotation.getRandomOffsetVelocity(),
+                    combatExecutor.options().isEnabled("Ignore walls")
+            );
+            return new AimData(pair.getLeft(), pair.getRight());
+        }
+
         Vec3d aimpoint = getRandomBodyToHeadPoint(target);
 
         if (predictOnElytra.getValue() && target instanceof PlayerEntity
@@ -245,7 +294,7 @@ public class AuraModule extends Module {
             aimpoint = PredictUtils.predict(target, target.getPos(), ticks);
         }
 
-        return aimpoint;
+        return new AimData(aimpoint, target.getBoundingBox());
     }
 
     /**
@@ -268,5 +317,15 @@ public class AuraModule extends Module {
 
     private boolean usingElytraTarget() {
         return target != null && ElytraTargetModule.getInstance().elytraRotationProcessor.using();
+    }
+
+    private void resetAimCache() {
+        cachedAimTick = -1;
+        cachedAimTarget = null;
+        cachedAimPoint = Vec3d.ZERO;
+        cachedAimBox = null;
+    }
+
+    private record AimData(Vec3d point, Box box) {
     }
 }

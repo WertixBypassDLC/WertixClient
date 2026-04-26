@@ -20,6 +20,7 @@ import sweetie.nezi.api.system.backend.SharedClass;
 import sweetie.nezi.api.utils.rotation.manager.Rotation;
 import sweetie.nezi.api.utils.rotation.manager.RotationManager;
 import sweetie.nezi.api.utils.rotation.manager.RotationPlan;
+import sweetie.nezi.api.utils.rotation.rotations.FunTimeRotation;
 
 @Mixin(LivingEntityRenderer.class)
 public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extends LivingEntityRenderState, M extends EntityModel<? super S>> {
@@ -36,6 +37,13 @@ public abstract class MixinLivingEntityRenderer<T extends LivingEntity, S extend
 
         if (currentRotationPlan == null) {
             return original;
+        }
+
+        if (!currentRotationPlan.clientLook() && FunTimeRotation.MODE_NAME.equals(currentRotationPlan.rotationMode().getName())) {
+            if (FunTimeRotation.shouldVisualSnap()) {
+                return MathHelper.lerpAngleDegrees(tickDelta, rotationPrev.getPitch(), rotation.getPitch());
+            }
+            return FunTimeRotation.getFrozenVisualPitch(original);
         }
 
         return MathHelper.lerpAngleDegrees(tickDelta, rotationPrev.getPitch(), rotation.getPitch());

@@ -24,7 +24,9 @@ import sweetie.nezi.api.utils.player.DirectionalInput;
 import sweetie.nezi.api.utils.rotation.manager.Rotation;
 import sweetie.nezi.api.utils.rotation.manager.RotationManager;
 import sweetie.nezi.api.utils.rotation.manager.RotationPlan;
+import sweetie.nezi.api.utils.rotation.rotations.FunTimeRotation;
 import sweetie.nezi.client.features.modules.combat.VelocityModule;
+import sweetie.nezi.client.features.modules.movement.SprintModule;
 import sweetie.nezi.client.features.modules.movement.noslow.NoSlowModule;
 
 @Mixin(ClientPlayerEntity.class)
@@ -63,9 +65,21 @@ public class MixinClientPlayerEntity extends AbstractClientPlayerEntity {
 
         if (SharedClass.player() != null) {
             float yaw = rotation.getYaw();
-
-            this.setHeadYaw(yaw);
-            this.setBodyYaw(yaw);
+            boolean funTimeSilent = !currentRotationPlan.clientLook() && FunTimeRotation.MODE_NAME.equals(currentRotationPlan.rotationMode().getName());
+            if (funTimeSilent) {
+                if (FunTimeRotation.shouldVisualSnap()) {
+                    FunTimeRotation.updateVisualFreeze(yaw, rotation.getPitch());
+                    this.setHeadYaw(yaw);
+                    this.setBodyYaw(yaw);
+                } else {
+                    float frozenYaw = FunTimeRotation.getFrozenVisualYaw(original);
+                    this.setHeadYaw(frozenYaw);
+                    this.setBodyYaw(frozenYaw);
+                }
+            } else {
+                this.setHeadYaw(yaw);
+                this.setBodyYaw(yaw);
+            }
         }
 
         return rotation.getYaw();
@@ -108,6 +122,9 @@ public class MixinClientPlayerEntity extends AbstractClientPlayerEntity {
 
     @ModifyExpressionValue(method = "tickMovement", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isUsingItem()Z"), require = 0)
     private boolean tickMovementHook(boolean original) {
+        if (original) {
+            SprintModule.getInstance().tickStop = 1;
+        }
         if (NoSlowModule.getInstance().doUseNoSlow()) return false;
         return original;
     }

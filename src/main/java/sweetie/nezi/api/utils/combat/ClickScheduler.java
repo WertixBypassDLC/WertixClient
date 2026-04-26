@@ -28,6 +28,11 @@ public class ClickScheduler implements QuickImports {
         this.delay = delay;
     }
 
+    public void reset() {
+        delay = 0;
+        lastClickTime = System.currentTimeMillis();
+    }
+
     public boolean isOneTickBeforeAttack() {
         return willClickAt(3);
     }

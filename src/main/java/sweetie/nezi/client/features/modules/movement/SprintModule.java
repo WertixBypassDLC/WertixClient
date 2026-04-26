@@ -2,9 +2,10 @@ package sweetie.nezi.client.features.modules.movement;
 
 import lombok.Getter;
 import net.minecraft.util.math.MathHelper;
-import sweetie.nezi.api.event.Listener;
 import sweetie.nezi.api.event.EventListener;
+import sweetie.nezi.api.event.Listener;
 import sweetie.nezi.api.event.events.player.move.SprintEvent;
+import sweetie.nezi.api.event.events.player.other.UpdateEvent;
 import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
@@ -19,6 +20,8 @@ import sweetie.nezi.client.features.modules.combat.WTapModule;
 public class SprintModule extends Module {
     @Getter private static final SprintModule instance = new SprintModule();
 
+    public int tickStop = 0;
+
     public final ModeSetting mode = new ModeSetting("Mode").value("Legit").values("Legit", "Packet", "None");
 
     public SprintModule() {
@@ -28,33 +31,61 @@ public class SprintModule extends Module {
 
     @Override
     public void onEvent() {
-        // Приоритет 0 — выполняется первым, до других подписчиков
         EventListener sprintEvent = SprintEvent.getInstance().subscribe(new Listener<>(0, event -> {
-            if (isWTapSuppressing()) {
-                // WTap активен — строго блокируем спринт
+            if (mc.player == null) {
                 event.setSprint(false);
-            } else if (shouldForceSprint()) {
+                return;
+            }
+
+            if (mode.is("Legit")) {
+                boolean horizontal = mc.player.horizontalCollision && !mc.player.collidedSoftly;
+                boolean sneaking = mc.player.isSneaking() && !mc.player.isSwimming();
+
+                if (tickStop > 0 || sneaking || horizontal || isWTapSuppressing()) {
+                    event.setSprint(false);
+                } else if (canStartSprinting() && !mc.options.sprintKey.isPressed()) {
+                    event.setSprint(true);
+                }
+                return;
+            }
+
+            if (isWTapSuppressing()) {
+                event.setSprint(false);
+            } else if (mode.is("Packet") && shouldForceSprint()) {
                 event.setSprint(true);
             }
         }));
-        addEvents(sprintEvent);
+
+        EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
+            if (tickStop > 0) {
+                tickStop--;
+            }
+        }));
+
+        addEvents(sprintEvent, updateEvent);
     }
 
-    /** WTap сейчас глушит спринт */
     private boolean isWTapSuppressing() {
-        return WTapModule.getInstance().isEnabled()
-                && WTapModule.getInstance().isSuppressing();
+        return WTapModule.getInstance().isEnabled() && WTapModule.getInstance().isSuppressing();
+    }
+
+    private boolean canStartSprinting() {
+        if (mc.player == null) {
+            return false;
+        }
+
+        boolean hasForwardMovement = mc.player.input != null && mc.player.input.hasForwardMovement();
+        return hasForwardMovement && !mc.player.isSprinting() && !mc.player.isGliding();
     }
 
     public boolean shouldForceSprint() {
         if (mc.player == null) return false;
         if (mc.player.isSneaking()) return false;
         if (mc.player.horizontalCollision) return false;
-        // Пока WTap активен — не трогаем спринт
         if (isWTapSuppressing()) return false;
 
         AuraModule aura = AuraModule.getInstance();
-        boolean auraCheck = mode.is("Legit") && aura.isEnabled() && aura.target != null;
+        boolean auraCheck = aura.isEnabled() && aura.target != null;
 
         return (mc.player.input.movementForward > 0 || auraCheck) && isActuallyMovingForward();
     }
@@ -62,16 +93,16 @@ public class SprintModule extends Module {
     public boolean isActuallyMovingForward() {
         if (mode.is("None") || mc.player == null) return false;
 
-        RotationManager rm   = RotationManager.getInstance();
-        RotationPlan    plan = rm.getCurrentRotationPlan();
+        RotationManager rm = RotationManager.getInstance();
+        RotationPlan plan = rm.getCurrentRotationPlan();
 
-        if (plan != null && (plan.provider() instanceof StrafeModule || plan.moveCorrection())) return false;
+        if (plan != null && plan.provider() instanceof StrafeModule) return false;
 
         Rotation cur = rm.getCurrentRotation() != null
                 ? rm.getCurrentRotation()
                 : new Rotation(mc.player.getYaw(), mc.player.getPitch());
 
-        float dy  = mc.player.getYaw() - cur.getYaw();
+        float dy = mc.player.getYaw() - cur.getYaw();
         float fwd = mc.player.input.movementForward;
         float sid = mc.player.input.movementSideways;
 
