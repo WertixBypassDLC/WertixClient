@@ -27,6 +27,7 @@ public class TargetEspModule extends Module {
     private final TargetEspGhost espGhost = new TargetEspGhost();
     private final TargetEspAtom espAtom = new TargetEspAtom();
     private final TargetEspGarland espGarland = new TargetEspGarland();
+    private final TargetEspCircle3D espCircle3D = new TargetEspCircle3D();
     private final TargetEspRofl espRofl = new TargetEspRofl();
     private final TargetEsp2D esp2D = new TargetEsp2D();
 
@@ -39,7 +40,7 @@ public class TargetEspModule extends Module {
     ).setVisible(() -> mode.is("2D"));
 
     private final ModeSetting style3D = new ModeSetting("Стиль 3D").value("Призраки").values(
-            "Призраки", "Кристаллы", "Фигуры", "Черепа", "Атом", "Гирлянда"
+            "Призраки", "Кристаллы", "Фигуры", "Черепа", "Атом", "Гирлянда", "Круг"
     ).setVisible(() -> mode.is("3D"));
 
     private final ModeSetting animation = new ModeSetting("Тип анимации").value("Появление").values("Появление", "Затухание", "Нет");
@@ -58,7 +59,7 @@ public class TargetEspModule extends Module {
             .setVisible(() -> mode.is("3D") || mode.is("Рофл"));
 
     private final SliderSetting lineWidth = new SliderSetting("Толщина линий").value(2.0f).range(0.5f, 4.0f).step(0.1f)
-            .setVisible(() -> mode.is("3D") && (style3D.is("Фигуры") || style3D.is("Черепа") || style3D.is("Атом") || style3D.is("Гирлянда")));
+            .setVisible(() -> mode.is("3D") && (style3D.is("Фигуры") || style3D.is("Черепа") || style3D.is("Атом") || style3D.is("Гирлянда") || style3D.is("Круг")));
 
     private final ModeSetting ghostTrajectory = new ModeSetting("Движение (Призраки)").value("Двойная спираль").values("Двойная спираль", "Орбита", "Хаос")
             .setVisible(() -> mode.is("3D") && style3D.is("Призраки"));
@@ -139,6 +140,7 @@ public class TargetEspModule extends Module {
             case "Черепа" -> espSkulls;
             case "Атом" -> espAtom;
             case "Гирлянда" -> espGarland;
+            case "Круг" -> espCircle3D;
             default -> espGhost;
         };
     }
@@ -180,3 +182,5 @@ public class TargetEspModule extends Module {
         );
     }
 }
+
+
