@@ -6,6 +6,8 @@ import sweetie.nezi.api.system.backend.Choice;
 public abstract class SpiderMode extends Choice {
     public void onUpdate() {}
     public void onMotion(MotionEvent.MotionEventData event) {}
+    public void onEnable() {}
+    public void onDisable() {}
 
     public boolean hozColl() {
         return mc.player.horizontalCollision;

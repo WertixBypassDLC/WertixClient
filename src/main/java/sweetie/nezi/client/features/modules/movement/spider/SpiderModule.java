@@ -10,6 +10,7 @@ import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
 import sweetie.nezi.api.module.setting.ModeSetting;
 import sweetie.nezi.api.system.backend.Choice;
+import sweetie.nezi.client.features.modules.movement.spider.modes.SpiderCustom;
 import sweetie.nezi.client.features.modules.movement.spider.modes.SpiderCommandBlock;
 import sweetie.nezi.client.features.modules.movement.spider.modes.SpiderFunTime;
 import sweetie.nezi.client.features.modules.movement.spider.modes.SpiderMatrix;
@@ -23,9 +24,10 @@ public class SpiderModule extends Module {
     private final SpiderSeaCucumber spiderSeaCucumber = new SpiderSeaCucumber();
     private final SpiderMatrix spiderMatrix = new SpiderMatrix(() -> getMode().is("Matrix"));
     private final SpiderCommandBlock spiderCommandBlock = new SpiderCommandBlock();
+    private final SpiderCustom spiderCustom = new SpiderCustom(() -> getMode().is("Custom"));
 
     private final SpiderMode[] modes = new SpiderMode[]{
-            spiderFunTime, spiderSeaCucumber, spiderMatrix, spiderCommandBlock
+            spiderFunTime, spiderSeaCucumber, spiderMatrix, spiderCommandBlock, spiderCustom
     };
 
     private SpiderMode currentMode = spiderFunTime;
@@ -33,7 +35,20 @@ public class SpiderModule extends Module {
     @Getter private final ModeSetting mode = new ModeSetting("Mode").value(spiderFunTime.getName())
             .values(Choice.getValues(modes))
             .onAction(() -> {
-                currentMode = (SpiderMode) Choice.getChoiceByName(getMode().getValue(), modes);
+                SpiderMode newMode = (SpiderMode) Choice.getChoiceByName(getMode().getValue(), modes);
+                if (newMode == null || newMode == currentMode) {
+                    return;
+                }
+
+                if (isEnabled()) {
+                    currentMode.onDisable();
+                }
+
+                currentMode = newMode;
+
+                if (isEnabled()) {
+                    currentMode.onEnable();
+                }
             });
 
     public SpiderModule() {
@@ -42,6 +57,18 @@ public class SpiderModule extends Module {
         for (SpiderMode spiderMode : modes) {
             addSettings(spiderMode.getSettings());
         }
+    }
+
+    @Override
+    public void onEnable() {
+        super.onEnable();
+        currentMode.onEnable();
+    }
+
+    @Override
+    public void onDisable() {
+        super.onDisable();
+        currentMode.onDisable();
     }
 
     @Override
