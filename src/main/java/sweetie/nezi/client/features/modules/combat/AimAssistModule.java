@@ -29,7 +29,7 @@ public class AimAssistModule extends Module {
 
     private final SliderSetting fov   = new SliderSetting("FOV").value(60.0f).range(10.0f, 180.0f).step(1.0f);
     private final SliderSetting range = new SliderSetting("Range").value(4.5f).range(1.0f, 10.0f).step(0.1f);
-    private final SliderSetting speed = new SliderSetting("Speed").value(4.0f).range(1.0f, 10.0f).step(0.1f);
+    private final SliderSetting speed = new SliderSetting("Speed").value(5.0f).range(1.0f, 10.0f).step(0.1f);
 
     private final BooleanSetting throughWalls = new BooleanSetting("Through Walls").value(false);
 
@@ -53,6 +53,8 @@ public class AimAssistModule extends Module {
     private volatile boolean running;
     private ScheduledExecutorService scheduler;
 
+    private volatile float smoothedYawVelocity = 0.0f;
+
     public AimAssistModule() {
         addSettings(fov, range, speed, throughWalls, targets, aimPoint);
     }
@@ -60,6 +62,7 @@ public class AimAssistModule extends Module {
     @Override
     public void onEnable() {
         running = true;
+        smoothedYawVelocity = 0.0f;
         startScheduler();
     }
 
@@ -68,6 +71,7 @@ public class AimAssistModule extends Module {
         running = false;
         stopScheduler();
         target = null;
+        smoothedYawVelocity = 0.0f;
     }
 
     @Override
@@ -77,7 +81,6 @@ public class AimAssistModule extends Module {
                 target = null;
                 return;
             }
-            // Не сбрасываем цель во время WTap — TriggerBot должен её помнить
             if (target != null && WTapModule.getInstance().isSuppressing()) return;
         }));
         addEvents(tick);
@@ -91,23 +94,34 @@ public class AimAssistModule extends Module {
             t.setDaemon(true);
             return t;
         });
-        scheduler.scheduleAtFixedRate(this::aimLoop, 0L, 5L, TimeUnit.MILLISECONDS);
+        scheduler.scheduleAtFixedRate(this::aimLoop, 0L, 4L, TimeUnit.MILLISECONDS);
     }
 
     private synchronized void stopScheduler() {
-        if (scheduler != null) { scheduler.shutdownNow(); scheduler = null; }
+        if (scheduler != null) {
+            scheduler.shutdownNow();
+            scheduler = null;
+        }
     }
 
     private void aimLoop() {
         try {
-            if (!running || mc.player == null || mc.world == null) { target = null; return; }
+            if (!running || mc.player == null || mc.world == null) {
+                target = null;
+                smoothedYawVelocity = 0.0f;
+                return;
+            }
 
             long  now   = System.nanoTime();
-            float dtSec = Math.min((now - lastLoopTime) / 1_000_000_000.0f, 0.02f);
+            float dtSec = Math.min((now - lastLoopTime) / 1_000_000_000.0f, 0.05f);
             lastLoopTime = now;
 
             LivingEntity best = findTarget();
-            if (best == null) { target = null; return; }
+            if (best == null) {
+                target = null;
+                smoothedYawVelocity *= 0.7f;
+                return;
+            }
 
             target = best;
             lastTargetTime = System.currentTimeMillis();
@@ -135,24 +149,44 @@ public class AimAssistModule extends Module {
             double dot   = lookVec.dotProduct(delta.normalize());
             double angle = Math.toDegrees(Math.acos(MathHelper.clamp((float) dot, -1.0f, 1.0f)));
 
-            if (angle < bestAngle) { bestAngle = (float) angle; best = living; }
+            if (angle < bestAngle) {
+                bestAngle = (float) angle;
+                best = living;
+            }
         }
         return best;
     }
 
-    private void applyAim(LivingEntity target, float dt) {
-        Vec3d targetPos   = getAimPoint(target);
-        Vec3d playerPos   = mc.player.getEyePos();
-        Vec3d delta       = targetPos.subtract(playerPos);
-        double hDist      = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-        float wantYaw     = (float) Math.toDegrees(Math.atan2(delta.z, delta.x)) - 90.0f;
-        float wantPitch   = (float) -Math.toDegrees(Math.atan2(delta.y, hDist));
-        float yawDiff     = MathHelper.wrapDegrees(wantYaw - mc.player.getYaw());
-        float pitchDiff   = wantPitch - mc.player.getPitch();
-        float alpha       = MathHelper.clamp(1.0f - (float) Math.exp(-speed.getValue() * 2.5f * dt), 0.0f, 1.0f);
-        float finalYaw   = mc.player.getYaw()   + yawDiff   * alpha + (secureRandom.nextFloat() - 0.5f) * 0.1f;
-        float finalPitch = MathHelper.clamp(mc.player.getPitch() + pitchDiff * alpha
-                + (secureRandom.nextFloat() - 0.5f) * 0.05f, -90, 90);
+    private void applyAim(LivingEntity targetEntity, float dt) {
+        Vec3d targetPos = getAimPoint(targetEntity);
+        Vec3d playerPos = mc.player.getEyePos();
+        Vec3d delta     = targetPos.subtract(playerPos);
+
+        float wantYaw = (float) Math.toDegrees(Math.atan2(delta.z, delta.x)) - 90.0f;
+        float yawDiff = MathHelper.wrapDegrees(wantYaw - mc.player.getYaw());
+
+        float speedVal = speed.getValue();
+
+        float maxDegreesPerSec = 20.0f + speedVal * speedVal * 1.8f;
+        float springK = 8.0f + speedVal * 3.5f;
+
+        float targetVelocity = MathHelper.clamp(yawDiff * springK, -maxDegreesPerSec, maxDegreesPerSec);
+
+        float damping = 0.05f + (speedVal / 10.0f) * 0.4f;
+        smoothedYawVelocity += (targetVelocity - smoothedYawVelocity) * Math.min(damping * 60.0f * dt, 1.0f);
+
+        float yawStep = smoothedYawVelocity * dt;
+
+        if (Math.abs(yawStep) > Math.abs(yawDiff)) {
+            yawStep = yawDiff;
+            smoothedYawVelocity = 0.0f;
+        }
+
+        float noiseMag = Math.max(0.02f, 0.15f - speedVal * 0.01f);
+        float noiseYaw = (secureRandom.nextFloat() - 0.5f) * noiseMag;
+
+        float finalYaw   = mc.player.getYaw() + yawStep + noiseYaw;
+        float finalPitch = mc.player.getPitch();
 
         mc.execute(() -> {
             if (running && mc.player != null && mc.currentScreen == null) {
@@ -164,20 +198,23 @@ public class AimAssistModule extends Module {
 
     private Vec3d getAimPoint(LivingEntity entity) {
         Box box = entity.getBoundingBox();
+
         if (aimPoint.is("Closest")) {
-            Vec3d  eye     = mc.player.getEyePos();
-            Vec3d  look    = mc.player.getRotationVec(1.0f);
-            double dist    = mc.player.distanceTo(entity);
-            Box    active  = box.expand(0.1);
+            Vec3d  eye    = mc.player.getEyePos();
+            Vec3d  look   = mc.player.getRotationVec(1.0f);
+            double dist   = mc.player.distanceTo(entity);
+            Box    active = box.expand(0.1);
             return new Vec3d(
                     MathHelper.clamp(eye.x + look.x * dist, active.minX, active.maxX),
                     MathHelper.clamp(eye.y + look.y * dist, active.minY, active.maxY),
                     MathHelper.clamp(eye.z + look.z * dist, active.minZ, active.maxZ)
             );
         }
-        double cx  = (box.minX + box.maxX) * 0.5;
-        double cz  = (box.minZ + box.maxZ) * 0.5;
-        double h   = box.maxY - box.minY;
+
+        double cx = (box.minX + box.maxX) * 0.5;
+        double cz = (box.minZ + box.maxZ) * 0.5;
+        double h  = box.maxY - box.minY;
+
         return switch (aimPoint.getValue()) {
             case "Head" -> new Vec3d(cx, box.maxY - h * 0.15, cz);
             case "Legs" -> new Vec3d(cx, box.minY + h * 0.2,  cz);
