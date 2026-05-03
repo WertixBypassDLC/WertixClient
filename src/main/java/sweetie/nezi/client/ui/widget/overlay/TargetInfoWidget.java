@@ -17,6 +17,7 @@ import sweetie.nezi.api.utils.math.MathUtil;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
+import sweetie.nezi.client.features.modules.combat.TriggerBotModule;
 import sweetie.nezi.client.ui.widget.Widget;
 
 import java.awt.*;
@@ -217,7 +218,7 @@ public final class TargetInfoWidget extends Widget {
 
     private LivingEntity getAuraTarget() {
         AuraModule aura = AuraModule.getInstance();
-        if (aura.isEnabled() && aura.target != null) return aura.target;
+        if (aura.target != null && (aura.isEnabled() || TriggerBotModule.getInstance().isEnabled())) return aura.target;
         return null;
     }
 

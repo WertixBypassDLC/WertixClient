@@ -28,10 +28,15 @@ public class TargetEspModule extends Module {
     private final TargetEspAtom espAtom = new TargetEspAtom();
     private final TargetEspGarland espGarland = new TargetEspGarland();
     private final TargetEspRofl espRofl = new TargetEspRofl();
+    private final TargetEsp2D esp2D = new TargetEsp2D();
 
     private final ModeSetting mode = new ModeSetting("Режим").value("3D").values(
-            "Кометы", "3D", "Рофл"
+            "Кометы", "2D", "3D", "Рофл"
     );
+
+    private final ModeSetting style2D = new ModeSetting("2D Style").value("Circle").values(
+            "Circle", "Skull"
+    ).setVisible(() -> mode.is("2D"));
 
     private final ModeSetting style3D = new ModeSetting("Стиль 3D").value("Призраки").values(
             "Призраки", "Кристаллы", "Фигуры", "Черепа", "Атом", "Гирлянда"
@@ -95,7 +100,7 @@ public class TargetEspModule extends Module {
 
     public TargetEspModule() {
         addSettings(
-                mode, style3D,
+                mode, style2D, style3D,
                 animation, duration, size, speed, smoothness, inSize, outSize, lastPosition,
                 lineWidth,
                 ghostTrajectory, ghostCount, ghostSize,
@@ -126,6 +131,7 @@ public class TargetEspModule extends Module {
     private TargetEspMode getActiveMode() {
         if (mode.is("Рофл")) return espRofl;
         if (mode.is("Кометы")) return espComets;
+        if (mode.is("2D")) return esp2D;
 
         return switch (style3D.getValue()) {
             case "Кристаллы" -> espCrystals;
@@ -161,6 +167,7 @@ public class TargetEspModule extends Module {
 
     public float getSmoothness() { return smoothness.getValue(); }
     public String getAnimal() { return animal.getValue(); }
+    public String get2DStyle() { return style2D.getValue(); }
 
     public Color getCustomColor(float red) {
         Color base = sweetie.nezi.api.utils.color.UIColors.primary(255);
