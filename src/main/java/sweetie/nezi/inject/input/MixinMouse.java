@@ -10,12 +10,27 @@ import sweetie.nezi.api.event.events.client.KeyEvent;
 import sweetie.nezi.api.system.backend.SharedClass;
 import sweetie.nezi.api.system.draggable.DraggableManager;
 import sweetie.nezi.client.ui.clickgui.ScreenClickGUI;
+import sweetie.nezi.client.ui.widget.WidgetManager;
 
 @Mixin(Mouse.class)
 public class MixinMouse {
     @Inject(method = "lockCursor", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;setScreen(Lnet/minecraft/client/gui/screen/Screen;)V"), cancellable = true)
     private void lockCursorHook(CallbackInfo ci) {
         if (MinecraftClient.getInstance().currentScreen instanceof ScreenClickGUI) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "onMouseButton", at = @At("HEAD"), cancellable = true)
+    private void widgetClickHook(long window, int button, int action, int mods, CallbackInfo ci) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || SharedClass.player() == null || action != 1) {
+            return;
+        }
+
+        double mouseX = client.mouse.getX() / client.getWindow().getScaleFactor();
+        double mouseY = client.mouse.getY() / client.getWindow().getScaleFactor();
+        if (WidgetManager.getInstance().handleMouseClick(mouseX, mouseY, button)) {
             ci.cancel();
         }
     }

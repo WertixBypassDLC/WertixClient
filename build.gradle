@@ -51,6 +51,9 @@ dependencies {
 
     // json
     modImplementation "org.json:json:${project.json_version}"
+
+    // media session info
+    implementation include("dev.redstones.mediaplayerinfo:media-player-info:0.1.0")
 }
 
 processResources {

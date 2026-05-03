@@ -141,7 +141,7 @@ public class NotifWidget extends Widget {
         }
 
         float notifMix = InterfaceModule.getGlassy();
-        drawStrokeCard(ms, x, y, w, h, pillR, 255, notifMix);
+        drawHudCard(ms, x, y, w, h, pillR, 255);
 
         float midY = y + h / 2f;
         Fonts.getICONS().drawText(ms, Icons.FPS.getLetter(),
@@ -185,7 +185,7 @@ public class NotifWidget extends Widget {
             ms.scale(anim, anim, 1f);
             ms.translate(-(x + w / 2f), -(y - h / 2f), 0f);
 
-            drawStrokeCard(ms, x, y - h, w, h, round, alpha, mix);
+            drawHudCard(ms, x, y - h, w, h, round, alpha);
 
             float currentY = y - h + p;
             float tW = getMediumFont().getWidth(stripCodes(notification.playerName), fS);
@@ -262,7 +262,7 @@ public class NotifWidget extends Widget {
             ms.scale(anim, anim, 1f);
             ms.translate(-(x + w / 2f), -(y + h / 2f), 0f);
 
-            drawStrokeCard(ms, x, y, w, h, round, alpha, mix);
+            drawHudCard(ms, x, y, w, h, round, alpha);
 
             float midY = y + h / 2f;
             float textY = midY - fS / 2f + scaled(0.3f);
@@ -338,7 +338,7 @@ public class NotifWidget extends Widget {
         ms.translate(-(x + rowW / 2f), -(y + boxH / 2f), 0);
 
         int alpha = Math.max(5, (int) (255 * settingsAnim));
-        drawStrokeCard(ms, x, y, rowW, boxH, popupRound, alpha, mix);
+        drawHudCard(ms, x, y, rowW, boxH, popupRound, alpha);
 
         boolean leftClick = GLFW.glfwGetMouseButton(mc.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         float currentY = y + p;
@@ -352,8 +352,8 @@ public class NotifWidget extends Widget {
             }
 
             Color textColor = states[i] ? UIColors.positiveColor() : UIColors.negativeColor();
-            RenderUtil.BLUR_RECT.draw(ms, x + p, currentY + rowH / 2f - toggle / 2f, toggle, toggle, scaled(2f),
-                    new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), alpha), InterfaceModule.getGlassy());
+            RenderUtil.RECT.draw(ms, x + p, currentY + rowH / 2f - toggle / 2f, toggle, toggle, scaled(2f),
+                    new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), alpha));
             getMediumFont().drawText(ms, options[i], x + p + toggle + p, currentY + rowH / 2f - fS / 2f + scaled(0.3f), fS,
                     UIColors.textColor(alpha));
             currentY += rowH + gap;

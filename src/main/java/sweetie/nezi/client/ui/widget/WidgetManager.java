@@ -27,6 +27,7 @@ public class WidgetManager {
                 new CooldownsWidget(),
                 new ArmorWidget(),
                 new TargetInfoWidget(),
+                new MusicInfoWidget(),
                 new NotifWidget()
         );
 
@@ -71,5 +72,24 @@ public class WidgetManager {
 
     public void register(Widget... widgets) {
         this.widgets.addAll(List.of(widgets));
+    }
+
+    public boolean handleMouseClick(double mouseX, double mouseY, int button) {
+        if (!InterfaceModule.getInstance().isEnabled()) {
+            return false;
+        }
+
+        for (int i = widgets.size() - 1; i >= 0; i--) {
+            Widget widget = widgets.get(i);
+            if (!widget.isEnabled()) {
+                continue;
+            }
+
+            if (widget.handleMouseClick(mouseX, mouseY, button)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

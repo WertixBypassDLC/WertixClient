@@ -14,8 +14,10 @@ import java.security.SecureRandom;
 public class FunTimeRotation extends RotationMode implements QuickImports {
     public static final String MODE_NAME = "FunTimeSnap";
     private static final long VISUAL_FREEZE_DURATION_MS = 380L;
+    private static final long DISABLE_JITTER_DURATION_MS = 1000L;
 
     private static long lastAttackTimeMs = System.currentTimeMillis();
+    private static long disableJitterEndTimeMs = 0L;
     private static int attackCount = 0;
     private static final long FORCE_MISS_DURATION_MS = 320L;
     private static boolean forceMissActive = false;
@@ -33,6 +35,7 @@ public class FunTimeRotation extends RotationMode implements QuickImports {
 
     public static void reset() {
         lastAttackTimeMs = System.currentTimeMillis();
+        disableJitterEndTimeMs = 0L;
         attackCount = 0;
         forceMissActive = false;
         forceMissSwinged = false;
@@ -46,6 +49,10 @@ public class FunTimeRotation extends RotationMode implements QuickImports {
         attackCount++;
         lastAttackTimeMs = System.currentTimeMillis();
         freezeVisualRotation();
+    }
+
+    public static void onAuraDisabled() {
+        disableJitterEndTimeMs = System.currentTimeMillis() + DISABLE_JITTER_DURATION_MS;
     }
 
     public static Vec3d getAimPoint(Entity entity) {
@@ -66,7 +73,9 @@ public class FunTimeRotation extends RotationMode implements QuickImports {
         }
 
         AuraModule aura = AuraModule.getInstance();
+        boolean auraEnabled = aura != null && aura.isEnabled();
         boolean hasTarget = aura != null && aura.isEnabled() && aura.target != null;
+        boolean allowDisableJitter = !auraEnabled && shouldAllowDisableJitter();
         boolean keepVisualFreeze = shouldKeepVisualFreeze(hasTarget);
         if (!keepVisualFreeze) {
             clearVisualRotation();
@@ -76,7 +85,7 @@ public class FunTimeRotation extends RotationMode implements QuickImports {
         float yawDelta = delta.getYaw();
         float pitchDelta = delta.getPitch();
         float rotationDifference = Math.max((float) Math.hypot(Math.abs(yawDelta), Math.abs(pitchDelta)), 1.0E-4F);
-        boolean canAttack = entity != null && aura != null && aura.isEnabled() && canAttackNow(aura);
+        boolean canAttack = entity != null && auraEnabled && canAttackNow(aura);
 
         float yawJitter = canAttack
                 ? 0.0F
@@ -97,6 +106,11 @@ public class FunTimeRotation extends RotationMode implements QuickImports {
 
         float yaw = MathHelper.lerp(randomBetween(speed, speed + 0.24F), currentRotation.getYaw(), currentRotation.getYaw() + moveYaw) + yawJitter;
         float pitch = MathHelper.lerp(randomBetween(speed, speed + 0.24F), currentRotation.getPitch(), currentRotation.getPitch() + movePitch) + pitchJitter;
+
+        if (!hasTarget && !allowDisableJitter) {
+            yaw = MathHelper.lerp(0.55F, currentRotation.getYaw(), targetRotation.getYaw());
+            pitch = MathHelper.lerp(0.55F, currentRotation.getPitch(), targetRotation.getPitch());
+        }
 
         return finalizeRotation(currentRotation, yaw, pitch);
     }
@@ -127,6 +141,10 @@ public class FunTimeRotation extends RotationMode implements QuickImports {
 
     private static long elapsedSinceAttack() {
         return Math.max(0L, System.currentTimeMillis() - lastAttackTimeMs);
+    }
+
+    private static boolean shouldAllowDisableJitter() {
+        return System.currentTimeMillis() <= disableJitterEndTimeMs;
     }
 
     private Rotation finalizeRotation(Rotation currentRotation, float yaw, float pitch) {

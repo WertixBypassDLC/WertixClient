@@ -579,6 +579,10 @@ public abstract class Widget implements QuickImports, IRenderer {
         render(event.matrixStack());
     }
 
+    public boolean handleMouseClick(double mouseX, double mouseY, int button) {
+        return false;
+    }
+
     public float scaled(float value) {
         return RenderService.getInstance().scaled(value) * getWidgetScale();
     }

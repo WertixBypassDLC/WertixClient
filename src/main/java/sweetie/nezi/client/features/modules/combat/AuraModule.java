@@ -115,7 +115,7 @@ public class AuraModule extends Module {
         target = null;
         resetAimCache();
         combatExecutor.combatManager().resetState();
-        FunTimeRotation.reset();
+        FunTimeRotation.onAuraDisabled();
     }
 
     @Override
