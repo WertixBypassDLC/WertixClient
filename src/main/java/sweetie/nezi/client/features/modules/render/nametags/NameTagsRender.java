@@ -6,7 +6,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.Arm;
 import org.joml.Vector2f;
 import sweetie.nezi.api.event.events.render.Render2DEvent;
 import sweetie.nezi.api.system.configs.FriendManager;
@@ -182,43 +181,42 @@ public class NameTagsRender implements QuickImports {
 
         // Рендер предметов в руках под игроком
         if (module.showArmor.getValue() && !snapshot.armorItems.isEmpty()) {
-            drawArmorRow(context, snapshot, entry.topX(), cardY + cardHeight + (2f * scale), scale);
+            float armorHeight = getItemRowHeight(scale);
+            drawArmorRow(context, snapshot, entry.topX(), cardY - armorHeight - (2f * scale), scale);
         }
 
         if (module.showHands.getValue()) {
-            drawHandsText(matrices, snapshot, entry.bottomX(), entry.bottomY(), scale);
+            drawHandsRow(context, snapshot, entry.bottomX(), entry.bottomY(), scale);
         }
     }
 
-    private void drawHandsText(MatrixStack matrices, PlayerSnapshot snapshot, float centerX, float bottomY, float scale) {
-        float textSize = 6f * scale;
-        float padding = 2f * scale;
-        float gap = 1f * scale;
-
-        List<String> lines = new ArrayList<>(2);
-        if (!snapshot.rightHandItem.isEmpty()) lines.add(snapshot.rightHandItem);
-        if (!snapshot.leftHandItem.isEmpty()) lines.add(snapshot.leftHandItem);
-
-        if (lines.isEmpty()) return;
-
-        float blockHeight = lines.size() * textSize + Math.max(0, lines.size() - 1) * gap + padding * 2f;
-        float maxWidth = 0f;
-        for (String line : lines) {
-            maxWidth = Math.max(maxWidth, Fonts.PS_MEDIUM.getWidth(line, textSize));
+    private void drawHandsRow(DrawContext context, PlayerSnapshot snapshot, float centerX, float bottomY, float scale) {
+        MatrixStack matrices = context.getMatrices();
+        if (snapshot.handItems.isEmpty()) {
+            return;
         }
-        float blockWidth = maxWidth + padding * 2f;
 
-        float startX = centerX - blockWidth / 2f;
-        // Смещение чуть ниже ног
-        float startY = bottomY + (4f * scale);
+        float iconSize = 12f * scale;
+        float gap = 1.5f * scale;
+        float padding = 2f * scale;
+        float blockWidth = snapshot.handItems.size() * iconSize + Math.max(0, snapshot.handItems.size() - 1) * gap + padding * 2f;
+        float blockHeight = iconSize + padding * 2f;
+        float blockX = centerX - blockWidth / 2f;
+        float blockY = bottomY + (4f * scale);
 
-        RenderUtil.RECT.draw(matrices, startX, startY, blockWidth, blockHeight, 0f, bgColor);
+        RenderUtil.RECT.draw(matrices, blockX, blockY, blockWidth, blockHeight, 0f, bgColor);
 
-        float textY = startY + padding;
-        for (String line : lines) {
-            float textX = centerX - Fonts.PS_MEDIUM.getWidth(line, textSize) / 2f;
-            Fonts.PS_MEDIUM.drawText(matrices, line, textX, textY, textSize, Color.WHITE);
-            textY += textSize + gap;
+        float drawX = blockX + padding;
+        float drawY = blockY + padding;
+        float itemScale = iconSize / 16f;
+
+        for (ItemStack stack : snapshot.handItems) {
+            matrices.push();
+            matrices.translate(drawX, drawY, 0f);
+            matrices.scale(itemScale, itemScale, 1f);
+            context.drawItem(stack, 0, 0);
+            matrices.pop();
+            drawX += iconSize + gap;
         }
     }
 
@@ -245,6 +243,12 @@ public class NameTagsRender implements QuickImports {
             matrices.pop();
             drawX += iconSize + gap;
         }
+    }
+
+    private float getItemRowHeight(float scale) {
+        float iconSize = 12f * scale;
+        float padding = 2f * scale;
+        return iconSize + padding * 2f;
     }
 
     private void renderSimpleTag(String displayName, float centerX, float baseY, DrawContext context) {
@@ -290,12 +294,8 @@ public class NameTagsRender implements QuickImports {
         rebuilt.friend = FriendManager.getInstance().contains(baseName);
         rebuilt.displayName = buildDisplayName(player, baseName);
 
-        if (module.showHands.getValue()) {
-            rebuilt.rightHandItem = getRightHandName(player);
-            rebuilt.leftHandItem = getLeftHandName(player);
-        }
-
         rebuilt.armorItems = module.showArmor.getValue() ? collectArmorItems(player) : List.of();
+        rebuilt.handItems = module.showHands.getValue() ? collectHandItems(player) : List.of();
         rebuilt.potionLines = module.showPotions.getValue() ? nameTagsPotions.collectLines(player) : List.of();
 
         float scale = module.scale.getValue();
@@ -342,14 +342,17 @@ public class NameTagsRender implements QuickImports {
         }
     }
 
-    private String getRightHandName(PlayerEntity player) {
-        ItemStack stack = player.getMainArm() == Arm.RIGHT ? player.getMainHandStack() : player.getOffHandStack();
-        return stack.isEmpty() ? "" : stack.getName().getString();
+    private List<ItemStack> collectHandItems(PlayerEntity player) {
+        List<ItemStack> handItems = new ArrayList<>(2);
+        addHandItem(handItems, player.getMainHandStack());
+        addHandItem(handItems, player.getOffHandStack());
+        return handItems;
     }
 
-    private String getLeftHandName(PlayerEntity player) {
-        ItemStack stack = player.getMainArm() == Arm.RIGHT ? player.getOffHandStack() : player.getMainHandStack();
-        return stack.isEmpty() ? "" : stack.getName().getString();
+    private void addHandItem(List<ItemStack> handItems, ItemStack stack) {
+        if (!stack.isEmpty()) {
+            handItems.add(stack.copy());
+        }
     }
 
     private String buildDisplayName(PlayerEntity player, String baseName) {
@@ -399,9 +402,8 @@ public class NameTagsRender implements QuickImports {
     private static final class PlayerSnapshot {
         private String displayName = "";
         private boolean friend;
-        private String rightHandItem = "";
-        private String leftHandItem = "";
         private List<ItemStack> armorItems = List.of();
+        private List<ItemStack> handItems = List.of();
         private List<NameTagsPotions.PotionLine> potionLines = List.of();
         private float nameWidth;
         private float effectBlockWidth;
@@ -430,3 +432,4 @@ public class NameTagsRender implements QuickImports {
         return entity.getHealth() + entity.getAbsorptionAmount();
     }
 }
+

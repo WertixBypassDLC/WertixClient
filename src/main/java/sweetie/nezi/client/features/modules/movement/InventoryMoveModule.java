@@ -213,7 +213,16 @@ public class InventoryMoveModule extends Module {
         return !mode.is("Default");
     }
 
+    public boolean usesBypassFlow() {
+        return !mode.is("Default");
+    }
+
+    public boolean usesLegitItemBypass() {
+        return mode.is("Legit");
+    }
+
     public boolean isBasic() {
         return mode.is("Default");
     }
 }
+

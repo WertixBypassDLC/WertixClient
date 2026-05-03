@@ -11,7 +11,7 @@ import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
 import sweetie.nezi.api.module.setting.BindSetting;
 import sweetie.nezi.api.utils.player.InventoryUtil;
-import sweetie.nezi.api.utils.other.SlownessManager;
+import sweetie.nezi.client.features.modules.movement.InventoryMoveModule;
 
 @ModuleRegister(name = "Click Pearl", category = Category.PLAYER)
 public class ClickPearlModule extends Module {
@@ -33,20 +33,25 @@ public class ClickPearlModule extends Module {
     @Override
     public void onEvent() {
         EventListener tickEvent = TickEvent.getInstance().subscribe(new Listener<>(event -> {
-            handle(!SlownessManager.isEnabled());
+            if (shouldHandleOnTick()) {
+                handle();
+            }
         }));
 
         EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
-            handle(SlownessManager.isEnabled());
+            if (!shouldHandleOnTick()) {
+                handle();
+            }
         }));
 
         addEvents(tickEvent, updateEvent);
     }
 
-    private void handle(boolean tick) {
-        if (tick) return;
+    private boolean shouldHandleOnTick() {
+        return InventoryMoveModule.getInstance().usesBypassFlow();
+    }
 
-        // Передаем true для использования безопасной тиковой логики свапа перлов
-        itemUsage.handleUse(throwKey.getValue(), true);
+    private void handle() {
+        itemUsage.handleUse(throwKey.getValue(), InventoryMoveModule.getInstance().usesLegitItemBypass());
     }
 }

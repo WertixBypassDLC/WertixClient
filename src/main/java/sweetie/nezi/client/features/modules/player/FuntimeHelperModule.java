@@ -34,6 +34,7 @@ import sweetie.nezi.client.features.modules.movement.InventoryMoveModule;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -45,7 +46,7 @@ public class FuntimeHelperModule extends Module {
     @Getter private static final FuntimeHelperModule instance = new FuntimeHelperModule();
 
     private final BooleanSetting timer = new BooleanSetting("Таймер").value(true);
-    private final Map<InventoryUtil.ItemUsage, BindSetting> keyBindings = new HashMap<>();
+    private final Map<InventoryUtil.ItemUsage, BindSetting> keyBindings = new LinkedHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private final List<Pair<Long, Vec3d>> consumables = new ArrayList<>();
     private final Map<Vec3d, String> consumableNames = new HashMap<>();
@@ -57,6 +58,7 @@ public class FuntimeHelperModule extends Module {
         keyBindings.put(new InventoryUtil.ItemUsage(Items.FIRE_CHARGE, this), new BindSetting("Огненный смерч").value(-999));
         keyBindings.put(new InventoryUtil.ItemUsage(Items.NETHERITE_SCRAP, this), new BindSetting("Трапка").value(-999));
         keyBindings.put(new InventoryUtil.ItemUsage(Items.DRIED_KELP, this), new BindSetting("Пласт").value(-999));
+        keyBindings.put(new InventoryUtil.ItemUsage(Items.SNOWBALL, this), new BindSetting("Snowball").value(-999));
 
         addSettings(timer);
         keyBindings.values().forEach(this::addSettings);
@@ -160,8 +162,8 @@ public class FuntimeHelperModule extends Module {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) return;
         if (client.currentScreen != null && !InventoryMoveModule.getInstance().isEnabled()) return;
-        // Вызываем с true, чтобы задействовать тиковый обход античита
-        keyBindings.forEach((usage, bind) -> usage.handleUse(bind.getValue(), true));
+        boolean useLegitBypass = InventoryMoveModule.getInstance().usesLegitItemBypass();
+        keyBindings.forEach((usage, bind) -> usage.handleUse(bind.getValue(), useLegitBypass));
     }
 
     private double getDistance(BlockPos pos1, BlockPos pos2) {
