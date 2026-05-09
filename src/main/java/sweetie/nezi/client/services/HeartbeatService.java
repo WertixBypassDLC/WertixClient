@@ -10,7 +10,6 @@ import sweetie.nezi.api.event.events.client.TickEvent;
 import sweetie.nezi.api.event.events.render.Render2DEvent;
 import sweetie.nezi.api.module.ModuleManager;
 import sweetie.nezi.api.system.client.GpsManager;
-import sweetie.nezi.api.system.configs.ConfigSkin;
 import sweetie.nezi.api.system.configs.MacroManager;
 import sweetie.nezi.api.system.draggable.DraggableManager;
 import sweetie.nezi.api.system.interfaces.QuickImports;
@@ -37,15 +36,13 @@ public class HeartbeatService implements QuickImports {
     private void tickEvent() {
         TickEvent.getInstance().subscribe(new Listener<>(event -> {
             SlownessManager.tick();
-
-            ConfigSkin.getInstance().fetchSkin();
         }));
     }
 
     private void render2dEvent() {
         Render2DEvent.getInstance().subscribe(new Listener<>(event -> {
             MinecraftClient client = MinecraftClient.getInstance();
-            if (client != null && client.currentScreen instanceof ChatScreen) {
+            if (client != null) {
                 DraggableManager.getInstance().getDraggables().forEach((s, draggable) -> {
                     if (draggable.getModule().isEnabled()) {
                         draggable.onDraw();

@@ -357,15 +357,15 @@ public class Panel extends UIComponent {
 
     private void drawGlassBlock(MatrixStack matrixStack, float x, float y, float width, float height, float round,
                                 java.awt.Color surface, int alpha, boolean compact) {
-        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 1.02f) : (int) (alpha * 1.10f)));
-        int backgroundBlurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.94f) : (int) (alpha * 1.00f)));
-        int overlayAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.10f) : (int) (alpha * 0.13f)));
-        int strokeAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.22f) : (int) (alpha * 0.24f)));
+        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 1.00f) : (int) (alpha * 1.04f)));
 
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, UIColors.blur(blurAlpha), 0.08f);
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, UIColors.backgroundBlur(backgroundBlurAlpha), 0.06f);
-        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, surface);
-        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, UIColors.overlay(overlayAlpha));
-        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, UIColors.stroke(strokeAlpha));
+        // Единый стиль с HUD: bg(23,23,34,107) + stroke(65,65,65,250)
+        java.awt.Color hudBg = new java.awt.Color(23, 23, 34, (int) (107 * (alpha / 255f)));
+        java.awt.Color hudStroke = new java.awt.Color(65, 65, 65, (int) (250 * (alpha / 255f)));
+
+        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, UIColors.blur(blurAlpha), 0.06f);
+        RenderUtil.RECT.draw(matrixStack, x - scaled(0.7f), y - scaled(0.7f),
+                width + scaled(1.4f), height + scaled(1.4f), round + scaled(0.7f), hudStroke);
+        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, hudBg);
     }
 }

@@ -79,74 +79,93 @@ public final class TargetInfoWidget extends Widget {
         glowAnimation.run(1.0, 2000, Easing.LINEAR);
         if (glowAnimation.isFinished()) glowAnimation.setValue(0.0);
 
-        // Background with Glow
         int alpha = (int)(anim * 255);
         float round = scaled(6.0F);
 
-        // Subtle Theme Glow
+        // Rectangle (background)
+        float headSize = height; // The square
+        
+        String playerName = target.getName().getString();
+        float nameScale = scaled(7.0F);
+        float nameWidth = Fonts.PS_BOLD.getWidth(playerName, nameScale);
+        float minContentW = scaled(60.0F);
+        float contentW = Math.max(minContentW, nameWidth);
+        
+        float padding = scaled(6f); // gap between head square and text
+        // Width: head + gap + content + right padding
+        width = headSize + padding + contentW + scaled(10f);
+        
+        float headX = posX;
+        float headY = posY;
+        float rectX = posX;
+        float rectW = width;
+        
+        // Subtle Theme Glow around Rect
         Color glowColor = UIColors.themeFlow(target.hashCode(), (int)(anim * 35));
-        RenderUtil.RECT.draw(matrixStack, posX - scaled(1.5f), posY - scaled(1.5f), width + scaled(3.0f), height + scaled(3.0f), round + scaled(1.5f), glowColor);
+        RenderUtil.RECT.draw(matrixStack, rectX - scaled(1.5f), posY - scaled(1.5f), rectW + scaled(3.0f), height + scaled(3.0f), round + scaled(1.5f), glowColor);
 
-        // Standard HUD Card (Blur & Surface)
-        drawHudCard(matrixStack, posX, posY, width, height, round, alpha);
-        RenderUtil.STROKE(matrixStack, posX, posY, width, height, round, (int)(anim * 40));
+        // Base rect (bottom layer)
+        drawHudCard(matrixStack, rectX, posY, rectW, height, round, alpha);
+        // Head square (top layer — stacking)
+        drawHudSquare(matrixStack, headX, headY, headSize, headSize, round, alpha);
 
-        // Player Head
-        float headSize = scaled(24.0F);
-        float headX = posX + scaled(4.0F);
-        float headY = posY + (height - headSize) / 2f;
+        // Player Head texture
         if (target instanceof PlayerEntity player) {
-            RenderUtil.TEXTURE_RECT.drawHead(matrixStack, player, headX, headY, headSize, headSize,
+            float innerHeadSize = headSize - scaled(8f);
+            RenderUtil.TEXTURE_RECT.drawHead(matrixStack, player, headX + scaled(4f), headY + scaled(4f), innerHeadSize, innerHeadSize,
                     0f, scaled(3.0F), ColorUtil.setAlpha(Color.WHITE, (int)(anim * 255.0F)));
         }
 
-        float contentX = headX + headSize + scaled(6.0F);
-        float contentW = width - headSize - scaled(14.0F);
+        float contentX = headX + headSize + padding;
 
-        // Player Name
-        String playerName = target.getName().getString();
-        if (Fonts.PS_BOLD.getWidth(playerName, scaled(7.0F)) > contentW) {
-            playerName = playerName.substring(0, Math.min(playerName.length(), 9)) + "..";
-        }
-        Fonts.PS_BOLD.drawText(matrixStack, playerName, contentX, posY + scaled(4.5F),
-                scaled(7.0F), UIColors.textColor((int)(anim * 255.0F)));
+        // === Vertical layout inside content area ===
+        // Total inner height = height. Divide into 3 equal chunks:
+        //   chunk 0: name    (top)
+        //   chunk 1: HP text (middle)
+        //   chunk 2: HP bar  (bottom)
+        float innerPad   = scaled(4.5f);
+        float barHeight  = scaled(3.5F);
+        float barRadius  = scaled(1.5F);
+        // Name — top-aligned with a small top pad
+        float nameY  = posY + innerPad;
+        // HP text — centred vertically in the widget
+        float hpTextSize = scaled(5.8F);
+        float hpTextY = posY + height / 2f - hpTextSize / 2f;
+        // Bar — near bottom
+        float barY   = posY + height - innerPad - barHeight;
+        float barX   = contentX;
+        float barWidth = contentW;
 
-        // Distance & Info
-        float dist = mc.player.distanceTo(target);
-        String infoText = String.format("%.1fm", dist) + " | " + (target instanceof PlayerEntity ? "Player" : "Mob");
-        Fonts.PS_MEDIUM.drawText(matrixStack, infoText, contentX, posY + scaled(12.5F),
-                scaled(5.5F), UIColors.inactiveTextColor((int)(anim * 255.0F)));
+        Fonts.PS_BOLD.drawText(matrixStack, playerName, contentX, nameY,
+                nameScale, UIColors.textColor((int)(anim * 255.0F)));
 
         // HP Text
         String hpText = String.format("%.1f", hp).replace(",", ".") + " HP";
         if (target.getAbsorptionAmount() > 0) {
             hpText += " §6+" + String.format("%.1f", target.getAbsorptionAmount()).replace(",", ".");
         }
-        Fonts.PS_BOLD.drawText(matrixStack, hpText, contentX, posY + scaled(18.5F),
-                scaled(6.0F), UIColors.textColor((int)(anim * 255.0F)));
+        Fonts.PS_BOLD.drawText(matrixStack, hpText, contentX, hpTextY,
+                hpTextSize, UIColors.textColor((int)(anim * 255.0F)));
 
         // Health Bar
-        float barX = contentX;
-        float barY = posY + scaled(25.5F);
-        float barWidth = contentW;
-        float barHeight = scaled(4.5F);
-        float barRadius = scaled(1.5F);
+        float barHeight2  = scaled(4.5F);
+        float barY2       = posY + height - innerPad - barHeight2;
 
         // Bar Background
-        RenderUtil.RECT.draw(matrixStack, barX, barY, barWidth, barHeight, barRadius,
+        RenderUtil.RECT.draw(matrixStack, barX, barY2, barWidth, barHeight2, barRadius,
                 new Color(30, 30, 35, (int)(anim * 180)));
 
         // Outdated health
         float outdatedWidth = MathHelper.clamp(barWidth * (float)outdatedHealthAnimation.getValue(), 0.0F, barWidth);
         if (outdatedWidth > 1f) {
-            RenderUtil.RECT.draw(matrixStack, barX, barY, outdatedWidth, barHeight, barRadius,
+            RenderUtil.RECT.draw(matrixStack, barX, barY2, outdatedWidth, barHeight2, barRadius,
                     ColorUtil.setAlpha(UIColors.primary(), (int)(anim * 80)));
         }
 
         // Current health
         float healthWidth = MathHelper.clamp(barWidth * (float)healthAnimation.getValue(), 0.0F, barWidth);
         if (healthWidth > 1f) {
-            RenderUtil.GRADIENT_RECT.draw(matrixStack, barX, barY, healthWidth, barHeight, barRadius,
+            RenderUtil.GRADIENT_RECT.draw(matrixStack, barX, barY2, healthWidth, barHeight2, barRadius,
                     UIColors.secondary((int)(anim * 255)),
                     UIColors.primary((int)(anim * 255)),
                     UIColors.secondary((int)(anim * 255)),
@@ -156,13 +175,13 @@ public final class TargetInfoWidget extends Widget {
         // Absorption
         float absorptionWidth = MathHelper.clamp(barWidth * (float)gappleAnimation.getValue(), 0.0F, barWidth);
         if (absorptionWidth > 1f) {
-            RenderUtil.RECT.draw(matrixStack, barX, barY, absorptionWidth, barHeight, barRadius,
+            RenderUtil.RECT.draw(matrixStack, barX, barY2, absorptionWidth, barHeight2, barRadius,
                     new Color(255, 200, 40, (int)(anim * 255)));
         }
 
-        // Armor Rendering
+        // Armor & Hands Rendering
         if (target instanceof PlayerEntity player) {
-            drawArmor(ctx, matrixStack, player, posX + width + scaled(3f), posY + scaled(1f), anim);
+            drawArmor(ctx, matrixStack, player, posX, posY, width, anim);
         }
 
         getDraggable().setWidth(width);
@@ -170,30 +189,57 @@ public final class TargetInfoWidget extends Widget {
     }
 
 
-    private void drawArmor(DrawContext ctx, MatrixStack ms, PlayerEntity player, float x, float y, float anim) {
-        float itemSize = scaled(12.0F);
-        float gap = scaled(2.0F);
+    private void drawArmor(DrawContext ctx, MatrixStack ms, PlayerEntity player, float x, float y, float width, float anim) {
+        float itemSize = scaled(11.0F); // Smaller squares
+        float gap = scaled(3.0F);
+        float round = scaled(3.0F);
+        int alpha = (int)(anim * 255);
         
         List<ItemStack> armor = player.getInventory().armor;
-        ItemStack[] items = new ItemStack[]{
-                player.getMainHandStack(), 
-                player.getOffHandStack(), 
-                armor.get(3), 
-                armor.get(2), 
-                armor.get(1), 
-                armor.get(0)
-        };
+        ItemStack[] armors = new ItemStack[]{ armor.get(3), armor.get(2), armor.get(1), armor.get(0) };
+        ItemStack[] hands = new ItemStack[]{ player.getMainHandStack(), player.getOffHandStack() };
 
-        float curY = y;
-        for (ItemStack stack : items) {
-            if (!stack.isEmpty()) {
-                ms.push();
-                ms.translate(x, curY, 0.0F);
-                float scale = (itemSize / 16.0F) * anim;
-                ms.scale(scale, scale, 1.0F);
-                ctx.drawItem(stack, 0, 0);
-                ms.pop();
-                curY += itemSize + gap;
+        // Draw Hands (Top Left, 2 items)
+        float hx = x;
+        float hy = y - itemSize - gap;
+        for (ItemStack stack : hands) {
+            drawItemSquare(ctx, ms, stack, hx, hy, itemSize, round, alpha, player);
+            hx += itemSize + gap;
+        }
+
+        // Draw Armor (Top Right, 4 items)
+        float totalArmorWidth = 4 * itemSize + 3 * gap;
+        float ax = x + width - totalArmorWidth;
+        float ay = y - itemSize - gap;
+        for (ItemStack stack : armors) {
+            drawItemSquare(ctx, ms, stack, ax, ay, itemSize, round, alpha, player);
+            ax += itemSize + gap;
+        }
+    }
+
+    private void drawItemSquare(DrawContext ctx, MatrixStack ms, ItemStack stack, float x, float y, float size, float round, int alpha, LivingEntity entity) {
+        drawHudSquare(ms, x, y, size, size, round, alpha);
+        if (stack == null || stack.isEmpty()) return;
+
+        float scale = (size - scaled(4f)) / 16.0F; // pad 2px on each side
+        ms.push();
+        ms.translate(x + scaled(2f), y + scaled(2f), 0.0F);
+        ms.scale(scale, scale, 1.0F);
+        ctx.drawItem(stack, 0, 0);
+        ms.pop();
+
+        // Item use logic
+        if (entity != null && entity.isUsingItem() && entity.getActiveItem() == stack) {
+            int maxUse = stack.getMaxUseTime(entity);
+            int left = entity.getItemUseTimeLeft();
+            if (maxUse > 0) {
+                float progress = 1f - ((float)left / (float)maxUse);
+                float fillHeight = size * progress;
+                RenderUtil.RECT.draw(ms, x, y + size - fillHeight, size, fillHeight, round, UIColors.primary((int)(alpha * 0.5f)));
+                
+                String text = String.format("%.1fs", left / 20f);
+                float textScale = scaled(4.5f);
+                Fonts.PS_MEDIUM.drawText(ms, text, x + size/2f - Fonts.PS_MEDIUM.getWidth(text, textScale)/2f, y + size/2f - textScale/2f, textScale, UIColors.textColor(alpha));
             }
         }
     }

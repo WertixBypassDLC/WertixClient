@@ -32,8 +32,6 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 public class MusicInfoWidget extends Widget {
-    private static final Color BG = new Color(15, 15, 20, 220);
-    private static final Color OUTLINE = new Color(70, 70, 85, 150);
     private static final MediaInfo EMPTY_MEDIA = new MediaInfo("", "", new byte[0], 0L, 0L, false);
 
     private final ExecutorService mediaExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -192,13 +190,10 @@ public class MusicInfoWidget extends Widget {
         matrixStack.scale(vis, vis, 1f);
         matrixStack.translate(-centerX, -centerY, 0f);
 
-        float outlineW = scaled(0.5f);
-        float outerR = layout.borderR + outlineW;
-        RenderUtil.RECT.draw(matrixStack, layout.x - outlineW, layout.y - outlineW,
-                layout.totalW + outlineW * 2f, layout.totalH + outlineW * 2f, outerR, OUTLINE);
-        RenderUtil.BLUR_RECT.draw(matrixStack, layout.x, layout.y, layout.totalW, layout.totalH, layout.borderR, BG);
+        int alpha = vis == 1f ? 255 : (int)(vis * 255);
+        drawHudCard(matrixStack, layout.x, layout.y, layout.totalW, layout.totalH, layout.borderR, alpha);
 
-        drawArtwork(context, matrixStack, currentMedia, layout);
+        drawArtwork(context, matrixStack, currentMedia, layout, alpha);
         drawTrackTexts(matrixStack, currentMedia, layout);
         drawControlPanel(matrixStack, currentMedia, layout);
         drawProgressPanel(matrixStack, currentMedia, layout);
@@ -210,7 +205,7 @@ public class MusicInfoWidget extends Widget {
         getDraggable().setHeight(layout.totalH);
     }
 
-    private void drawArtwork(DrawContext context, MatrixStack matrixStack, MediaInfo currentMedia, Layout layout) {
+    private void drawArtwork(DrawContext context, MatrixStack matrixStack, MediaInfo currentMedia, Layout layout, int alpha) {
         if (artworkRegistered && currentMedia.getArtworkPng() != null && currentMedia.getArtworkPng().length > 0) {
             var texture = mc.getTextureManager().getTexture(artworkId);
             if (texture != null) {
@@ -224,8 +219,7 @@ public class MusicInfoWidget extends Widget {
             }
         }
 
-        RenderUtil.BLUR_RECT.draw(matrixStack, layout.coverX, layout.coverY, layout.coverSize, layout.coverSize, scaled(4f),
-                new Color(25, 25, 32, 200));
+        drawHudSquare(matrixStack, layout.coverX, layout.coverY, layout.coverSize, layout.coverSize, scaled(4f), alpha);
         Font font = getSemiBoldFont();
         String note = "♪";
         float size = scaled(16f);
@@ -289,8 +283,7 @@ public class MusicInfoWidget extends Widget {
     }
 
     private void drawPanel(MatrixStack matrixStack, float x, float y, float width, float height, float round) {
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, new Color(22, 22, 28, 210));
-        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, new Color(255, 255, 255, 12));
+        drawHudSquare(matrixStack, x, y, width, height, round, 255);
     }
 
     private void drawButton(MatrixStack matrixStack, Font font, String label, float x, float y, float box, float size) {

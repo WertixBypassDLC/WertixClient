@@ -192,9 +192,8 @@ public class ScreenClickGUI extends Screen implements QuickImports {
         float themeProgress = themeEditor.getOpenProgress();
         if (themeProgress > 0.01f) {
             int blurAlpha = (int) (themeProgress * openAnim * 255f);
-            RenderUtil.BLUR_RECT.draw(context.getMatrices(), 0f, 0f, windowWidth, windowHeight, 0f, UIColors.widgetBlur(Math.min(255, blurAlpha)), 0.25f * themeProgress);
-            RenderUtil.BLUR_RECT.draw(context.getMatrices(), 0f, 0f, windowWidth, windowHeight, 0f, UIColors.backgroundBlur(Math.min(255, blurAlpha)), 0.20f * themeProgress);
-            RenderUtil.RECT.draw(context.getMatrices(), 0f, 0f, windowWidth, windowHeight, 0f, UIColors.overlay(Math.min(200, (int) (blurAlpha * 0.90f))));
+            RenderUtil.BLUR_RECT.draw(context.getMatrices(), 0f, 0f, windowWidth, windowHeight, 0f, UIColors.widgetBlur(Math.min(180, blurAlpha)), 0.10f * themeProgress);
+            RenderUtil.RECT.draw(context.getMatrices(), 0f, 0f, windowWidth, windowHeight, 0f, UIColors.overlay(Math.min(150, (int) (blurAlpha * 0.65f))));
         }
 
         if (themeEditor.isOpen()) {
@@ -350,8 +349,8 @@ public class ScreenClickGUI extends Screen implements QuickImports {
 
     private void renderBackdrop(DrawContext context, float windowWidth, float windowHeight, float alpha) {
         int fullAlpha = (int) (alpha * 255f);
-        RenderUtil.BLUR_RECT.draw(context.getMatrices(), 0f, 0f, windowWidth, windowHeight, 0f, UIColors.blur(Math.min(220, (int) (fullAlpha * 0.90f))), 0.08f);
-        RenderUtil.BLUR_RECT.draw(context.getMatrices(), 0f, 0f, windowWidth, windowHeight, 0f, UIColors.backgroundBlur(Math.min(196, (int) (fullAlpha * 0.72f))), 0.06f);
+        // Один проход blur вместо двух — FPS буст
+        RenderUtil.BLUR_RECT.draw(context.getMatrices(), 0f, 0f, windowWidth, windowHeight, 0f, UIColors.blur(Math.min(210, (int) (fullAlpha * 0.85f))), 0.05f);
     }
 
     private void renderControls(DrawContext context, float guiX, float guiY, float guiWidth, float alpha, float windowWidth, float windowHeight) {
@@ -408,16 +407,16 @@ public class ScreenClickGUI extends Screen implements QuickImports {
 
     private void drawGlassSurface(MatrixStack ms, float x, float y, float width, float height, float round,
                                   java.awt.Color surface, int alpha, boolean compact) {
-        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 1.04f) : (int) (alpha * 1.12f)));
-        int backgroundBlurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.96f) : (int) (alpha * 1.02f)));
-        int overlayAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.10f) : (int) (alpha * 0.14f)));
-        int strokeAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.22f) : (int) (alpha * 0.24f)));
+        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 1.00f) : (int) (alpha * 1.04f)));
 
-        RenderUtil.BLUR_RECT.draw(ms, x, y, width, height, round, UIColors.blur(blurAlpha), 0.08f);
-        RenderUtil.BLUR_RECT.draw(ms, x, y, width, height, round, UIColors.backgroundBlur(backgroundBlurAlpha), 0.06f);
-        RenderUtil.RECT.draw(ms, x, y, width, height, round, surface);
-        RenderUtil.RECT.draw(ms, x, y, width, height, round, UIColors.overlay(overlayAlpha));
-        RenderUtil.RECT.draw(ms, x, y, width, height, round, UIColors.stroke(strokeAlpha));
+        // Единый стиль с HUD
+        java.awt.Color hudBg = new java.awt.Color(23, 23, 34, (int) (107 * (alpha / 255f)));
+        java.awt.Color hudStroke = new java.awt.Color(65, 65, 65, (int) (250 * (alpha / 255f)));
+
+        RenderUtil.BLUR_RECT.draw(ms, x, y, width, height, round, UIColors.blur(blurAlpha), 0.06f);
+        RenderUtil.RECT.draw(ms, x - scaled(0.7f), y - scaled(0.7f),
+                width + scaled(1.4f), height + scaled(1.4f), round + scaled(0.7f), hudStroke);
+        RenderUtil.RECT.draw(ms, x, y, width, height, round, hudBg);
     }
 
     private float themeButtonY() {

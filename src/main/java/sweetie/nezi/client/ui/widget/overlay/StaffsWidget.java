@@ -84,14 +84,14 @@ public class StaffsWidget extends ContainerWidget {
 
         float x = getDraggable().getX(), y = getDraggable().getY();
         float hr = hudRound();
-        float hdrH = scaled(14.1f);
-        float p = scaled(5f);
+        float hdrH = scaled(13.4f);
+        float p = scaled(4f);
         float hGap = scaled(2f);
-        float fTit = scaled(6.1f);
-        float fRow = scaled(5.8f);
-        float iS = scaled(8.6f);
-        float rowH = scaled(13f);
-        float rowG = scaled(2f);
+        float fTit = scaled(5.8f);
+        float fRow = scaled(5.3f);
+        float iS = scaled(7.9f);
+        float rowH = scaled(10f);
+        float rowG = scaled(1.5f);
         float dotSize = scaled(4f);
         float sqS = hdrH - scaled(3f);
 

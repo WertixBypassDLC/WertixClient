@@ -3,12 +3,12 @@ package sweetie.nezi.api.event;
 import sweetie.nezi.api.event.interfaces.Cacheable;
 import sweetie.nezi.api.event.interfaces.Notifiable;
 import sweetie.nezi.api.event.interfaces.Subscribable;
-import sweetie.nezi.api.system.interfaces.QuickImports;
 
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public abstract class Flora<T> implements Cacheable<T>, Subscribable<Listener<T>, T>, Notifiable<T> {
-    private final ConcurrentSkipListSet<Listener<T>> listeners = new ConcurrentSkipListSet<>();
+    private final List<Listener<T>> listeners = new CopyOnWriteArrayList<>();
 
     @SuppressWarnings("unchecked")
     private volatile Listener<T>[] cache = (Listener<T>[]) new Listener<?>[0];
@@ -19,7 +19,7 @@ public abstract class Flora<T> implements Cacheable<T>, Subscribable<Listener<T>
     @SuppressWarnings("unchecked")
     public Listener<T>[] getCache() {
         if (rebuildCache) {
-            cache = listeners.toArray(Listener[]::new);
+            cache = listeners.toArray(new Listener[0]);
             rebuildCache = false;
         }
         return cache;
@@ -28,6 +28,7 @@ public abstract class Flora<T> implements Cacheable<T>, Subscribable<Listener<T>
     @Override
     public EventListener subscribe(Listener<T> listener) {
         listeners.add(listener);
+        listeners.sort(null);
         rebuildCache = true;
         return new EventListener(() -> unsubscribe(listener));
     }
@@ -40,12 +41,10 @@ public abstract class Flora<T> implements Cacheable<T>, Subscribable<Listener<T>
 
     @Override
     public void notify(T event) {
-        QuickImports.bindMinecraftClient();
         for (Listener<T> tListener : getCache()) {
             try {
                 tListener.getHandler().accept(event);
             } catch (Throwable throwable) {
-                System.err.println("Event listener failed in " + getClass().getSimpleName() + ": " + throwable.getMessage());
                 throwable.printStackTrace();
             }
         }

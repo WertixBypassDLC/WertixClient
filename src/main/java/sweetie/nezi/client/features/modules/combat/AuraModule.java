@@ -58,22 +58,24 @@ public class AuraModule extends Module {
     private final PointFinder pointFinder = new PointFinder();
     public final CombatExecutor combatExecutor = new CombatExecutor();
 
-    @Getter private final ModeSetting aimMode = new ModeSetting("Aim mode").value("Snap").values(
+    @Getter private final ModeSetting aimMode = new ModeSetting("Режим прицела").value("Snap").values(
             "Fun Time", "Snap", "Legit Snap", "Matrix"
     );
-    @Getter private final ModeSetting move = new ModeSetting("Move").value("Free").values("Free", "Focus");
+    @Getter private final ModeSetting move = new ModeSetting("Движение").value("Free").values("Free", "Focus");
 
-    private final SliderSetting distance = new SliderSetting("Distance").value(3.3f).range(2.5f, 5f).step(0.1f);
-    private final SliderSetting preDistance = new SliderSetting("Pre distance").value(0.3f).range(0f, 3f).step(0.1f);
-    private final SliderSetting legitFov = new SliderSetting("Legit FOV").value(50f).range(30f, 90f).step(1f)
+    private final SliderSetting distance    = new SliderSetting("Дистанция").value(3.3f).range(2.5f, 5f).step(0.1f);
+    private final SliderSetting preDistance = new SliderSetting("Предел дистанции").value(0.3f).range(0f, 3f).step(0.1f);
+    private final SliderSetting legitFov    = new SliderSetting("Легитный FOV").value(50f).range(30f, 90f).step(1f)
             .setVisible(() -> aimMode.is("Legit Snap"));
-    private final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
-            new BooleanSetting("Players").value(true),
-            new BooleanSetting("Friends").value(false),
-            new BooleanSetting("Mobs").value(false),
-            new BooleanSetting("Animals").value(false),
-            new BooleanSetting("Villagers").value(false),
-            new BooleanSetting("Naked").value(false)
+    private final BooleanSetting auraTargetPlayers = new BooleanSetting("Игроки").value(true);
+    private final BooleanSetting auraTargetNaked   = new BooleanSetting("Голые").value(false).setVisible(auraTargetPlayers::getValue);
+    private final MultiBooleanSetting targets = new MultiBooleanSetting("Цели").value(
+            auraTargetPlayers,
+            new BooleanSetting("Друзья").value(false),
+            new BooleanSetting("Мобы").value(false),
+            new BooleanSetting("Животные").value(false),
+            new BooleanSetting("Жители").value(false),
+            auraTargetNaked
     );
 
     public LivingEntity target;
@@ -177,7 +179,7 @@ public class AuraModule extends Module {
 
     private LivingEntity updateTarget() {
         TargetManager.EntityFilter filter = new TargetManager.EntityFilter(targets.getList());
-        filter.needFriends = targets.isEnabled("Friends");
+        filter.needFriends = targets.isEnabled("Друзья");
 
         float maxDistance = getAttackDistance() + getPreDistance();
         boolean ignoreWalls = combatExecutor.options().isEnabled("Ignore walls");
@@ -228,12 +230,25 @@ public class AuraModule extends Module {
         boolean canAttack = combatExecutor.combatManager().canAttackPreview();
         long sinceLastClick = combatExecutor.combatManager().clickScheduler().lastClickPassed();
 
+        // --- Distance-based urgency ---
+        // The farther the target, the longer we've been clicking without hitting → rotate faster
+        double distToTarget = mc.player.getEyePos().distanceTo(targetVec);
+        double maxDist = getAttackDistance() + getPreDistance();
+        // urgency 0..1 (0 = close, 1 = at edge of range)
+        double urgency = Math.min(1.0, distToTarget / maxDist);
+
+        // --- Crit acceleration ---
+        boolean critPossible = canDoCrit();
+
         if (aimMode.is("Snap")) {
-            if (!canAttack && sinceLastClick >= 100L) {
+            // Reduce the "give up" window when far or when crit is ready
+            long threshold = critPossible ? 60L : (urgency > 0.7 ? 70L : 100L);
+            if (!canAttack && sinceLastClick >= threshold) {
                 return;
             }
         } else if (aimMode.is("Legit Snap")) {
-            if (!canAttack && sinceLastClick >= 100L) {
+            long threshold = critPossible ? 60L : (urgency > 0.7 ? 70L : 100L);
+            if (!canAttack && sinceLastClick >= threshold) {
                 return;
             }
             RotationManager.getInstance().clear();
@@ -241,13 +256,24 @@ public class AuraModule extends Module {
             if (!canAttack) {
                 return;
             }
-
             strategy.ticksUntilReset(60);
             RotationManager.getInstance().clear();
         }
 
         Vec3d rotationVec = aimMode.is("Fun Time") ? rotation.getVector() : targetVec;
         RotationManager.getInstance().addRotation(new Rotation.VecRotation(rotation, rotationVec), target, strategy, TaskPriority.HIGH, this);
+    }
+
+    /**
+     * Returns true if the player can land a critical hit right now.
+     * Crit = falling + not in liquid + not climbing + not in cobweb.
+     */
+    private boolean canDoCrit() {
+        if (mc.player == null) return false;
+        boolean falling  = mc.player.fallDistance > 0.05f && !mc.player.isOnGround();
+        boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
+        boolean climbing = mc.player.isClimbing();
+        return falling && !inLiquid && !climbing;
     }
 
     private RotationMode getRotationMode() {

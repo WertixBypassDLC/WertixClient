@@ -3,6 +3,8 @@
 uniform sampler2D Sampler0;
 uniform vec2 uResolution;
 uniform float uProgress; // 0.0 to 1.0 (0.0 = old theme full, 1.0 = new theme full)
+uniform float uSeed;    // unique pattern per transition
+uniform vec3 uPaint;    // tint color (theme primary)
 
 in vec2 TexCoord;
 out vec4 fragColor;
@@ -41,34 +43,39 @@ void main() {
         discard;
     }
 
-    // Normalised from 0 to 1
-    // Bottom-left is TexCoord (0,0), top-right is (1,1).
-    float gradient = (TexCoord.x + TexCoord.y) * 0.5; 
-    
-    // Add organic wave/noise displacement
-    vec2 pos = TexCoord * vec2(uResolution.x / uResolution.y, 1.0) * 5.0;
-    float n = fbm(pos + vec2(-uProgress, uProgress) * 2.0);
-    
-    // The wave shape
-    float wave = gradient + (n * 0.15) + (sin(TexCoord.x * 20.0 + TexCoord.y * 20.0) * 0.02);
-    
-    float adjustedProgress = (uProgress * 1.5) - 0.25; 
-    
+    // Горизонтальная заливка слева→направо (раньше была диагональ)
+    float gradient = TexCoord.x;
+
+    // Уникальный паттерн по seed: сдвиг+поворот
+    float a = uSeed * 6.2831853;
+    mat2 rs = mat2(cos(a), sin(a), -sin(a), cos(a));
+    vec2 pos = (TexCoord + vec2(uSeed * 13.37, uSeed * 7.91)) * vec2(uResolution.x / uResolution.y, 1.0) * 5.0;
+    pos = rs * pos;
+    float n = fbm(pos + vec2(-uProgress, uProgress) * 2.2);
+
+    // Капельная волна — больше локального искажения по Y, чтобы стекало
+    float drip = sin(TexCoord.y * (12.0 + uSeed * 9.0) + uSeed * 17.0) * 0.05;
+    drip += fbm(vec2(TexCoord.y * 6.0 + uSeed * 3.0, uProgress * 2.0)) * 0.10;
+
+    float wave = gradient + (n * 0.18) + drip;
+
+    float adjustedProgress = (uProgress * 1.4) - 0.20;
+
     if (wave < adjustedProgress) {
         discard;
     }
 
     float edgeDist = wave - adjustedProgress;
-    float edgeThickness = 0.12;
-    
+    float edgeThickness = 0.14;
+
     if (edgeDist < edgeThickness) {
-        float dotPattern = noise(TexCoord * 150.0);
-        vec3 redColor = vec3(1.0, 0.1, 0.1);
-        vec3 darkRed = vec3(0.6, 0.0, 0.0);
-        vec3 finalRed = mix(darkRed, redColor, dotPattern);
-        
+        float dotPattern = noise(TexCoord * (120.0 + uSeed * 60.0));
+        vec3 paintBright = clamp(uPaint * 1.25, 0.0, 1.0);
+        vec3 paintDark = uPaint * 0.55;
+        vec3 finalPaint = mix(paintDark, paintBright, dotPattern);
+
         float alphaEdge = 1.0 - (edgeDist / edgeThickness);
-        fragColor = vec4(mix(oldColor.rgb, finalRed, alphaEdge), oldColor.a);
+        fragColor = vec4(mix(oldColor.rgb, finalPaint, alphaEdge), oldColor.a);
     } else {
         fragColor = oldColor;
     }

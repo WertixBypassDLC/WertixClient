@@ -111,13 +111,34 @@ public abstract class Widget implements QuickImports, IRenderer {
         drawHudCard(matrixStack, x, y, width, height, hudRound(), 255);
     }
 
+    /**
+     * Base HUD rectangle – rgba(23,23,34, 0.42) + background blur.
+     * alpha 107 = 42% of 255.
+     */
     protected void drawHudCard(MatrixStack matrixStack, float x, float y, float width, float height, float round, int alpha) {
         alpha = animatedAlpha(alpha);
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBlurColor(alpha), 0.08f);
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBackgroundBlurColor(alpha), 0.06f);
-        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetSurface(alpha));
-        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetOverlaySurface(alpha));
-        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetStrokeColor(alpha));
+        Color bg     = new Color(23, 23, 34, (int)(107 * (alpha / 255f)));
+        Color stroke = new Color(65, 65, 65, (int)(250 * (alpha / 255f))); // 98% opacity stroke
+        // Blur mix = 0.06 ≈ Figma "background blur strength 12"
+        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBlurColor(alpha), 0.06f);
+        RenderUtil.RECT.draw(matrixStack, x - scaled(0.7f), y - scaled(0.7f),
+                width + scaled(1.4f), height + scaled(1.4f), round + scaled(0.7f), stroke);
+        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, bg);
+    }
+
+    /**
+     * Overlay square drawn ON TOP of the base card.
+     * No additional blur (avoids the "solid" look from double-blur).
+     * Same fill alpha as card, so the stacking effect is visible but subtle.
+     */
+    protected void drawHudSquare(MatrixStack matrixStack, float x, float y, float width, float height, float round, int alpha) {
+        alpha = animatedAlpha(alpha);
+        Color bg     = new Color(23, 23, 34, (int)(107 * (alpha / 255f)));
+        Color stroke = new Color(65, 65, 65, (int)(250 * (alpha / 255f)));
+        // NO blur here — only card has blur. Square just draws fill+stroke on top.
+        RenderUtil.RECT.draw(matrixStack, x - scaled(0.7f), y - scaled(0.7f),
+                width + scaled(1.4f), height + scaled(1.4f), round + scaled(0.7f), stroke);
+        RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, bg);
     }
 
     protected void drawHudAccent(MatrixStack matrixStack, float x, float y, float width, float height, int alpha) {
@@ -156,8 +177,8 @@ public abstract class Widget implements QuickImports, IRenderer {
 
     protected void drawGlassCard(MatrixStack matrixStack, float x, float y, float width, float height, float round, int alpha, float mix) {
         alpha = animatedAlpha(alpha);
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBlurColor(alpha), mix);
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBackgroundBlurColor(alpha), Math.max(0.02f, mix * 0.82f));
+        // Единый glass-стиль: 1 blur + surface/overlay + stroke
+        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBlurColor(alpha), Math.max(0.04f, mix * 0.6f));
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetSurface(alpha));
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetOverlaySurface(alpha));
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetStrokeColor(alpha));
@@ -224,20 +245,6 @@ public abstract class Widget implements QuickImports, IRenderer {
     }
 
     public void renderTransitionParticles(MatrixStack ms, boolean behindWidget) {
-        if (!InterfaceModule.isHudParticlesEnabled()) {
-            return;
-        }
-
-        if (targetVisible) {
-            if (behindWidget) {
-                renderAssembleParticles(ms);
-            }
-            return;
-        }
-
-        if (!behindWidget) {
-            renderExplodeParticles(ms);
-        }
     }
 
     private void renderAssembleParticles(MatrixStack ms) {
@@ -377,25 +384,24 @@ public abstract class Widget implements QuickImports, IRenderer {
     protected void drawJoinedHeader(MatrixStack ms, float x, float y, float width, float height,
                                     float round, int alpha, String iconText, String title,
                                     float iconSize, float titleSize) {
-        float cardRound = Math.max(scaled(4.6f), round);
         float squareSize = height;
         float titleWidth = Fonts.PS_BOLD.getWidth(title, titleSize);
         float gap = scaled(3f);
-        float headerWidth = width;
         float textAreaX = x + squareSize + gap;
-        float textAreaWidth = Math.max(0f, headerWidth - squareSize - gap);
+        float textAreaWidth = Math.max(0f, width - squareSize - gap);
+        // Center text in the area to the right of the icon square
         float textX = textAreaX + Math.max(0f, (textAreaWidth - titleWidth) / 2f);
         float contentProgress = getHeaderContentProgress();
         int contentAlpha = Math.max(0, Math.min(255, (int) (alpha * contentProgress)));
         float contentOffset = scaled(1.7f) * (1f - contentProgress);
 
-        int animatedAlpha = animatedAlpha(alpha);
-        RenderUtil.BLUR_RECT.draw(ms, x, y, headerWidth, height, cardRound, widgetBlurColor(animatedAlpha), 0.08f);
-        RenderUtil.BLUR_RECT.draw(ms, x, y, headerWidth, height, cardRound, widgetBackgroundBlurColor(animatedAlpha), 0.06f);
-        RenderUtil.RECT.draw(ms, x, y, headerWidth, height, cardRound, widgetSurface(Math.min(255, (int) (animatedAlpha * 0.98f))));
-        RenderUtil.RECT.draw(ms, x, y, headerWidth, height, cardRound, widgetOverlaySurface(Math.min(255, (int) (animatedAlpha * 1.02f))));
-        RenderUtil.RECT.draw(ms, x, y, headerWidth, height, cardRound, widgetStrokeColor(animatedAlpha));
+        // 1) Base header rect (full width) – 42% opacity
+        drawHudCard(ms, x, y, width, height, round, alpha);
+        // 2) Icon square ON TOP of rect – stacks, appears more opaque
+        drawHudSquare(ms, x, y, squareSize, squareSize, round, alpha);
+        // 3) Icon glyph
         drawWatermarkIconBlock(ms, x, y + contentOffset * 0.35f, squareSize, squareSize, iconText, contentAlpha, iconSize);
+        // 4) Title text centred in the right portion
         Fonts.PS_BOLD.drawText(ms, title,
                 textX,
                 y + height / 2f - titleSize / 2f + scaled(0.2f) + contentOffset,
@@ -437,34 +443,11 @@ public abstract class Widget implements QuickImports, IRenderer {
 
     protected void drawLineAssembleParticles(MatrixStack ms, float x, float y, float width, float height,
                                              float progress, int alpha, int seed) {
-        if (!InterfaceModule.isHudParticlesEnabled()) {
-            return;
-        }
-
-        float burst = MathHelper.clamp(1f - progress, 0f, 1f);
-        if (burst <= 0.03f) {
-            return;
-        }
-
-        int count = MathHelper.clamp((int) (width / scaled(4.4f)), 28, 46);
-        for (int i = 0; i < count; i++) {
-            float tx = x + ((i + 0.5f) / count) * width;
-            float ty = y + height * (0.2f + particleNoise(seed, i + 17) * 0.6f);
-            float angle = particleNoise(seed, i + 41) * (float) (Math.PI * 2.0);
-            float orbit = scaled(8f + particleNoise(seed, i + 89) * 18f);
-            float px = tx + MathHelper.cos(angle) * orbit * burst * 1.4f;
-            float py = ty + MathHelper.sin(angle) * orbit * burst * 0.95f;
-            float size = scaled(1.0f + particleNoise(seed, i + 131) * 1.55f) * (0.8f + burst * 0.8f);
-
-            Color themeColor = i % 4 == 0 ? UIColors.secondary(alpha) : UIColors.primary(alpha);
-            Color particleColor = ColorUtil.interpolate(new Color(255, 255, 255, alpha), themeColor, 0.14f);
-            RenderUtil.RECT.draw(ms, px - size / 2f, py - size / 2f, size, size, size / 2f, particleColor);
-        }
     }
 
     private void drawWatermarkIconBlock(MatrixStack ms, float x, float y, float width, float height, String text,
                                         int alpha, float iconSize) {
-        drawHudCard(ms, x, y, width, height, scaled(5f), alpha);
+        drawHudSquare(ms, x, y, width, height, scaled(5f), alpha);
         if (text == null || text.isBlank()) {
             return;
         }
@@ -508,8 +491,8 @@ public abstract class Widget implements QuickImports, IRenderer {
 
     protected void drawStrokeCard(MatrixStack ms, float x, float y, float w, float h, float round, int alpha, float mix) {
         alpha = animatedAlpha(alpha);
-        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, widgetBlurColor(alpha), mix);
-        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, widgetBackgroundBlurColor(alpha), Math.max(0.02f, mix * 0.82f));
+        // Единый glass-стиль
+        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, widgetBlurColor(alpha), Math.max(0.04f, mix * 0.6f));
         RenderUtil.RECT.draw(ms, x, y, w, h, round, widgetSurface(alpha));
         RenderUtil.RECT.draw(ms, x, y, w, h, round, widgetOverlaySurface(alpha));
         RenderUtil.RECT.draw(ms, x, y, w, h, round, widgetStrokeColor(alpha));
@@ -527,16 +510,9 @@ public abstract class Widget implements QuickImports, IRenderer {
         Color base = UIColors.card(alpha);
         Color overlay = UIColors.overlay(alpha);
 
-        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, radii, base, base, base, base, mix);
-        float inset = scaled(1f);
-        Vector4f radiiIn = new Vector4f(
-                Math.max(1f, big - scaled(0.6f)),
-                Math.max(1f, small - scaled(0.6f)),
-                Math.max(1f, small - scaled(0.6f)),
-                Math.max(1f, big - scaled(0.6f))
-        );
-        RenderUtil.BLUR_RECT.draw(ms, x + inset, y + inset, w - inset * 2f, h - inset * 2f,
-                radiiIn, overlay, overlay, overlay, overlay, mix);
+        // Единый glass-стиль: 1 blur вместо двух
+        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, radii, base, base, base, base, Math.max(0.04f, mix * 0.6f));
+        RenderUtil.RECT.draw(ms, x, y, w, h, radii, overlay);
         RenderUtil.STROKE(ms, x, y, w, h, radii, alpha);
     }
 

@@ -94,16 +94,17 @@ public class ModuleComponent extends ExpandableComponent {
 
         int fullAlpha = (int) (getAlpha() * 255f);
 
-        // --- ЛОГИКА ЦВЕТА ФОНА ---
-        // Выключенное состояние (idle): Темно-серый, почти черный (без цвета)
-        Color idle1 = new Color(22, 22, 25, Math.min(fullAlpha, 190));
-        Color idle2 = new Color(18, 18, 20, Math.min(fullAlpha, 180));
+        // --- Цвет фона под худ (база 23,23,34) ---
+        // Idle (выкл): чуть темнее, без радужности
+        Color idle1 = new Color(20, 20, 28, Math.min(fullAlpha, 200));
+        Color idle2 = new Color(16, 16, 22, Math.min(fullAlpha, 195));
 
         int colorSeed = module.getName().hashCode();
 
-        // Включенное состояние (activeBg): Светлый + яркий цвет из темы (цветной)
-        Color activeBg1 = ColorUtil.interpolate(new Color(75, 75, 85, Math.min(fullAlpha, 220)), UIColors.themeFlow(colorSeed, Math.min(fullAlpha, 170)), 0.45f);
-        Color activeBg2 = ColorUtil.interpolate(new Color(60, 60, 70, Math.min(fullAlpha, 210)), UIColors.themeFlowAlt(colorSeed, Math.min(fullAlpha, 150)), 0.40f);
+        // Active: худ-база слегка смешана с темой (не радужный)
+        Color hudBase = new Color(28, 28, 40, Math.min(fullAlpha, 215));
+        Color activeBg1 = ColorUtil.interpolate(hudBase, UIColors.themeFlow(colorSeed, Math.min(fullAlpha, 150)), 0.30f);
+        Color activeBg2 = ColorUtil.interpolate(hudBase, UIColors.themeFlowAlt(colorSeed, Math.min(fullAlpha, 130)), 0.26f);
 
         float enabled = (float) enableAnimation.getValue();
 
@@ -158,7 +159,8 @@ public class ModuleComponent extends ExpandableComponent {
         if (isNotOver()) return;
 
         for (SettingComponent setting : settings) {
-            if (setting.getAlpha() < 0.9) continue;
+            // Клавиши работают даже у выключенных модулей, если настройка видима
+            if (setting.getVisibleAnimation().getValue() < 0.9) continue;
             setting.keyPressed(keyCode, scanCode, modifiers);
         }
     }
@@ -196,7 +198,7 @@ public class ModuleComponent extends ExpandableComponent {
         if (isNotOver()) return;
 
         for (SettingComponent setting : settings) {
-            if (setting.getAlpha() < 0.9) continue;
+            if (setting.getVisibleAnimation().getValue() < 0.9) continue;
             setting.mouseClicked(mouseX, mouseY, button);
         }
     }
@@ -206,7 +208,7 @@ public class ModuleComponent extends ExpandableComponent {
         if (isNotOver()) return;
 
         for (SettingComponent setting : settings) {
-            if (setting.getAlpha() < 0.9) continue;
+            if (setting.getVisibleAnimation().getValue() < 0.9) continue;
             setting.mouseReleased(mouseX, mouseY, button);
         }
     }
@@ -225,9 +227,18 @@ public class ModuleComponent extends ExpandableComponent {
         Vector4f round = getSettingsRound(openAnim);
         float settingsBottomRound = round.z;
 
+        // Выкл модуль → серая панель настроек (без радужного фона), но настройки полностью читаемы
+        boolean modOn = module.isEnabled();
         int openAlpha = (int) (getAlpha() * openAnim * 255f);
-        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY() + getDefaultHeight(), getWidth(), getHeight() - getDefaultHeight(), round,
-                UIColors.panelSoft(openAlpha));
+        if (modOn) {
+            RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY() + getDefaultHeight(), getWidth(), getHeight() - getDefaultHeight(), round,
+                    UIColors.panelSoft(openAlpha));
+        } else {
+            // Серый худ-цвет (под HUD-карты)
+            int a = (int) (openAlpha * 0.92f);
+            Color graySoft = new Color(20, 20, 28, Math.min(255, a));
+            RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY() + getDefaultHeight(), getWidth(), getHeight() - getDefaultHeight(), round, graySoft);
+        }
         RenderUtil.BLUR_RECT.draw(matrixStack, getX() + scaled(1f), getY() + getDefaultHeight(), getWidth() - scaled(2f), getHeight() - getDefaultHeight() - scaled(1f), new Vector4f(0f, 0f, Math.max(0f, settingsBottomRound - scaled(0.5f)), Math.max(0f, settingsBottomRound - scaled(0.5f))), UIColors.overlay(openAlpha));
         RenderUtil.RECT.draw(matrixStack, getX(), getY() + getDefaultHeight(), getWidth(), getHeight() - getDefaultHeight(), round, UIColors.stroke(openAlpha));
 

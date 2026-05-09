@@ -5,6 +5,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.ShulkerBoxBlock;
+import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -25,13 +26,10 @@ import sweetie.nezi.api.utils.render.display.BoxRender;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.features.modules.other.WardenHelperModule;
 
-import java.awt.*;
+import java.awt.Color;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.util.shape.VoxelShape;
 
 @ModuleRegister(name = "Block ESP", category = Category.RENDER)
@@ -47,13 +45,28 @@ public class BlockESPModule extends Module {
             new BooleanSetting("Воронки").value(true),
             new BooleanSetting("Шалкера").value(true)
     );
-    private final SliderSetting range = new SliderSetting("Растояние").value(32f).range(8f, 96f).step(1f);
+    private final BooleanSetting useRenderDistance = new BooleanSetting("В радиусе прогрузки").value(true);
+    private final SliderSetting range = new SliderSetting("Расстояние").value(32f).range(8f, 256f).step(1f).setVisible(() -> !useRenderDistance.getValue());
 
     private final Map<BlockPos, BlockState> renderBlocks = new HashMap<>();
     private long lastScanMs = 0L;
+    private long lastPlayerChunkX = Long.MIN_VALUE;
+    private long lastPlayerChunkZ = Long.MIN_VALUE;
 
     public BlockESPModule() {
-        addSettings(blocks, range);
+        addSettings(blocks, useRenderDistance, range);
+    }
+
+    private float effectiveRange() {
+        if (useRenderDistance.getValue()) {
+            try {
+                int viewChunks = mc.options.getViewDistance().getValue();
+                return Math.max(16f, viewChunks * 16f);
+            } catch (Throwable ignored) {
+                return 96f;
+            }
+        }
+        return range.getValue();
     }
 
     @Override
@@ -75,9 +88,15 @@ public class BlockESPModule extends Module {
         }
 
         long now = System.currentTimeMillis();
-        if (now - lastScanMs >= 1500L) {
+        long curCx = mc.player.getChunkPos().x;
+        long curCz = mc.player.getChunkPos().z;
+        boolean movedChunks = curCx != lastPlayerChunkX || curCz != lastPlayerChunkZ;
+        // Сканируем реже (3с) и только при смене чанка или по интервалу
+        if (movedChunks || now - lastScanMs >= 3000L) {
             scanBlocks();
             lastScanMs = now;
+            lastPlayerChunkX = curCx;
+            lastPlayerChunkZ = curCz;
         }
 
         Iterator<Map.Entry<BlockPos, BlockState>> iterator = renderBlocks.entrySet().iterator();
@@ -144,39 +163,34 @@ public class BlockESPModule extends Module {
 
     private void scanBlocks() {
         renderBlocks.clear();
-        BlockPos playerPos = mc.player.getBlockPos();
-        float scanRange = range.getValue();
-        int chunkRange = Math.max(1, (int) Math.ceil(scanRange / 16.0));
-        int yRange = Math.min(48, Math.max(16, (int) scanRange));
 
-        for (int cx = -chunkRange; cx <= chunkRange; cx++) {
-            for (int cz = -chunkRange; cz <= chunkRange; cz++) {
-                int chunkX = (playerPos.getX() >> 4) + cx;
-                int chunkZ = (playerPos.getZ() >> 4) + cz;
-                if (!mc.world.getChunkManager().isChunkLoaded(chunkX, chunkZ)) continue;
+        float r = effectiveRange();
+        float scanRangeSq = r * r;
 
-                WorldChunk chunk = mc.world.getChunkManager().getWorldChunk(chunkX, chunkZ);
-                if (chunk == null) continue;
+        int playerChunkX = mc.player.getChunkPos().x;
+        int playerChunkZ = mc.player.getChunkPos().z;
 
-                int baseX = chunk.getPos().x << 4;
-                int baseZ = chunk.getPos().z << 4;
+        int chunkRadius = (int) Math.ceil(r / 16.0);
 
-                for (int bx = 0; bx < 16; bx++) {
-                    for (int bz = 0; bz < 16; bz++) {
-                        int worldX = baseX + bx;
-                        int worldZ = baseZ + bz;
-                        int minY = Math.max(mc.world.getBottomY(), playerPos.getY() - yRange);
-                        int maxY = Math.min(mc.world.getTopY(Heightmap.Type.WORLD_SURFACE, worldX, worldZ), playerPos.getY() + yRange);
+        for (int cx = playerChunkX - chunkRadius; cx <= playerChunkX + chunkRadius; cx++) {
+            for (int cz = playerChunkZ - chunkRadius; cz <= playerChunkZ + chunkRadius; cz++) {
 
-                        for (int y = minY; y <= maxY; y++) {
-                            BlockPos pos = new BlockPos(worldX, y, worldZ);
-                            if (mc.player.squaredDistanceTo(worldX + 0.5, y + 0.5, worldZ + 0.5) > scanRange * scanRange) continue;
+                if (!mc.world.isChunkLoaded(cx, cz))
+                    continue;
 
-                            BlockState state = mc.world.getBlockState(pos);
-                            if (!state.isAir() && shouldRender(state)) {
-                                renderBlocks.put(pos.toImmutable(), state);
-                            }
-                        }
+                var chunk = mc.world.getChunk(cx, cz);
+
+                for (BlockEntity blockEntity : chunk.getBlockEntities().values()) {
+
+                    BlockPos pos = blockEntity.getPos();
+
+                    if (mc.player.squaredDistanceTo(pos.toCenterPos()) > scanRangeSq)
+                        continue;
+
+                    BlockState state = blockEntity.getCachedState();
+
+                    if (shouldRender(state)) {
+                        renderBlocks.put(pos.toImmutable(), state);
                     }
                 }
             }
@@ -209,7 +223,7 @@ public class BlockESPModule extends Module {
     }
 
     public float getRenderRange() {
-        return range.getValue();
+        return effectiveRange();
     }
 
     public boolean rendersWardenContainers() {

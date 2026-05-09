@@ -50,6 +50,7 @@ public class WardenHelperModule extends Module {
     private String currentServer = null;
     private Vec3d lastPlayerPos = null;
     private long serverJoinTime = 0L;
+    private long lastScanTime = 0L;
 
     private static class TimerData {
         Vec3d pos;
@@ -117,38 +118,44 @@ public class WardenHelperModule extends Module {
             return;
         }
 
-        Box scanBox = mc.player.getBoundingBox().expand(TRACK_DISTANCE, 48.0, TRACK_DISTANCE);
-        for (ArmorStandEntity entity : mc.world.getEntitiesByClass(ArmorStandEntity.class, scanBox, Entity::isAlive)) {
-            if (mc.player.squaredDistanceTo(entity) > TRACK_DISTANCE_SQ) continue;
+        if (System.currentTimeMillis() - lastScanTime > 1000) {
+            lastScanTime = System.currentTimeMillis();
+            Box scanBox = mc.player.getBoundingBox().expand(TRACK_DISTANCE, 48.0, TRACK_DISTANCE);
+            for (ArmorStandEntity entity : mc.world.getEntitiesByClass(ArmorStandEntity.class, scanBox, Entity::isAlive)) {
+                if (mc.player.squaredDistanceTo(entity) > TRACK_DISTANCE_SQ) continue;
 
-            String name = entity.getName().getString().trim();
-            String clean = name.replaceAll("§[0-9a-fk-or]", "").trim();
+                String name = entity.getName().getString().trim();
+                String clean = name.replaceAll("§[0-9a-fk-or]", "").trim();
 
-            if (!TIMER_PATTERN.matcher(clean).matches()) continue;
-            BlockPos containerPos = findNearestTimerContainer(entity.getPos());
-            if (containerPos == null) continue;
-            if (!shouldRenderUnderground(containerPos)) continue;
+                if (!TIMER_PATTERN.matcher(clean).matches()) continue;
+                BlockPos containerPos = findNearestTimerContainer(entity.getPos());
+                if (containerPos == null) continue;
+                if (!shouldRenderUnderground(containerPos)) continue;
 
-            String[] parts = clean.split(":");
-            if (parts.length != 2) continue;
+                String[] parts = clean.split(":");
+                if (parts.length != 2) continue;
 
-            try {
-                int minutes = Integer.parseInt(parts[0]);
-                int seconds = Integer.parseInt(parts[1]);
-                int totalSec = minutes * 60 + seconds;
+                try {
+                    int minutes = Integer.parseInt(parts[0]);
+                    int seconds = Integer.parseInt(parts[1]);
+                    int totalSec = minutes * 60 + seconds;
 
-                String key = blockKey(Vec3d.ofCenter(containerPos));
+                    String key = blockKey(Vec3d.ofCenter(containerPos));
 
-                TimerData existing = trackedTimers.get(key);
-                if (existing != null) {
-                    existing.pos = entity.getPos();
-                    existing.totalSeconds = totalSec;
-                    existing.lastSeenRealTime = System.currentTimeMillis();
-                    existing.visibleNow = true;
-                } else {
-                    trackedTimers.put(key, new TimerData(entity.getPos(), totalSec));
-                }
-            } catch (NumberFormatException ignored) {}
+                    TimerData existing = trackedTimers.get(key);
+                    if (existing != null) {
+                        existing.pos = entity.getPos();
+                        existing.totalSeconds = totalSec;
+                        existing.lastSeenRealTime = System.currentTimeMillis();
+                        existing.visibleNow = true;
+                    } else {
+                        trackedTimers.put(key, new TimerData(entity.getPos(), totalSec));
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+            
+            // Move ensureExpiredUndergroundTimers inside the 500ms block too, since it scans blocks!
+            ensureExpiredUndergroundTimers();
         }
 
         // Remove timers that have been at 00:00 for more than 40 seconds
@@ -157,8 +164,6 @@ public class WardenHelperModule extends Module {
             long zeroTime = data.lastSeenRealTime + data.totalSeconds * 1000L;
             return System.currentTimeMillis() > zeroTime + 40_000L;
         });
-
-        ensureExpiredUndergroundTimers();
 
         BlockESPModule blockESP = BlockESPModule.getInstance();
         for (TimerData data : trackedTimers.values()) {
@@ -177,7 +182,7 @@ public class WardenHelperModule extends Module {
 
         int secs = data.getClientCountedSeconds();
         double distSq = mc.player.getPos().squaredDistanceTo(data.pos);
-        if (distSq > 30.0 * 30.0 && secs >= 60) return;
+        if (distSq > 25.0 * 25.0 && secs >= 60) return;
 
         MatrixStack ms = context.getMatrices();
 
@@ -248,13 +253,14 @@ public class WardenHelperModule extends Module {
         if (mc.player == null || mc.player.getY() >= UNDERGROUND_RENDER_Y) return;
 
         BlockPos playerPos = mc.player.getBlockPos();
-        int range = 10; // Only check within 10 blocks for implicit 00:00
+        int range = 6; // Сужаем с 10 до 6 (в ~5 раз меньше итераций)
+        double maxDistSq = 36.0;
 
         for (int dx = -range; dx <= range; dx++) {
             for (int dy = -range; dy <= range; dy++) {
                 for (int dz = -range; dz <= range; dz++) {
                     BlockPos pos = playerPos.add(dx, dy, dz);
-                    if (mc.player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 100.0) continue;
+                    if (mc.player.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > maxDistSq) continue;
                     if (!isTimerContainer(mc.world.getBlockState(pos))) continue;
                     if (!shouldRenderUnderground(pos)) continue;
                     if (getTrackedSecondsNear(pos) != Integer.MIN_VALUE) continue;
@@ -324,7 +330,7 @@ public class WardenHelperModule extends Module {
         }
 
         double distSq = mc.player.getPos().squaredDistanceTo(Vec3d.ofCenter(pos));
-        if (distSq > 30.0 * 30.0 && seconds >= 60) {
+        if (distSq > 25.0 * 25.0 && seconds >= 60) {
             return null;
         }
 
@@ -345,7 +351,7 @@ public class WardenHelperModule extends Module {
         }
 
         double distSq = mc.player.getPos().squaredDistanceTo(Vec3d.ofCenter(pos));
-        if (distSq > 30.0 * 30.0 && seconds >= 60) {
+        if (distSq > 25.0 * 25.0 && seconds >= 60) {
             return null;
         }
 

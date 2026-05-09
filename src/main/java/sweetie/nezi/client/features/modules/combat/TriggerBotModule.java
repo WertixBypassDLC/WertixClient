@@ -31,15 +31,16 @@ import java.util.concurrent.ThreadLocalRandom;
 public class TriggerBotModule extends Module {
     @Getter private static final TriggerBotModule instance = new TriggerBotModule();
 
-    private final SliderSetting distance       = new SliderSetting("Distance").value(2.9997f).range(2.0f, 5.0f).step(0.05f);
-    private final BooleanSetting onlyCrits     = new BooleanSetting("Only Crits").value(true);
-    private final BooleanSetting smartCrits    = new BooleanSetting("Smart Crits").value(true).setVisible(onlyCrits::getValue);
-    private final BooleanSetting shieldBreak   = new BooleanSetting("Shield Break").value(true);
-    private final BooleanSetting noAttackIfEat = new BooleanSetting("No Attack If Eat").value(false);
+    private final SliderSetting distance       = new SliderSetting("Дистанция").value(2.9997f).range(2.0f, 5.0f).step(0.05f);
+    private final BooleanSetting onlyCrits     = new BooleanSetting("Только криты").value(true);
+    private final BooleanSetting smartCrits    = new BooleanSetting("Умные криты").value(true).setVisible(onlyCrits::getValue);
+    private final BooleanSetting noAttackIfEat = new BooleanSetting("Не бить при еде").value(false);
 
-    private final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
-            new BooleanSetting("Игроки").value(true),
-            new BooleanSetting("Голые").value(true),
+    private final BooleanSetting targetPlayers = new BooleanSetting("Игроки").value(true);
+    private final BooleanSetting targetNaked   = new BooleanSetting("Голые").value(true).setVisible(targetPlayers::getValue);
+    private final MultiBooleanSetting targets = new MultiBooleanSetting("Цели").value(
+            targetPlayers,
+            targetNaked,
             new BooleanSetting("Мобы").value(false),
             new BooleanSetting("Животные").value(false),
             new BooleanSetting("Жители").value(false)
@@ -51,7 +52,7 @@ public class TriggerBotModule extends Module {
     private volatile boolean pendingWtapAttack = false;
 
     public TriggerBotModule() {
-        addSettings(distance, onlyCrits, smartCrits, shieldBreak, noAttackIfEat, targets);
+        addSettings(distance, onlyCrits, smartCrits, noAttackIfEat, targets);
     }
 
     @Override
@@ -122,25 +123,35 @@ public class TriggerBotModule extends Module {
                 || mainHand instanceof net.minecraft.item.MaceItem
                 || mainHand instanceof net.minecraft.item.TridentItem;
 
+        boolean falling  = mc.player.fallDistance > 0.05f && !mc.player.isOnGround();
+        boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
+        boolean inWeb    = mc.player.inPowderSnow || isInCobweb();
+        boolean climbing = mc.player.isClimbing();
+
         if (!isWeapon) {
-            if (!attackTimer.finished(100L)) return false;
-        } else {
-            float cooldownReq = 0.93f + ThreadLocalRandom.current().nextFloat() * 0.02f;
-            if (mc.player.getAttackCooldownProgress(0.5f) < cooldownReq) return false;
+            // Без оружия: бьём только в крит (falling) ИЛИ с большой задержкой
+            if (falling && !inLiquid && !inWeb && !climbing) return true;
+            return attackTimer.finished(600L);
         }
 
-        if (target.isBlocking() && shieldBreak.getValue()) return true;
+        // Полный кулдаун, без рандомной поддавки → не «съедает» серию критов
+        if (mc.player.getAttackCooldownProgress(0.5f) < 0.98f) return false;
 
         if (!onlyCrits.getValue()) return true;
 
-        if (smartCrits.getValue() && mc.player.isOnGround() && !mc.options.jumpKey.isPressed()) {
-            return true;
-        }
+        // Чёткий крит: только при падении
+        if (falling && !inLiquid && !inWeb && !climbing) return true;
 
-        boolean falling  = mc.player.fallDistance > 0.05f && !mc.player.isOnGround();
-        boolean inLiquid = mc.player.isTouchingWater() || mc.player.isInLava();
-        boolean climbing = mc.player.isClimbing();
-        return falling && !inLiquid && !climbing;
+        // Умные криты: разрешаем при невозможности крита (вода/паутина),
+        // на земле НЕ бьём, чтобы не выдавать обычные удары между критами
+        if (smartCrits.getValue() && (inLiquid || inWeb || climbing)) return true;
+
+        return false;
+    }
+
+    /** Check if player is inside cobweb block */
+    private boolean isInCobweb() {
+        return PlayerUtil.isInWeb();
     }
 
     private void initiateAttack(LivingEntity target) {
@@ -161,9 +172,11 @@ public class TriggerBotModule extends Module {
 
     private void doAttack(LivingEntity target) {
         mc.interactionManager.attackEntity(mc.player, target);
+        // Use swingHand only once (no double-swing)
         mc.player.swingHand(Hand.MAIN_HAND);
 
-        nextDelay = 50L + ThreadLocalRandom.current().nextLong(0, 30);
+        // Лёгкая дрожь между ударами, не быстрее реального кулдауна
+        nextDelay = 80L + ThreadLocalRandom.current().nextLong(0, 40);
         attackTimer.reset();
     }
 

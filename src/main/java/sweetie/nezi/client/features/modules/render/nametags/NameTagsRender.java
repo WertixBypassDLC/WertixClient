@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 public class NameTagsRender implements QuickImports {
-    private static final long PLAYER_SNAPSHOT_CACHE_MS = 200L;
+    private static final long PLAYER_SNAPSHOT_CACHE_MS = 50L;
     private static final float SCREEN_PADDING = 100f;
     private static final Pattern LEGACY_GHOST_TOKEN = Pattern.compile("(?i)(^|\\s)[0-9A-FK-ORX](?=\\s|$)");
     private static final Pattern NOISE_EDGE_TOKEN = Pattern.compile("(?i)(^|\\s)[a-z0-9](?=\\s|$)");

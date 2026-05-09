@@ -8,9 +8,9 @@ import lombok.Getter;
 import sweetie.nezi.client.ui.theme.Theme;
 import sweetie.nezi.client.ui.theme.ThemeEditor;
 import sweetie.nezi.client.ui.theme.ThemeSelectable;
+import sweetie.nezi.client.ui.theme.basic.BloodTheme;
 import sweetie.nezi.client.ui.theme.basic.BlueTheme;
 import sweetie.nezi.client.ui.theme.basic.CandyLoveTheme;
-import sweetie.nezi.client.ui.theme.basic.CrimsonTheme;
 
 import java.awt.Color;
 import java.lang.reflect.Type;
@@ -152,7 +152,7 @@ public class ThemeManager {
                 new Theme("EvaWare"),
                 new BlueTheme().update(),
                 new CandyLoveTheme().update(),
-                new CrimsonTheme().update()
+                new BloodTheme().update()
         };
 
         for (Theme theme : themes) {

@@ -33,9 +33,11 @@ public class AimAssistModule extends Module {
 
     private final BooleanSetting throughWalls = new BooleanSetting("Through Walls").value(false);
 
+    private final BooleanSetting aimTargetPlayers = new BooleanSetting("Игроки").value(true);
+    private final BooleanSetting aimTargetNaked   = new BooleanSetting("Голые").value(true).setVisible(aimTargetPlayers::getValue);
     private final MultiBooleanSetting targets = new MultiBooleanSetting("Targets").value(
-            new BooleanSetting("Игроки").value(true),
-            new BooleanSetting("Голые").value(true),
+            aimTargetPlayers,
+            aimTargetNaked,
             new BooleanSetting("Мобы").value(false),
             new BooleanSetting("Животные").value(false),
             new BooleanSetting("Жители").value(false)

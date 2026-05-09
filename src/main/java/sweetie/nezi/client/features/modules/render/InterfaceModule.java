@@ -22,14 +22,12 @@ public class InterfaceModule extends Module {
 
     public final SliderSetting scale = new SliderSetting("Масштаб").value(0.85f).range(0.6f, 1.5f).step(0.05f).onAction(() -> RenderService.getInstance().updateScale());
     public final SliderSetting widgetScale = new SliderSetting("Размер HUD").value(0.9f).range(0.5f, 2.0f).step(0.05f);
-    public final BooleanSetting hudParticles = new BooleanSetting("Частицы HUD").value(true);
 
     public static float getScale() { return getInstance().scale.getValue(); }
     public static float getWidgetScale() { return getInstance().widgetScale.getValue(); }
     public static float getGlassy() { return GLASSY; }
     public static int getPasses() { return PASSES; }
     public static float getOffset() { return OFFSET; }
-    public static boolean isHudParticlesEnabled() { return getInstance().hudParticles.getValue(); }
 
     public InterfaceModule() {
     }
@@ -43,7 +41,7 @@ public class InterfaceModule extends Module {
                 })
                 .toList());
 
-        addSettings(widgets, scale, widgetScale, hudParticles);
+        addSettings(widgets, scale, widgetScale);
     }
 
     @Override

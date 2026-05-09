@@ -30,6 +30,10 @@ public class NotifWidget extends Widget {
     private float settingsX, settingsY;
     private boolean wasRightClick, wasLeftClick;
     private long lastDuraCheck;
+    // Per-row stagger animation
+    private static final int NOTIF_SETTINGS_ROWS = 3;
+    private final float[] rowAnims = new float[NOTIF_SETTINGS_ROWS];
+    private long settingsOpenTime = -1L;
 
     private final List<Notif> notifs = new CopyOnWriteArrayList<>();
     private final List<PotionNotif> potionNotifs = new CopyOnWriteArrayList<>();
@@ -296,70 +300,105 @@ public class NotifWidget extends Widget {
             }
 
             ms.pop();
-            stackY += (h + gap) * anim;
+        stackY += (h + gap) * anim;
         }
     }
 
     private void renderSettings(MatrixStack ms, double mx, double my) {
-        settingsAnim += (settingsOpen ? 0.15f : -0.15f);
+        settingsAnim += (settingsOpen ? 0.2f : -0.35f);
         settingsAnim = Math.max(0, Math.min(1, settingsAnim));
-        if (settingsAnim <= 0.05f) return;
+        if (settingsAnim <= 0.02f) {
+            for (int i = 0; i < NOTIF_SETTINGS_ROWS; i++) rowAnims[i] = 0f;
+            return;
+        }
 
-        float rowH = scaled(13f);
-        float p = scaled(5f);
-        float gap = scaled(2f);
-        float fS = scaled(7f);
-        float popupRound = scaled(6f);
-        float mix = InterfaceModule.getGlassy();
+        float rowH  = scaled(13f);
+        float gap   = scaled(1.5f); // tighter
+        float fS    = scaled(6.5f);
+        float togSz = scaled(8f);
+        float rowPad = scaled(5f);
+        float hr    = hudRound();
         String[] options = {
-                "\u041f\u0440\u043e\u0441\u044c\u0431\u0430 \u043e \u043d\u0430\u0431\u043b\u044e\u0434\u0435\u043d\u0438\u0438",
-                "\u0421\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435 \u043c\u043e\u0434\u0443\u043b\u0435\u0439",
-                "\u041d\u0438\u0437\u043a\u0430\u044f \u043f\u0440\u043e\u0447\u043d\u043e\u0441\u0442\u044c \u043f\u0440\u0435\u0434\u043c\u0435\u0442\u043e\u0432"
+                "Просьба о наблюдении",
+                "Состояние модулей",
+                "Низкая прочность"
         };
         boolean[] states = {specRequest, moduleState, lowDurability};
 
-        float maxW = 0;
-        for (String option : options) {
-            maxW = Math.max(maxW, getMediumFont().getWidth(option, fS));
+        float[] rowWidths = new float[options.length];
+        float maxRowW = 0f;
+        for (int i = 0; i < options.length; i++) {
+            rowWidths[i] = rowPad + togSz + scaled(4f) + getMediumFont().getWidth(options[i], fS) + rowPad;
+            maxRowW = Math.max(maxRowW, rowWidths[i]);
         }
 
-        float toggle = scaled(7f);
-        float rowW = p + toggle + p + maxW + p;
-        float boxH = p + options.length * rowH + gap * (options.length - 1) + p;
-
+        float totalH = options.length * rowH + gap * (options.length - 1);
         float x = settingsX + scaled(10);
         float y = settingsY;
-        if (x + rowW > mc.getWindow().getScaledWidth()) x = settingsX - rowW - scaled(10);
-        if (y + boxH > mc.getWindow().getScaledHeight()) y = mc.getWindow().getScaledHeight() - boxH - scaled(10);
+        if (x + maxRowW > mc.getWindow().getScaledWidth()) x = settingsX - maxRowW - scaled(10);
+        if (y + totalH  > mc.getWindow().getScaledHeight()) y = mc.getWindow().getScaledHeight() - totalH - scaled(10);
 
-        ms.push();
-        ms.translate(x + rowW / 2f, y + boxH / 2f, 0);
-        ms.scale(settingsAnim, settingsAnim, 1);
-        ms.translate(-(x + rowW / 2f), -(y + boxH / 2f), 0);
-
-        int alpha = Math.max(5, (int) (255 * settingsAnim));
-        drawHudCard(ms, x, y, rowW, boxH, popupRound, alpha);
+        // Per-row stagger
+        long now = System.currentTimeMillis();
+        if (settingsOpen) {
+            if (settingsOpenTime < 0) settingsOpenTime = now;
+            long elapsed = now - settingsOpenTime;
+            for (int i = 0; i < options.length; i++) {
+                long delay = i * 60L;
+                if (elapsed >= delay) {
+                    float progress = Math.min(1f, (elapsed - delay) / 150f);
+                    rowAnims[i] = Math.min(1f, rowAnims[i] + progress * 0.25f);
+                }
+            }
+        } else {
+            settingsOpenTime = -1L;
+            for (int i = 0; i < options.length; i++) {
+                rowAnims[i] = Math.max(0f, rowAnims[i] - 0.25f);
+            }
+        }
 
         boolean leftClick = GLFW.glfwGetMouseButton(mc.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-        float currentY = y + p;
+        float currentY = y;
 
         for (int i = 0; i < options.length; i++) {
-            if (mx >= x && mx <= x + rowW && my >= currentY && my <= currentY + rowH && leftClick && !wasLeftClick) {
+            float ra = rowAnims[i];
+            if (ra < 0.01f) { currentY += rowH + gap; continue; }
+
+            float rw = rowWidths[i];
+            if (mx >= x && mx <= x + rw && my >= currentY && my <= currentY + rowH && leftClick && !wasLeftClick) {
                 if (i == 0) specRequest = !specRequest;
                 if (i == 1) moduleState = !moduleState;
                 if (i == 2) lowDurability = !lowDurability;
                 states[i] = !states[i];
             }
 
-            Color textColor = states[i] ? UIColors.positiveColor() : UIColors.negativeColor();
-            RenderUtil.RECT.draw(ms, x + p, currentY + rowH / 2f - toggle / 2f, toggle, toggle, scaled(2f),
-                    new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), alpha));
-            getMediumFont().drawText(ms, options[i], x + p + toggle + p, currentY + rowH / 2f - fS / 2f + scaled(0.3f), fS,
-                    UIColors.textColor(alpha));
+            float pivotX = settingsX;
+            float pivotY = currentY + rowH / 2f;
+            ms.push();
+            ms.translate(pivotX, pivotY, 0);
+            ms.scale(ra, ra, 1f);
+            ms.translate(-pivotX, -pivotY, 0);
+
+            int a = Math.max(5, (int)(255 * ra));
+            drawHudCard(ms, x, currentY, rw, rowH, hr, a);
+
+            Color tC = states[i] ? UIColors.positiveColor() : UIColors.negativeColor();
+            drawHudSquare(ms, x + rowPad, currentY + rowH / 2f - togSz / 2f, togSz, togSz, scaled(2.5f), a);
+            RenderUtil.RECT.draw(ms,
+                    x + rowPad + scaled(2f),
+                    currentY + rowH / 2f - togSz / 2f + scaled(2f),
+                    togSz - scaled(4f), togSz - scaled(4f),
+                    scaled(1.5f),
+                    new Color(tC.getRed(), tC.getGreen(), tC.getBlue(), a));
+            getMediumFont().drawText(ms, options[i],
+                    x + rowPad + togSz + scaled(4f),
+                    currentY + rowH / 2f - fS / 2f + scaled(0.3f),
+                    fS, UIColors.textColor(a));
+            ms.pop();
+
             currentY += rowH + gap;
         }
         wasLeftClick = leftClick;
-        ms.pop();
     }
 
     private void checkDura() {
