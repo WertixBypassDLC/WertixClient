@@ -44,19 +44,22 @@ public class StringComponent extends SettingComponent {
         int fullAlpha = (int) (getAlpha() * 255f);
         float labelOffset = scaled(0.5f);
 
-        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + labelOffset, getY() + labelOffset, fontSize, UIColors.textColor(fullAlpha));
+        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), scaled(22f), scaled(3.2f), UIColors.cardSecondary(Math.min(fullAlpha, 206)));
+        RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), scaled(22f), scaled(3.2f), UIColors.stroke(Math.min(fullAlpha, 124)));
+        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + scaled(4f), getY() + scaled(3.2f), fontSize, UIColors.textColor(fullAlpha));
 
         float boxHeight = scaled(12f);
-        float boxY = getY() + fontSize + scaled(3f);
-        float boxX = getX();
-        float boxWidth = getWidth();
+        float boxY = getY() + scaled(7.3f);
+        float boxX = getX() + scaled(3f);
+        float boxWidth = getWidth() - scaled(6f);
         float round = boxHeight * 0.25f;
 
-        Color idleColor = UIColors.backgroundBlur(fullAlpha);
+        Color idleColor = UIColors.panelSoft(Math.min(fullAlpha, 196));
         Color focusColor = new Color(UIColors.primary().getRed(), UIColors.primary().getGreen(), UIColors.primary().getBlue(), Math.min(255, fullAlpha));
         Color boxColor = ColorUtil.interpolate(idleColor, focusColor, focusAnimation.getValue() * 0.3f);
 
         RenderUtil.BLUR_RECT.draw(matrixStack, boxX, boxY, boxWidth, boxHeight, new Vector4f(round), boxColor);
+        RenderUtil.RECT.draw(matrixStack, boxX, boxY, boxWidth, boxHeight, round, ColorUtil.interpolate(UIColors.stroke(Math.min(fullAlpha, 118)), UIColors.primary(Math.min(fullAlpha, 182)), focusAnimation.getValue() * 0.45f));
 
         String displayString = currentString;
         if (typing && (System.currentTimeMillis() % 1000 > 500)) {
@@ -71,15 +74,17 @@ public class StringComponent extends SettingComponent {
         Fonts.PS_MEDIUM.drawText(matrixStack, displayString, boxX + scaled(4f), boxY + boxHeight / 2f - fontSize / 2f, fontSize, textColor);
         ScissorUtil.stop(matrixStack);
 
-        setHeight((boxY + boxHeight) - getY() + scaled(4f));
+        setHeight((boxY + boxHeight) - getY() + scaled(3f));
     }
 
     @Override
     public void mouseClicked(double mouseX, double mouseY, int button) {
         float boxHeight = scaled(12f);
-        float boxY = getY() + fontSize() + scaled(3f);
+        float boxY = getY() + scaled(7.3f);
+        float boxX = getX() + scaled(3f);
+        float boxWidth = getWidth() - scaled(6f);
 
-        boolean hovered = MouseUtil.isHovered(mouseX, mouseY, getX(), boxY, getWidth(), boxHeight);
+        boolean hovered = MouseUtil.isHovered(mouseX, mouseY, boxX, boxY, boxWidth, boxHeight);
 
         if (button == 0) {
             if (hovered) {

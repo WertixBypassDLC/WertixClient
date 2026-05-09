@@ -14,7 +14,9 @@ import sweetie.nezi.api.module.setting.ModeSetting;
 import sweetie.nezi.api.utils.rotation.manager.Rotation;
 import sweetie.nezi.api.utils.rotation.manager.RotationManager;
 import sweetie.nezi.api.utils.rotation.manager.RotationPlan;
+import sweetie.nezi.client.features.modules.combat.AimAssistModule;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
+import sweetie.nezi.client.features.modules.combat.LegitAuraModule;
 import sweetie.nezi.client.features.modules.combat.WTapModule;
 
 @ModuleRegister(name = "Sprint", category = Category.MOVEMENT)
@@ -88,9 +90,13 @@ public class SprintModule extends Module {
         if (isWTapSuppressing()) return false;
 
         AuraModule aura = AuraModule.getInstance();
+        LegitAuraModule legitAura = LegitAuraModule.getInstance();
+        AimAssistModule aimAssist = AimAssistModule.getInstance();
         boolean auraCheck = aura.isEnabled() && aura.target != null;
+        boolean legitAuraCheck = legitAura.isEnabled() && legitAura.target != null;
+        boolean aimAssistCheck = aimAssist.isEnabled() && aimAssist.getTarget() != null;
 
-        return (mc.player.input.movementForward > 0 || auraCheck) && isActuallyMovingForward();
+        return (mc.player.input.movementForward > 0 || auraCheck || legitAuraCheck || aimAssistCheck) && isActuallyMovingForward();
     }
 
     public boolean isActuallyMovingForward() {

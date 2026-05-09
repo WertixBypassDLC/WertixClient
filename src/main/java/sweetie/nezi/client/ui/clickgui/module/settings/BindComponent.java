@@ -43,8 +43,6 @@ public class BindComponent extends SettingComponent {
 
         Font mediumFont = Fonts.PS_MEDIUM;
 
-        mediumFont.drawText(matrixStack, setting.getName(), getX(), halfY - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
-
         float anim = (float) animation.getValue();
         float reverseAnim = (float) (1.0 - animation.getValue());
 
@@ -63,8 +61,12 @@ public class BindComponent extends SettingComponent {
         float bindY = valueY - offset();
         float bindWidth = totalWidth + offset() * 2f;
         float bindHeight = valueSize + offset() * 2f;
-        float bindRound = bindHeight * 0.1f;
-        RenderUtil.BLUR_RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, UIColors.cardSecondary(Math.min(fullAlpha, 120)));
+        float bindRound = bindHeight * 0.24f;
+        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), getHeight() * 0.22f, UIColors.cardSecondary(Math.min(fullAlpha, 206)));
+        RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), getHeight() * 0.22f, UIColors.stroke(Math.min(fullAlpha, 124)));
+        mediumFont.drawText(matrixStack, setting.getName(), getX() + scaled(4f), halfY - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
+        RenderUtil.BLUR_RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, bind ? UIColors.primary(Math.min(fullAlpha, 166)) : UIColors.panelSoft(Math.min(fullAlpha, 190)));
+        RenderUtil.RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, UIColors.stroke(Math.min(fullAlpha, 116)));
 
         ScissorUtil.start(matrixStack, bindX, bindY, bindWidth, bindHeight);
 

@@ -37,25 +37,26 @@ public class ButtonComponent extends SettingComponent {
         hoverAnimation.update();
         hoverAnimation.run(hovered(mouseX, mouseY) ? 1.0 : 0.0, 500, Easing.EXPO_OUT);
 
-        Color buttonColor1 = ColorUtil.interpolate(UIColors.widgetBlur(Math.min(fullAlpha, 212)), UIColors.cardSecondary(Math.min(fullAlpha, 196)), hoverAnimation.getValue());
-        Color buttonColor2 = ColorUtil.interpolate(UIColors.backgroundBlur(Math.min(fullAlpha, 202)), UIColors.card(Math.min(fullAlpha, 184)), hoverAnimation.getValue());
+        Color buttonColor1 = ColorUtil.interpolate(UIColors.cardSecondary(Math.min(fullAlpha, 206)), UIColors.card(Math.min(fullAlpha, 226)), hoverAnimation.getValue());
+        Color buttonColor2 = ColorUtil.interpolate(UIColors.panelSoft(Math.min(fullAlpha, 196)), UIColors.primary(Math.min(fullAlpha, 164)), hoverAnimation.getValue() * 0.36f);
 
         float fontSize = getHeight() * 0.39f + scaled((float) hoverAnimation.getValue() * 0.18f);
         float round = getWidth() * 0.04f;
         RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), new Vector4f(round), buttonColor1, buttonColor2, buttonColor1, buttonColor2);
-        RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), round, UIColors.stroke(Math.min(fullAlpha, 116)));
+        RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), round, UIColors.stroke(Math.min(fullAlpha, 124)));
         Fonts.PS_MEDIUM.drawWrap(
                 matrixStack,
                 setting.getName(),
                 getX() + scaled(4f),
                 getY() + getHeight() / 2f - fontSize / 2f,
-                getWidth() - scaled(8f),
+                getWidth() - scaled(16f),
                 fontSize,
                 ColorUtil.setAlpha(UIColors.textColor(), fullAlpha),
                 scaled(14f),
                 Duration.ofMillis(2600),
                 Duration.ofMillis(350)
         );
+        Fonts.PS_BOLD.drawText(matrixStack, "→", getX() + getWidth() - scaled(9.5f), getY() + getHeight() / 2f - scaled(2.6f), scaled(5.0f), UIColors.textColor((int) (fullAlpha * (0.72f + hoverAnimation.getValue() * 0.28f))));
     }
 
     @Override

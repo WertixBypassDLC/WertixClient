@@ -58,38 +58,49 @@ public class MultiBooleanComponent extends ExpandableComponent.ExpandableSetting
         float fontSize = getDefaultHeight() * scaled(0.40f);
         float scd = scaled(getDefaultHeight());
         int fullAlpha = (int) (getAlpha() * 255f);
+        int selectedCount = setting.getList().size();
+        int totalCount = setting.getValue().size();
+        String countText = selectedCount + "/" + totalCount;
+        float countWidth = Fonts.PS_MEDIUM.getWidth(countText, fontSize);
+        float arrowSize = scaled(5.0f);
+        String arrow = settingsAnim > 0.5f ? "⌃" : "⌄";
+        float arrowWidth = Fonts.PS_BOLD.getWidth(arrow, arrowSize);
+        float headerRound = getWidth() * 0.04f;
 
-        String dermo = "...";
-        float dermoWidth = Fonts.PS_MEDIUM.getWidth(dermo, fontSize);
-
-        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), getWidth() * 0.04f, UIColors.card(Math.min(fullAlpha, 110)));
-        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), getX() + offset(), getY() + scd / 2f - fontSize / 2f, getWidth() - offset() * 3f - dermoWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
-        Fonts.PS_MEDIUM.drawText(matrixStack, dermo, getX() + getWidth() - offset() * 2f - dermoWidth, getY() + scd / 2f - fontSize / 2f - scaled(2f), fontSize, UIColors.inactiveTextColor(fullAlpha));
+        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), headerRound, UIColors.cardSecondary(Math.min(fullAlpha, 196)));
+        RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), headerRound, UIColors.stroke(Math.min(fullAlpha, 124)));
+        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), getX() + offset(), getY() + scd / 2f - fontSize / 2f, getWidth() - offset() * 3f - countWidth - arrowWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
+        Fonts.PS_MEDIUM.drawText(matrixStack, countText, getX() + getWidth() - offset() - countWidth - arrowWidth - scaled(4f), getY() + scd / 2f - fontSize / 2f, fontSize, UIColors.mutedText(fullAlpha));
+        Fonts.PS_BOLD.drawText(matrixStack, arrow, getX() + getWidth() - offset() - arrowWidth, getY() + scd / 2f - arrowSize / 2f - scaled(0.7f), arrowSize, UIColors.textColor((int) (fullAlpha * (0.75f + settingsAnim * 0.25f))));
 
         if (openAnim > 0.0) {
-            float bY = -scaled(2f) * (1f - settingsAnim);
+            float currentY = getY() + scd + scaled(1.4f) - scaled(6f) * (1f - settingsAnim);
+            float visibleHeight = 0.0f;
 
             for (BooleanComponent component : booleans) {
                 AnimationUtil anim = component.getVisibleAnimation();
                 anim.update();
                 anim.run(component.getSetting().isVisible() ? 1.0 : 0.0, 120, Easing.SINE_OUT);
+                float itemAnim = (float) anim.getValue();
+                if (itemAnim <= 0.0f) {
+                    continue;
+                }
                 component.setX(getX() + offset());
-                component.setY(getY() + scd + bY);
+                component.setY(currentY);
                 component.setWidth(getWidth() - offset() * 2f);
-                bY += (float) (component.getHeight() * anim.getValue());
+                currentY += (component.getHeight() + scaled(2.0f)) * itemAnim;
+                visibleHeight = currentY - (getY() + scd);
             }
 
-            setHeight(scaled(getDefaultHeight()) + (bY + gap()) * openAnim);
+            setHeight(scd + visibleHeight * settingsAnim + scaled(1.2f));
 
             if (settingsAnim > 0.0) {
-                RenderUtil.OTHER.scaleStart(matrixStack, getX() + getWidth() / 2f, getY() + getDefaultHeight() + getHeight() / 2f - bY, 0.95f + (0.05f * settingsAnim));
                 ScissorUtil.start(matrixStack, getX(), getY(), getWidth(), getHeight());
                 for (BooleanComponent component : booleans) {
                     component.setAlpha((float) (component.getVisibleAnimation().getValue() * getAlpha() * settingsAnim));
                     component.render(context, mouseX, mouseY, delta);
                 }
                 ScissorUtil.stop(matrixStack);
-                RenderUtil.OTHER.scaleStop(matrixStack);
             }
         } else {
             updateHeight(getDefaultHeight());

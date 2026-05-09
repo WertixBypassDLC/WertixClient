@@ -15,7 +15,9 @@ import sweetie.nezi.api.utils.player.PlayerUtil;
 import sweetie.nezi.api.utils.rotation.RaytracingUtil;
 import sweetie.nezi.api.utils.rotation.rotations.FunTimeRotation;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
+import sweetie.nezi.client.features.modules.combat.WTapModule;
 import sweetie.nezi.client.features.modules.movement.SprintModule;
+import sweetie.nezi.client.features.modules.render.SwingAnimationModule;
 
 @Getter
 @Accessors(fluent = true, chain = true)
@@ -141,6 +143,7 @@ public class CombatManager implements QuickImports {
 
         mc.interactionManager.attackEntity(mc.player, configurable.target);
         mc.player.swingHand(Hand.MAIN_HAND);
+        SwingAnimationModule.getInstance().notifyHit(configurable.target);
         onAttackPerformed();
         finishSprintReset(true);
     }
@@ -152,6 +155,9 @@ public class CombatManager implements QuickImports {
     }
 
     public void releaseSprintReset() {
+        if (WTapModule.getInstance().isSuppressing()) {
+            WTapModule.getInstance().releaseReset();
+        }
         finishSprintReset(true);
     }
 
@@ -192,6 +198,12 @@ public class CombatManager implements QuickImports {
     }
 
     private void applyLegitSprintReset() {
+        if (WTapModule.getInstance().requestReset()) {
+            sprintResetShouldRestore = false;
+            sprintKeyForcedRelease = false;
+            return;
+        }
+
         SprintModule sprintModule = SprintModule.getInstance();
         sprintModule.tickStop = Math.max(sprintModule.tickStop, 2);
 

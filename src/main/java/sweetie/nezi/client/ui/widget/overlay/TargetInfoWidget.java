@@ -17,6 +17,7 @@ import sweetie.nezi.api.utils.math.MathUtil;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
+import sweetie.nezi.client.features.modules.combat.LegitAuraModule;
 import sweetie.nezi.client.features.modules.combat.TriggerBotModule;
 import sweetie.nezi.client.ui.widget.Widget;
 
@@ -56,7 +57,7 @@ public final class TargetInfoWidget extends Widget {
         float posX = getDraggable().getX();
         float posY = getDraggable().getY();
         float width = scaled(95.0F);
-        float height = scaled(32.0F);
+        float height = scaled(30.5F);
 
         float hp = target.getHealth();
         float maxHp = target.getMaxHealth();
@@ -88,12 +89,12 @@ public final class TargetInfoWidget extends Widget {
         String playerName = target.getName().getString();
         float nameScale = scaled(7.0F);
         float nameWidth = Fonts.PS_BOLD.getWidth(playerName, nameScale);
-        float minContentW = scaled(60.0F);
+        float minContentW = scaled(56.0F);
         float contentW = Math.max(minContentW, nameWidth);
         
-        float padding = scaled(6f); // gap between head square and text
+        float padding = scaled(4f); // gap between head square and text
         // Width: head + gap + content + right padding
-        width = headSize + padding + contentW + scaled(10f);
+        width = headSize + padding + contentW + scaled(9f);
         
         float headX = posX;
         float headY = posY;
@@ -123,15 +124,12 @@ public final class TargetInfoWidget extends Widget {
         //   chunk 0: name    (top)
         //   chunk 1: HP text (middle)
         //   chunk 2: HP bar  (bottom)
-        float innerPad   = scaled(4.5f);
-        float barHeight  = scaled(3.5F);
+        float innerPad   = scaled(3.05f);
+        float barHeight  = scaled(3.25F);
         float barRadius  = scaled(1.5F);
-        // Name — top-aligned with a small top pad
         float nameY  = posY + innerPad;
-        // HP text — centred vertically in the widget
         float hpTextSize = scaled(5.8F);
-        float hpTextY = posY + height / 2f - hpTextSize / 2f;
-        // Bar — near bottom
+        float hpTextY = nameY + nameScale + scaled(0.1f);
         float barY   = posY + height - innerPad - barHeight;
         float barX   = contentX;
         float barWidth = contentW;
@@ -148,8 +146,8 @@ public final class TargetInfoWidget extends Widget {
                 hpTextSize, UIColors.textColor((int)(anim * 255.0F)));
 
         // Health Bar
-        float barHeight2  = scaled(4.5F);
-        float barY2       = posY + height - innerPad - barHeight2;
+        float barHeight2  = scaled(3.5F);
+        float barY2       = Math.max(hpTextY + hpTextSize + scaled(0.55f), posY + height - innerPad - barHeight2);
 
         // Bar Background
         RenderUtil.RECT.draw(matrixStack, barX, barY2, barWidth, barHeight2, barRadius,
@@ -263,6 +261,9 @@ public final class TargetInfoWidget extends Widget {
     }
 
     private LivingEntity getAuraTarget() {
+        LegitAuraModule legitAura = LegitAuraModule.getInstance();
+        if (legitAura.target != null && legitAura.isEnabled()) return legitAura.target;
+
         AuraModule aura = AuraModule.getInstance();
         if (aura.target != null && (aura.isEnabled() || TriggerBotModule.getInstance().isEnabled())) return aura.target;
         return null;

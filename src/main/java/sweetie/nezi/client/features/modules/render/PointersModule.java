@@ -76,6 +76,7 @@ public class PointersModule extends Module {
     private final HashMap<Entity, AnimationUtil> animations = new HashMap<>();
     private final AnimationUtil yawAnimation = new AnimationUtil();
     private final AnimationUtil radiusAnimation = new AnimationUtil();
+    private long lastScanTime;
 
     public PointersModule() {
         addSettings(targets,
@@ -100,7 +101,6 @@ public class PointersModule extends Module {
                 return;
             }
 
-            alive.clear();
             entityFilter.targetSettings = targets.getList();
             entityFilter.needFriends = true;
 
@@ -113,26 +113,32 @@ public class PointersModule extends Module {
                     && !targets.isEnabled("Мобы")
                     && !targets.isEnabled("Предметы");
 
-            if (playersOnly) {
-                for (PlayerEntity player : mc.world.getPlayers()) {
-                    if (player != mc.player && shouldRenderEntity(player)) {
-                        alive.add(player);
+            long now = System.currentTimeMillis();
+            if (now - lastScanTime > 50L) {
+                lastScanTime = now;
+                alive.clear();
+
+                if (playersOnly) {
+                    for (PlayerEntity player : mc.world.getPlayers()) {
+                        if (player != mc.player && shouldRenderEntity(player)) {
+                            alive.add(player);
+                        }
+                    }
+                } else {
+                    for (Entity entity : mc.world.getEntities()) {
+                        if (mc.player == entity) continue;
+
+                        if ((entity instanceof ItemEntity && targets.isEnabled("Предметы")) ||
+                                (entity instanceof LivingEntity le && shouldRenderEntity(le))) {
+                            alive.add(entity);
+                        }
                     }
                 }
-            } else {
-                for (Entity entity : mc.world.getEntities()) {
-                    if (mc.player == entity) continue;
 
-                    if ((entity instanceof ItemEntity && targets.isEnabled("Предметы")) ||
-                            (entity instanceof LivingEntity le && shouldRenderEntity(le))) {
-                        alive.add(entity);
+                for (Entity entity : alive) {
+                    if (!animations.containsKey(entity)) {
+                        animations.put(entity, new AnimationUtil());
                     }
-                }
-            }
-
-            for (Entity entity : alive) {
-                if (!animations.containsKey(entity)) {
-                    animations.put(entity, new AnimationUtil());
                 }
             }
 

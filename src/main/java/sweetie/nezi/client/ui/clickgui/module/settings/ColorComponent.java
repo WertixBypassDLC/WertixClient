@@ -79,21 +79,31 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         int fullAlpha = (int) (getAlpha() * 255f);
 
         if (setting != null) {
-            Fonts.PS_MEDIUM.drawText(ms, setting.getName(), getX(), getY() + baseHeight / 2f - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
+            RenderUtil.BLUR_RECT.draw(ms, getX(), getY(), getWidth(), baseHeight, baseHeight * 0.22f, UIColors.cardSecondary(Math.min(fullAlpha, 206)));
+            RenderUtil.RECT.draw(ms, getX(), getY(), getWidth(), baseHeight, baseHeight * 0.22f, UIColors.stroke(Math.min(fullAlpha, 124)));
+            Fonts.PS_MEDIUM.drawText(ms, setting.getName(), getX() + scaled(4f), getY() + baseHeight / 2f - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
 
             float previewSize = baseHeight * 0.7f;
-            float previewX = getX() + getWidth() - previewSize;
+            float previewX = getX() + getWidth() - previewSize - scaled(4f);
             float previewY = getY() + baseHeight / 2f - previewSize / 2f;
             float previewRound = previewSize * 0.2f;
+            RenderUtil.BLUR_RECT.draw(ms, previewX - scaled(1f), previewY - scaled(1f), previewSize + scaled(2f), previewSize + scaled(2f), previewRound + scaled(0.6f), UIColors.panelSoft(Math.min(fullAlpha, 188)));
             RenderUtil.RECT.draw(ms, previewX, previewY, previewSize, previewSize, previewRound, ColorUtil.setAlpha(getCurrentColor(), (int) (getCurrentColor().getAlpha() / 255f * fullAlpha)));
             updateHeight(getDefaultHeight());
         }
 
         float animValue = getAnimValue();
         if (animValue > 0.0) {
+            float pickerY = getColorPickerY() + getAnimY();
+            float pickerHeight = getColorPickerHeight();
+            float hueY = getHueY() + getAnimY();
+            float alphaY = getAlphaY() + getAnimY();
+            float totalPickerHeight = (pickerHeight + getHueHeight() + getAlphaHeight() + gap() * 2f) * animValue;
+            RenderUtil.BLUR_RECT.draw(ms, getPickerX(), pickerY, getPickerWidth(), totalPickerHeight, scaled(3.0f), UIColors.panelSoft(Math.min(fullAlpha, 198)));
+            RenderUtil.RECT.draw(ms, getPickerX(), pickerY, getPickerWidth(), totalPickerHeight, scaled(3.0f), UIColors.stroke(Math.min(fullAlpha, 120)));
             Color[] colors = getGradientColors(animValue);
             float colorPickerRound = getWidth() * 0.02f;
-            RenderUtil.GRADIENT_RECT.draw(ms, getPickerX(), getColorPickerY() + getAnimY(), getPickerWidth(), getColorPickerHeight(), colorPickerRound, colors[0], colors[1], colors[2], colors[3]);
+            RenderUtil.GRADIENT_RECT.draw(ms, getPickerX() + scaled(2f), pickerY + scaled(2f), getPickerWidth() - scaled(4f), pickerHeight - scaled(2f), colorPickerRound, colors[0], colors[1], colors[2], colors[3]);
 
             drawHueBar(ms, animValue);
             drawAlphaBar(ms, animValue);
@@ -175,7 +185,7 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         Color left = new Color(c.getRed(), c.getGreen(), c.getBlue(), 0);
         Color right = new Color(c.getRed(), c.getGreen(), c.getBlue(), (int) (getAnimValue() * getAlpha() * 255f));
 
-        RenderUtil.GRADIENT_RECT.draw(ms, getPickerX(), y, getPickerWidth(), h, h * 0.3f, left, right, left, right);
+        RenderUtil.GRADIENT_RECT.draw(ms, getPickerX() + scaled(2f), y, getPickerWidth() - scaled(4f), h, h * 0.3f, left, right, left, right);
     }
 
     private void drawHueBar(MatrixStack ms, float animValue) {
@@ -183,8 +193,8 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         float h = getAlphaHeight();
 
         RenderUtil.TEXTURE_RECT.draw(
-                ms, getPickerX(), y,
-                getPickerWidth(), h, h * 0.3f,
+                ms, getPickerX() + scaled(2f), y,
+                getPickerWidth() - scaled(4f), h, h * 0.3f,
                 new Color(255, 255, 255, (int) (getAnimValue() * getAlpha() * 255f)),
                 0f, 0f, 1f, 1f,
                 mc.getTextureManager().getTexture(FileUtil.getImage("interface/hue")).getGlId()
@@ -205,15 +215,16 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         float circleOffset = scaled(2f);
         float circleSize = circleOffset * 2f;
 
-        float satX = getPickerX() + hsb[1] * getPickerWidth();
+        float usableWidth = getPickerWidth() - scaled(4f);
+        float satX = getPickerX() + scaled(2f) + hsb[1] * usableWidth;
         float briY = getColorPickerY() + (1 - hsb[2]) * getColorPickerHeight();
         RenderUtil.RECT.draw(ms, satX - circleOffset, briY + getAnimY() - circleOffset, circleSize, circleSize, circleSize * 0.5f, cursorColor);
 
-        float hueX = getPickerX() + hueCache * getPickerWidth();
+        float hueX = getPickerX() + scaled(2f) + hueCache * usableWidth;
         RenderUtil.RECT.draw(ms, hueX - lineOffset, getHueY() + getAnimY() + lineYOffset, lineWidth, lineHeight, lineRound, cursorColor);
 
         float alphaRel = currentColor.getAlpha() / 255f;
-        float alphaX = getPickerX() + alphaRel * getPickerWidth();
+        float alphaX = getPickerX() + scaled(2f) + alphaRel * usableWidth;
         RenderUtil.RECT.draw(ms, alphaX - lineOffset, getAlphaY() + getAnimY() + lineYOffset, lineWidth, lineHeight, lineRound, cursorColor);
     }
 

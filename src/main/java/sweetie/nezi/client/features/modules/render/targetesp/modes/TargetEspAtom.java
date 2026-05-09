@@ -41,11 +41,10 @@ public class TargetEspAtom extends TargetEspMode {
         Vec3d cameraPos = camera.getPos();
 
         float red = MathHelper.clamp((currentTarget.hurtTime - partialTicks) / 20f, 0f, 1f);
-        float sp = smoothSpeed.get();
         float anim = alpha * sizeVal;
         float appearance = alpha * alpha * (3.0f - 2.0f * alpha);
 
-        float time = (float)((System.nanoTime() / 1_000_000_000.0f) * sp);
+        float time = getStableTime();
         int baseColor = TargetEspModule.getInstance().getCustomColor(red).getRGB();
 
         float blend = getRetargetBlend();

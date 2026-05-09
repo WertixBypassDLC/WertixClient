@@ -10,6 +10,9 @@ import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
 import sweetie.nezi.api.utils.math.TimerUtil;
+import sweetie.nezi.client.features.modules.movement.SprintModule;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 @ModuleRegister(name = "WTap", category = Category.COMBAT)
 public class WTapModule extends Module {
@@ -20,10 +23,11 @@ public class WTapModule extends Module {
     private volatile Phase phase = Phase.IDLE;
     private final TimerUtil phaseTimer = new TimerUtil();
 
-    private static final long SUPPRESS_MS = 60L;
+    private long suppressMs = 60L;
+    private int sprintStopTicks = 2;
+    private boolean suppressForward;
 
     public WTapModule() {
-        setEnabled(true);
     }
 
     @Override
@@ -36,41 +40,17 @@ public class WTapModule extends Module {
     }
 
     public boolean requestCritAttack(Runnable onAttack) {
-        if (!isEnabled() || mc.player == null) return false;
-
-        if (mc.player.isSprinting() || mc.options.forwardKey.isPressed()) {
-            mc.options.forwardKey.setPressed(false);
-            mc.options.sprintKey.setPressed(false);
-            mc.player.setSprinting(false);
-
-            if (mc.getNetworkHandler() != null) {
-                mc.getNetworkHandler().sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING));
-            }
-        }
-
-        phase = Phase.SUPPRESSING;
-        phaseTimer.reset();
-
+        if (!beginSuppress(true)) return false;
         onAttack.run();
-
         return true;
     }
 
-    public void requestReset() {
-        if (!isEnabled() || mc.player == null) return;
+    public boolean requestReset() {
+        return beginSuppress(false);
+    }
 
-        if (mc.player.isSprinting() || mc.options.forwardKey.isPressed()) {
-            mc.options.forwardKey.setPressed(false);
-            mc.options.sprintKey.setPressed(false);
-            mc.player.setSprinting(false);
-
-            if (mc.getNetworkHandler() != null) {
-                mc.getNetworkHandler().sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING));
-            }
-        }
-
-        phase = Phase.SUPPRESSING;
-        phaseTimer.reset();
+    public void releaseReset() {
+        cancel();
     }
 
     @Override
@@ -79,11 +59,9 @@ public class WTapModule extends Module {
             if (mc.player == null) return;
 
             if (phase == Phase.SUPPRESSING) {
-                mc.options.forwardKey.setPressed(false);
-                mc.options.sprintKey.setPressed(false);
-                mc.player.setSprinting(false);
+                applySuppression();
 
-                if (phaseTimer.finished(SUPPRESS_MS)) {
+                if (phaseTimer.finished(suppressMs)) {
                     cancel();
                 }
             }
@@ -91,8 +69,51 @@ public class WTapModule extends Module {
         addEvents(update);
     }
 
+    private boolean beginSuppress(boolean attacking) {
+        if (!isEnabled() || mc.player == null || mc.options == null) {
+            return false;
+        }
+
+        long sampledSuppressMs = ThreadLocalRandom.current().nextLong(attacking ? 46L : 38L, attacking ? 87L : 73L);
+        int sampledSprintStop = ThreadLocalRandom.current().nextInt(attacking ? 2 : 1, 4);
+        boolean sampledForwardSuppress = mc.player.input != null
+                && mc.player.input.hasForwardMovement()
+                && ThreadLocalRandom.current().nextFloat() < (attacking ? 0.58f : 0.34f);
+
+        if (phase != Phase.SUPPRESSING) {
+            phase = Phase.SUPPRESSING;
+            phaseTimer.reset();
+            suppressMs = sampledSuppressMs;
+        } else {
+            suppressMs = Math.max(suppressMs, phaseTimer.getElapsedTime() + sampledSuppressMs);
+        }
+
+        sprintStopTicks = Math.max(sprintStopTicks, sampledSprintStop);
+        suppressForward = suppressForward || sampledForwardSuppress;
+        applySuppression();
+        return true;
+    }
+
+    private void applySuppression() {
+        SprintModule.getInstance().tickStop = Math.max(SprintModule.getInstance().tickStop, sprintStopTicks);
+        mc.options.sprintKey.setPressed(false);
+        if (suppressForward) {
+            mc.options.forwardKey.setPressed(false);
+        }
+
+        boolean wasSprinting = mc.player.isSprinting();
+        mc.player.setSprinting(false);
+
+        if (wasSprinting && mc.getNetworkHandler() != null) {
+            mc.getNetworkHandler().sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.STOP_SPRINTING));
+        }
+    }
+
     private void cancel() {
         phase = Phase.IDLE;
+        suppressMs = 60L;
+        sprintStopTicks = 2;
+        suppressForward = false;
         restoreKey();
     }
 

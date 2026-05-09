@@ -56,6 +56,8 @@ public class AimAssistModule extends Module {
     private ScheduledExecutorService scheduler;
 
     private volatile float smoothedYawVelocity = 0.0f;
+    private volatile LivingEntity cachedBestTarget;
+    private volatile long lastTargetScanMs;
 
     public AimAssistModule() {
         addSettings(fov, range, speed, throughWalls, targets, aimPoint);
@@ -73,6 +75,7 @@ public class AimAssistModule extends Module {
         running = false;
         stopScheduler();
         target = null;
+        cachedBestTarget = null;
         smoothedYawVelocity = 0.0f;
     }
 
@@ -96,7 +99,7 @@ public class AimAssistModule extends Module {
             t.setDaemon(true);
             return t;
         });
-        scheduler.scheduleAtFixedRate(this::aimLoop, 0L, 4L, TimeUnit.MILLISECONDS);
+        scheduler.scheduleAtFixedRate(this::aimLoop, 0L, 8L, TimeUnit.MILLISECONDS);
     }
 
     private synchronized void stopScheduler() {
@@ -118,7 +121,7 @@ public class AimAssistModule extends Module {
             float dtSec = Math.min((now - lastLoopTime) / 1_000_000_000.0f, 0.05f);
             lastLoopTime = now;
 
-            LivingEntity best = findTarget();
+            LivingEntity best = getCachedTarget();
             if (best == null) {
                 target = null;
                 smoothedYawVelocity *= 0.7f;
@@ -138,7 +141,14 @@ public class AimAssistModule extends Module {
         LivingEntity best      = null;
         float        bestAngle = fov.getValue();
 
-        for (Entity entity : mc.world.getEntities()) {
+        Iterable<? extends Entity> entities = targets.isEnabled("Игроки")
+                && !targets.isEnabled("Мобы")
+                && !targets.isEnabled("Животные")
+                && !targets.isEnabled("Жители")
+                ? mc.world.getPlayers()
+                : mc.world.getEntities();
+
+        for (Entity entity : entities) {
             if (!(entity instanceof LivingEntity living)) continue;
             if (!living.isAlive()) continue;
             if (!isValidTarget(living)) continue;
@@ -157,6 +167,17 @@ public class AimAssistModule extends Module {
             }
         }
         return best;
+    }
+
+    private LivingEntity getCachedTarget() {
+        long now = System.currentTimeMillis();
+        LivingEntity current = cachedBestTarget;
+        if (current != null && current.isAlive() && isValidTarget(current) && mc.player.distanceTo(current) <= range.getValue() && now - lastTargetScanMs < 35L) {
+            return current;
+        }
+        cachedBestTarget = findTarget();
+        lastTargetScanMs = now;
+        return cachedBestTarget;
     }
 
     private void applyAim(LivingEntity targetEntity, float dt) {

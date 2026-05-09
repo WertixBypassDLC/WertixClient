@@ -21,6 +21,7 @@ import sweetie.nezi.api.utils.other.SearchUtil;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.services.RenderService;
+import sweetie.nezi.client.ui.theme.Theme;
 import sweetie.nezi.client.ui.theme.ThemeEditor;
 
 import java.time.LocalTime;
@@ -92,27 +93,24 @@ public class ScreenClickGUI extends Screen implements QuickImports {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         sweetie.nezi.api.utils.render.display.ThemeTransitionRender transitionRender = sweetie.nezi.api.utils.render.display.ThemeTransitionRender.getInstance();
 
-        if (ThemeEditor.getInstance().hasPendingTransition()) {
-            boolean captured = false;
-            // Start capturing to FBO
-            transitionRender.startTransition();
+        if (transitionRender.isTransitioning()) {
+            transitionRender.updateProgress();
+        }
+
+        if (ThemeEditor.getInstance().shouldStartPendingTransition() && !transitionRender.isTransitioning()) {
+            transitionRender.startTransition(ThemeEditor.getInstance().getPendingTheme());
+            ThemeEditor.getInstance().markPendingTransitionStarted();
             if (transitionRender.getFbo() != null) {
                 transitionRender.getFbo().beginWrite(true);
-                // Draw everything currently!
                 renderCore(context, mouseX, mouseY, delta);
-                // Re-bind the main window FBO
                 mc.getFramebuffer().beginWrite(true);
-                captured = true;
             }
-            if (captured) {
-                ThemeEditor.getInstance().applyPendingTheme();
-            }
+            ThemeEditor.getInstance().applyPendingTheme();
         }
 
         renderCore(context, mouseX, mouseY, delta);
 
         if (transitionRender.isTransitioning()) {
-            transitionRender.updateProgress();
             transitionRender.drawMaskedTransition(context.getMatrices(), mc.getWindow().getScaledWidth(), mc.getWindow().getScaledHeight());
         }
     }
@@ -407,13 +405,12 @@ public class ScreenClickGUI extends Screen implements QuickImports {
 
     private void drawGlassSurface(MatrixStack ms, float x, float y, float width, float height, float round,
                                   java.awt.Color surface, int alpha, boolean compact) {
-        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 1.00f) : (int) (alpha * 1.04f)));
+        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.62f) : (int) (alpha * 0.68f)));
 
-        // Единый стиль с HUD
-        java.awt.Color hudBg = new java.awt.Color(23, 23, 34, (int) (107 * (alpha / 255f)));
-        java.awt.Color hudStroke = new java.awt.Color(65, 65, 65, (int) (250 * (alpha / 255f)));
+        java.awt.Color hudBg = new java.awt.Color(23, 23, 34, (int) (78 * (alpha / 255f)));
+        java.awt.Color hudStroke = new java.awt.Color(65, 65, 65, (int) (138 * (alpha / 255f)));
 
-        RenderUtil.BLUR_RECT.draw(ms, x, y, width, height, round, UIColors.blur(blurAlpha), 0.06f);
+        RenderUtil.BLUR_RECT.draw(ms, x, y, width, height, round, UIColors.blur(blurAlpha), 0.045f);
         RenderUtil.RECT.draw(ms, x - scaled(0.7f), y - scaled(0.7f),
                 width + scaled(1.4f), height + scaled(1.4f), round + scaled(0.7f), hudStroke);
         RenderUtil.RECT.draw(ms, x, y, width, height, round, hudBg);

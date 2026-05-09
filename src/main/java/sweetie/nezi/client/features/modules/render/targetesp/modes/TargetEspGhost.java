@@ -43,13 +43,12 @@ public class TargetEspGhost extends TargetEspMode {
         Vec3d cameraPos = camera.getPos();
 
         float red = MathHelper.clamp((currentTarget.hurtTime - partialTicks) / 20f, 0f, 1f);
-        float spMul = smoothSpeed.get();
         String traj = TargetEspModule.getInstance().getGhostTrajectory();
 
         float eased = 1.0f - (1.0f - alpha * sizeVal) * (1.0f - alpha * sizeVal) * (1.0f - alpha * sizeVal);
         float radius = Math.max(0.22f, currentTarget.getWidth() * 0.75f);
         float height = Math.max(0.35f, currentTarget.getHeight());
-        double time = (double) System.currentTimeMillis() / (500.0 / (double) (3f * spMul));
+        double time = getStableTime() * 6.0;
         int baseColor = TargetEspModule.getInstance().getCustomColor(red).getRGB();
 
         float blend = getRetargetBlend();

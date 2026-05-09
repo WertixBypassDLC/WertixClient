@@ -49,12 +49,24 @@ public class SliderComponent extends SettingComponent {
         float piska = scaled(0.5f);
 
         int fullAlpha = (int) (getAlpha() * 255f);
+        float cardRound = scaled(3.2f);
+        float cardHeight = scaled(18.0f);
+        float cardY = getY();
+        float valueBadgeWidth = valueWidth + scaled(8f);
+        float valueBadgeHeight = scaled(8.6f);
 
         float progress = (bigPenis - setting.getMin()) / (setting.getMax() - setting.getMin()) * sliderWidth();
         currentWidth = MathHelper.clamp(MathUtil.interpolate(currentWidth, progress, 0.2f), 0f, sliderWidth());
 
-        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + piska, getY() + piska, fontSize, UIColors.mutedText(fullAlpha));
-        Fonts.PS_MEDIUM.drawText(matrixStack, valueText, getX() - piska + getWidth() - valueWidth, getY() + piska, fontSize, UIColors.textColor(fullAlpha));
+        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), cardY, getWidth(), cardHeight, cardRound, UIColors.cardSecondary(Math.min(fullAlpha, 206)));
+        RenderUtil.RECT.draw(matrixStack, getX(), cardY, getWidth(), cardHeight, cardRound, UIColors.stroke(Math.min(fullAlpha, 126)));
+        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + scaled(4f), cardY + scaled(3.2f), fontSize, UIColors.textColor(fullAlpha));
+
+        float badgeX = getX() + getWidth() - valueBadgeWidth - scaled(4f);
+        float badgeY = cardY + scaled(3.0f);
+        RenderUtil.BLUR_RECT.draw(matrixStack, badgeX, badgeY, valueBadgeWidth, valueBadgeHeight, valueBadgeHeight * 0.3f, ColorUtil.interpolate(UIColors.panelSoft(Math.min(fullAlpha, 192)), UIColors.primary(Math.min(fullAlpha, 182)), (float) dragAnimation.getValue() * 0.32f));
+        RenderUtil.RECT.draw(matrixStack, badgeX, badgeY, valueBadgeWidth, valueBadgeHeight, valueBadgeHeight * 0.3f, UIColors.stroke(Math.min(fullAlpha, 116)));
+        Fonts.PS_MEDIUM.drawText(matrixStack, valueText, badgeX + valueBadgeWidth / 2f - valueWidth / 2f, badgeY + valueBadgeHeight / 2f - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
 
         float sliderRound = sliderHeight() / 2f;
         float knobX = MathHelper.clamp(sliderX() + currentWidth - knobSize() / 2f, sliderX(), sliderX() + sliderWidth() - knobSize());
@@ -66,11 +78,12 @@ public class SliderComponent extends SettingComponent {
         Color color1 = UIColors.primary(fullAlpha);
         Color color2 = UIColors.secondary(fullAlpha);
 
-        RenderUtil.BLUR_RECT.draw(matrixStack, sliderX(), sliderY(), sliderWidth(), sliderHeight(), sliderRound, UIColors.cardSecondary(Math.min(fullAlpha, 120)));
+        RenderUtil.BLUR_RECT.draw(matrixStack, sliderX(), sliderY(), sliderWidth(), sliderHeight(), sliderRound, UIColors.panelSoft(Math.min(fullAlpha, 186)));
+        RenderUtil.RECT.draw(matrixStack, sliderX(), sliderY(), sliderWidth(), sliderHeight(), sliderRound, UIColors.stroke(Math.min(fullAlpha, 118)));
         RenderUtil.GRADIENT_RECT.draw(matrixStack, sliderX(), sliderY(), currentWidth, sliderHeight(), sliderRound, color1, color2, color1, color2);
         RenderUtil.BLUR_RECT.draw(matrixStack, knobX, sliderY() - hui, knobSize(), knobSize(), knobSize() / 2f, knobColor);
 
-        setHeight(sliderHeight() + (sliderY() - getY()) + knobSize() / 2f);
+        setHeight(sliderHeight() + (sliderY() - getY()) + knobSize() / 2f + scaled(2f));
 
         if (dragging) {
             float newValue = (mouseX - sliderX()) / sliderWidth();
@@ -106,9 +119,9 @@ public class SliderComponent extends SettingComponent {
     private float sliderWidth() { return getWidth(); }
     private float sliderHeight() { return scaled(4f); }
     private float knobSize() { return sliderHeight() * 1.85f; }
-    private float sliderY() { return getY() + fontSize() + knobSize() / 2f; }
+    private float sliderY() { return getY() + scaled(12.2f) + knobSize() / 2f; }
     private float sliderX() { return getX(); }
-    private float getDefaultHeight() { return fontSize() + gap() + knobSize(); }
+    private float getDefaultHeight() { return scaled(20f) + gap() + knobSize(); }
 
     private float getDisplayValue(float actualValue) {
         InterfaceModule interfaceModule = InterfaceModule.getInstance();

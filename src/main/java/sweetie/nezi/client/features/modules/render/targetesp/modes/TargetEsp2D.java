@@ -83,7 +83,7 @@ public class TargetEsp2D extends TargetEspMode {
         double renderY = getTargetY() + currentTarget.getHeight() * 0.55 - camera.getPos().y;
         double renderZ = getTargetZ() - camera.getPos().z;
 
-        float time = System.currentTimeMillis() * 0.001f;
+        float time = getStableTime();
         float spin = MathUtil.interpolate(prevAngle, angle, event.partialTicks());
         float bob = (float) Math.sin(time * 2.35f) * 0.08f;
         float size = 0.72f + sizeValue * 0.55f;

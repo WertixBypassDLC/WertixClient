@@ -38,6 +38,7 @@ public class SpeedGrim extends SpeedMode {
     public SpeedGrim(Supplier<Boolean> condition) {
         grimType.setVisible(condition);
         addSettings(grimType);
+        bypassType = BypassType.COLLIDE;
     }
 
     @Override

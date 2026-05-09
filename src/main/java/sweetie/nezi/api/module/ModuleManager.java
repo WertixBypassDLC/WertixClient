@@ -29,6 +29,7 @@ public class ModuleManager {
                 ClickGUIModule.getInstance(),
                 AmbienceModule.getInstance(),
                 AuraModule.getInstance(),
+                LegitAuraModule.getInstance(),
                 AimAssistModule.getInstance(),
                 TriggerBotModule.getInstance(), // Добавлен TriggerBot
                 AutoRespawnModule.getInstance(),

@@ -10,6 +10,7 @@ import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.ModuleRegister;
 import sweetie.nezi.api.module.setting.ModeSetting;
 import sweetie.nezi.api.system.backend.Choice;
+import sweetie.nezi.client.features.modules.movement.speed.modes.SpeedGrim;
 import sweetie.nezi.client.features.modules.movement.speed.modes.SpeedShulker;
 import sweetie.nezi.client.features.modules.movement.speed.modes.SpeedVanilla;
 
@@ -18,10 +19,12 @@ public class SpeedModule extends Module {
     @Getter private static final SpeedModule instance = new SpeedModule();
 
     private final SpeedVanilla speedVanilla = new SpeedVanilla(() -> getMode().is("Vanilla"));
+    private final SpeedGrim speedGrim = new SpeedGrim(() -> getMode().is("Grim"));
     private final SpeedShulker speedShulker = new SpeedShulker(() -> getMode().is("Shulker"));
 
     private final SpeedMode[] modes = new SpeedMode[]{
             speedVanilla,
+            speedGrim,
             speedShulker
     };
 
@@ -39,6 +42,7 @@ public class SpeedModule extends Module {
         addSettings(mode);
 
         addSettings(speedVanilla.getSettings());
+        addSettings(speedGrim.getSettings());
         addSettings(speedShulker.getSettings());
 
         // чтобы currentMode сразу совпадал с mode.value() / конфигом
