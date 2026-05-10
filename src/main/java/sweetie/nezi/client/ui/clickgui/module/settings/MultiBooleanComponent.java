@@ -66,12 +66,12 @@ public class MultiBooleanComponent extends ExpandableComponent.ExpandableSetting
         String arrow = settingsAnim > 0.5f ? "⌃" : "⌄";
         float arrowWidth = Fonts.PS_BOLD.getWidth(arrow, arrowSize);
         float headerRound = getWidth() * 0.04f;
+        float badgeWidth = countWidth + arrowWidth + scaled(8f);
 
-        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), headerRound, UIColors.cardSecondary(Math.min(fullAlpha, 196)));
-        RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), headerRound, UIColors.stroke(Math.min(fullAlpha, 124)));
-        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), getX() + offset(), getY() + scd / 2f - fontSize / 2f, getWidth() - offset() * 3f - countWidth - arrowWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
-        Fonts.PS_MEDIUM.drawText(matrixStack, countText, getX() + getWidth() - offset() - countWidth - arrowWidth - scaled(4f), getY() + scd / 2f - fontSize / 2f, fontSize, UIColors.mutedText(fullAlpha));
-        Fonts.PS_BOLD.drawText(matrixStack, arrow, getX() + getWidth() - offset() - arrowWidth, getY() + scd / 2f - arrowSize / 2f - scaled(0.7f), arrowSize, UIColors.textColor((int) (fullAlpha * (0.75f + settingsAnim * 0.25f))));
+        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), getX() + scaled(2f), getY() + scd / 2f - fontSize / 2f, getWidth() - offset() * 3f - badgeWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
+        float badgeX = getX() + getWidth() - badgeWidth - scaled(2f);
+        Fonts.PS_MEDIUM.drawText(matrixStack, countText, badgeX + scaled(1.5f), getY() + scd / 2f - fontSize / 2f, fontSize, UIColors.mutedText(fullAlpha));
+        Fonts.PS_BOLD.drawText(matrixStack, arrow, badgeX + badgeWidth - scaled(3.4f) - arrowWidth, getY() + scd / 2f - arrowSize / 2f - scaled(0.7f), arrowSize, UIColors.textColor((int) (fullAlpha * (0.75f + settingsAnim * 0.25f))));
 
         if (openAnim > 0.0) {
             float currentY = getY() + scd + scaled(1.4f) - scaled(6f) * (1f - settingsAnim);

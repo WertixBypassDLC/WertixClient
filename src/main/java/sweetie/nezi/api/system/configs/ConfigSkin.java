@@ -1,31 +1,36 @@
 package sweetie.nezi.api.system.configs;
 
 import lombok.Getter;
-import sweetie.nezi.api.utils.math.TimerUtil;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConfigSkin {
     @Getter private static final ConfigSkin instance = new ConfigSkin();
 
-    private final TimerUtil timerUtil = new TimerUtil();
-    private final AtomicBoolean fetchingInProgress = new AtomicBoolean(false);
+    private volatile String cachedSkinName;
 
     public void load() {
-        update();
+        cachedSkinName = readStoredSkinName();
     }
 
     public void save(String skinName) {
+        String normalized = skinName == null ? null : skinName.trim();
         UnifiedConfigStore.getInstance().updateRoot(root -> {
-            if (skinName != null && !skinName.trim().isEmpty()) {
-                root.addProperty("Skin", skinName.trim());
+            if (normalized != null && !normalized.isEmpty()) {
+                root.addProperty("Skin", normalized);
             } else {
                 root.remove("Skin");
             }
         });
+        cachedSkinName = (normalized == null || normalized.isEmpty()) ? null : normalized;
     }
 
     public String update() {
+        if (cachedSkinName == null) {
+            cachedSkinName = readStoredSkinName();
+        }
+        return cachedSkinName;
+    }
+
+    private String readStoredSkinName() {
         try {
             String content = "";
             if (UnifiedConfigStore.getInstance().get("Skin") != null) {

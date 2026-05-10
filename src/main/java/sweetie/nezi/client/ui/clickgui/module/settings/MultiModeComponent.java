@@ -56,20 +56,30 @@ public class MultiModeComponent extends ExpandableComponent.ExpandableSettingCom
         String arrow = anim > 0.5f ? "⌃" : "⌄";
         float arrowWidth = Fonts.PS_BOLD.getWidth(arrow, arrowSize);
         float headerRound = getWidth() * 0.04f;
+        float badgeWidth = countWidth + arrowWidth + scaled(8f);
 
         RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), headerRound, UIColors.cardSecondary(Math.min(fullAlpha, 196)));
         RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), headerRound, UIColors.stroke(Math.min(fullAlpha, 124)));
-        Fonts.PS_BOLD.drawWrap(matrixStack, name, getX() + zavoz, getY() + scd / 2f - fontSize / 2f, getWidth() - zavoz * 3f - countWidth - arrowWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
+        RenderUtil.RECT.draw(matrixStack, getX() + scaled(1.9f), getY() + scaled(2.4f), scaled(1.45f), getHeight() - scaled(4.8f), scaled(0.9f), UIColors.primary(Math.min(fullAlpha, 184)));
+        Fonts.PS_BOLD.drawWrap(matrixStack, name, getX() + scaled(5.2f), getY() + scd / 2f - fontSize / 2f, getWidth() - zavoz * 3f - badgeWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
 
         ScissorUtil.start(matrixStack, getX(), getY(), getWidth(), getHeight());
-        Fonts.PS_MEDIUM.drawText(matrixStack, countText, getX() + getWidth() - zavoz - countWidth - arrowWidth - scaled(4f), getY() + scd / 2f - fontSize / 2f, fontSize, UIColors.mutedText(fullAlpha));
-        Fonts.PS_BOLD.drawText(matrixStack, arrow, getX() + getWidth() - zavoz - arrowWidth, getY() + scd / 2f - arrowSize / 2f - scaled(0.7f), arrowSize, UIColors.textColor((int) (fullAlpha * (0.75f + 0.25f * anim))));
+        float badgeX = getX() + getWidth() - badgeWidth - scaled(3.4f);
+        float badgeY = getY() + scd / 2f - scaled(4.5f);
+        float badgeHeight = scaled(9.0f);
+        RenderUtil.BLUR_RECT.draw(matrixStack, badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight * 0.32f, UIColors.panelSoft(Math.min(fullAlpha, 194)));
+        RenderUtil.RECT.draw(matrixStack, badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight * 0.32f, UIColors.stroke(Math.min(fullAlpha, 112)));
+        Fonts.PS_MEDIUM.drawText(matrixStack, countText, badgeX + scaled(3.3f), getY() + scd / 2f - fontSize / 2f, fontSize, UIColors.mutedText(fullAlpha));
+        Fonts.PS_BOLD.drawText(matrixStack, arrow, badgeX + badgeWidth - scaled(3.4f) - arrowWidth, getY() + scd / 2f - arrowSize / 2f - scaled(0.7f), arrowSize, UIColors.textColor((int) (fullAlpha * (0.75f + 0.25f * anim))));
 
         if (anim > 0.0) {
             bounds.clear();
-            float rowHeight = scaled(12.8f);
-            float rowGap = scaled(2.2f);
-            float currentY = getY() + scd + scaled(1.3f) - scaled(6f) * (1f - anim);
+            float rowHeight = scaled(10.8f);
+            float rowGapX = scaled(3.0f);
+            float rowGapY = scaled(2.4f);
+            float currentX = getX() + zavoz;
+            float currentY = getY() + scd + scaled(1.6f) - scaled(6f) * (1f - anim);
+            float maxX = getX() + getWidth() - zavoz;
             int listAlpha = (int) (getAlpha() * anim * 255f);
 
             for (String mode : setting.getAllModes()) {
@@ -78,30 +88,35 @@ public class MultiModeComponent extends ExpandableComponent.ExpandableSettingCom
                 modeAnim.update();
                 modeAnim.run(setting.isSelected(mode) ? 1.0 : 0.0, 220, Easing.EXPO_OUT);
 
-                float rowX = getX() + zavoz;
-                float rowWidth = getWidth() - zavoz * 2f;
-                bounds.add(new Bound(rowX, currentY, rowWidth, rowHeight, mode));
+                float textWidth = Fonts.PS_MEDIUM.getWidth(mode, fontSize);
+                float rowWidth = Math.max(scaled(24f), textWidth + scaled(15f));
+                if (currentX + rowWidth > maxX) {
+                    currentX = getX() + zavoz;
+                    currentY += rowHeight + rowGapY;
+                }
+
+                bounds.add(new Bound(currentX, currentY, rowWidth, rowHeight, mode));
 
                 float selected = (float) modeAnim.getValue();
-                Color rowColor = ColorUtil.interpolate(UIColors.panelSoft(Math.min(listAlpha, 190)), ColorUtil.interpolate(UIColors.primary(Math.min(listAlpha, 220)), UIColors.card(Math.min(listAlpha, 230)), 0.20f), selected);
-                Color rowStroke = ColorUtil.interpolate(UIColors.stroke(Math.min(listAlpha, 118)), UIColors.primary(Math.min(listAlpha, 198)), selected * 0.55f);
+                Color rowColor = ColorUtil.interpolate(UIColors.panelSoft(Math.min(listAlpha, 190)), ColorUtil.interpolate(UIColors.primary(Math.min(listAlpha, 214)), UIColors.card(Math.min(listAlpha, 228)), 0.18f), selected);
+                Color rowStroke = ColorUtil.interpolate(UIColors.stroke(Math.min(listAlpha, 118)), UIColors.primary(Math.min(listAlpha, 196)), 0.20f + selected * 0.48f);
                 Color textColor = ColorUtil.interpolate(UIColors.mutedText(listAlpha), UIColors.textColor(listAlpha), selected);
-                float boxSize = rowHeight * 0.58f;
-                float boxX = rowX + scaled(4f);
+                float boxSize = rowHeight * 0.52f;
+                float boxX = currentX + scaled(3.2f);
                 float boxY = currentY + rowHeight / 2f - boxSize / 2f;
-                RenderUtil.BLUR_RECT.draw(matrixStack, rowX, currentY, rowWidth, rowHeight, rowHeight * 0.24f, rowColor);
-                RenderUtil.RECT.draw(matrixStack, rowX, currentY, rowWidth, rowHeight, rowHeight * 0.2f, rowStroke);
+                RenderUtil.BLUR_RECT.draw(matrixStack, currentX, currentY, rowWidth, rowHeight, rowHeight * 0.42f, rowColor);
+                RenderUtil.RECT.draw(matrixStack, currentX, currentY, rowWidth, rowHeight, rowHeight * 0.42f, rowStroke);
                 RenderUtil.BLUR_RECT.draw(matrixStack, boxX, boxY, boxSize, boxSize, boxSize * 0.24f, ColorUtil.interpolate(UIColors.panelSoft(Math.min(listAlpha, 210)), UIColors.primary(Math.min(listAlpha, 216)), selected));
                 RenderUtil.RECT.draw(matrixStack, boxX, boxY, boxSize, boxSize, boxSize * 0.24f, ColorUtil.interpolate(UIColors.stroke(Math.min(listAlpha, 120)), UIColors.primary(Math.min(listAlpha, 198)), selected * 0.6f));
                 if (selected > 0.02f) {
                     Fonts.PS_BOLD.drawCenteredText(matrixStack, "✓", boxX + boxSize / 2f, boxY + boxSize / 2f - scaled(2.2f), scaled(4.75f), ColorUtil.setAlpha(UIColors.textColor(listAlpha), (int) (listAlpha * selected)));
                 }
-                Fonts.PS_MEDIUM.drawText(matrixStack, mode, rowX + scaled(11f), currentY + rowHeight / 2f - fontSize / 2f, fontSize, textColor);
-                currentY += rowHeight + rowGap;
+                Fonts.PS_MEDIUM.drawText(matrixStack, mode, currentX + scaled(10.2f), currentY + rowHeight / 2f - fontSize / 2f, fontSize, textColor);
+                currentX += rowWidth + rowGapX;
             }
 
-            float listHeight = currentY - (getY() + scd);
-            setHeight(scd + listHeight * anim + scaled(1.2f));
+            float listHeight = currentY + rowHeight - (getY() + scd);
+            setHeight(scd + listHeight * anim + scaled(1.6f));
         } else {
             updateHeight(getDefaultHeight());
         }

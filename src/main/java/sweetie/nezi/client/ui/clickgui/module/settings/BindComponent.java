@@ -8,6 +8,7 @@ import sweetie.nezi.api.system.backend.KeyStorage;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.color.UIColors;
+import java.awt.Color;
 import sweetie.nezi.api.utils.math.MouseUtil;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.ScissorUtil;
@@ -62,11 +63,11 @@ public class BindComponent extends SettingComponent {
         float bindWidth = totalWidth + offset() * 2f;
         float bindHeight = valueSize + offset() * 2f;
         float bindRound = bindHeight * 0.24f;
-        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), getHeight() * 0.22f, UIColors.cardSecondary(Math.min(fullAlpha, 206)));
-        RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), getHeight() * 0.22f, UIColors.stroke(Math.min(fullAlpha, 124)));
-        mediumFont.drawText(matrixStack, setting.getName(), getX() + scaled(4f), halfY - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
-        RenderUtil.BLUR_RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, bind ? UIColors.primary(Math.min(fullAlpha, 166)) : UIColors.panelSoft(Math.min(fullAlpha, 190)));
-        RenderUtil.RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, UIColors.stroke(Math.min(fullAlpha, 116)));
+        mediumFont.drawText(matrixStack, setting.getName(), getX() + scaled(2f), halfY - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
+        Color badgeBg = bind ? UIColors.primary(Math.min(fullAlpha, 140)) : UIColors.panelSoft(Math.min(fullAlpha, 130));
+        Color badgeStroke = bind ? UIColors.primary(Math.min(fullAlpha, 180)) : UIColors.stroke(Math.min(fullAlpha, 100));
+        RenderUtil.BLUR_RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, badgeBg);
+        RenderUtil.RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, badgeStroke);
 
         ScissorUtil.start(matrixStack, bindX, bindY, bindWidth, bindHeight);
 

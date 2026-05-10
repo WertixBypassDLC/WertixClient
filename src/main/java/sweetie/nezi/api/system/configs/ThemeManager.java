@@ -8,9 +8,19 @@ import lombok.Getter;
 import sweetie.nezi.client.ui.theme.Theme;
 import sweetie.nezi.client.ui.theme.ThemeEditor;
 import sweetie.nezi.client.ui.theme.ThemeSelectable;
+import sweetie.nezi.client.ui.theme.basic.AmberTheme;
 import sweetie.nezi.client.ui.theme.basic.BloodTheme;
 import sweetie.nezi.client.ui.theme.basic.BlueTheme;
 import sweetie.nezi.client.ui.theme.basic.CandyLoveTheme;
+import sweetie.nezi.client.ui.theme.basic.EmeraldTheme;
+import sweetie.nezi.client.ui.theme.basic.FrostTheme;
+import sweetie.nezi.client.ui.theme.basic.MidnightTheme;
+import sweetie.nezi.client.ui.theme.basic.MonoTheme;
+import sweetie.nezi.client.ui.theme.basic.OceanTheme;
+import sweetie.nezi.client.ui.theme.basic.RoseTheme;
+import sweetie.nezi.client.ui.theme.basic.SunsetTheme;
+import sweetie.nezi.client.ui.theme.basic.ToxicTheme;
+import sweetie.nezi.client.ui.theme.basic.WertixTheme;
 
 import java.awt.Color;
 import java.lang.reflect.Type;
@@ -149,10 +159,19 @@ public class ThemeManager {
 
     private void loadDefaultThemes() {
         Theme[] themes = new Theme[]{
-                new Theme("EvaWare"),
+                new WertixTheme().update(),
                 new BlueTheme().update(),
                 new CandyLoveTheme().update(),
-                new BloodTheme().update()
+                new BloodTheme().update(),
+                new EmeraldTheme().update(),
+                new AmberTheme().update(),
+                new FrostTheme().update(),
+                new SunsetTheme().update(),
+                new MonoTheme().update(),
+                new RoseTheme().update(),
+                new OceanTheme().update(),
+                new ToxicTheme().update(),
+                new MidnightTheme().update()
         };
 
         for (Theme theme : themes) {

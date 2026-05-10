@@ -28,7 +28,7 @@ public class ThemeEditor extends UIComponent {
 
     private final List<ThemeSelectable> themeSelectables = new ArrayList<>();
     private final List<ThemeBound> themeBounds = new ArrayList<>();
-    private final Theme defaultTheme = new Theme("EvaWare");
+    private final Theme defaultTheme = new Theme("Wertix");
 
     private Theme currentTheme = defaultTheme;
     private Theme pendingTheme = null;
@@ -87,7 +87,7 @@ public class ThemeEditor extends UIComponent {
     private ClickRegion settingsRegion = new ClickRegion(-1f, -1f, 0f, 0f);
     private ClickRegion gridRegion = new ClickRegion(-1f, -1f, 0f, 0f);
 
-    private final int defaultThemeCount = 4;
+    private final int defaultThemeCount = 13;
 
     private record ThemeBound(float x, float y, float width, float height, Theme.ElementColor elementColor) { }
     private record ClickRegion(float x, float y, float width, float height) { }

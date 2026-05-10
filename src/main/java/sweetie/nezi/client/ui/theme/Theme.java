@@ -16,8 +16,8 @@ public class Theme {
     public Theme(String name) {
         this.name = name;
 
-        elementColors.add(new ElementColor("Primary", new Color(126, 181, 188)));
-        elementColors.add(new ElementColor("Secondary", new Color(92, 148, 158)));
+        elementColors.add(new ElementColor("Primary", new Color(160, 100, 255)));
+        elementColors.add(new ElementColor("Secondary", new Color(105, 55, 220)));
         elementColors.add(new ElementColor("Blur", new Color(30, 41, 46)));
         elementColors.add(new ElementColor("Widget blur", new Color(20, 29, 34, 255)));
         elementColors.add(new ElementColor("Background blur", new Color(25, 36, 40, 255)));

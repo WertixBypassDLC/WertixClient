@@ -57,7 +57,7 @@ public final class TargetInfoWidget extends Widget {
         float posX = getDraggable().getX();
         float posY = getDraggable().getY();
         float width = scaled(95.0F);
-        float height = scaled(30.5F);
+        float height = scaled(32.6F);
 
         float hp = target.getHealth();
         float maxHp = target.getMaxHealth();
@@ -87,10 +87,16 @@ public final class TargetInfoWidget extends Widget {
         float headSize = height; // The square
         
         String playerName = target.getName().getString();
-        float nameScale = scaled(7.0F);
+        String hpText = String.format("%.1f", hp).replace(",", ".") + " HP";
+        if (target.getAbsorptionAmount() > 0) {
+            hpText += " §6+" + String.format("%.1f", target.getAbsorptionAmount()).replace(",", ".");
+        }
+        float nameScale = scaled(7.95F);
+        float hpTextSize = scaled(6.6F);
         float nameWidth = Fonts.PS_BOLD.getWidth(playerName, nameScale);
-        float minContentW = scaled(56.0F);
-        float contentW = Math.max(minContentW, nameWidth);
+        float hpWidth = Fonts.PS_BOLD.getWidth(hpText, hpTextSize);
+        float minContentW = scaled(60.0F);
+        float contentW = Math.max(minContentW, Math.max(nameWidth, hpWidth));
         
         float padding = scaled(4f); // gap between head square and text
         // Width: head + gap + content + right padding
@@ -119,18 +125,16 @@ public final class TargetInfoWidget extends Widget {
 
         float contentX = headX + headSize + padding;
 
-        // === Vertical layout inside content area ===
-        // Total inner height = height. Divide into 3 equal chunks:
-        //   chunk 0: name    (top)
-        //   chunk 1: HP text (middle)
-        //   chunk 2: HP bar  (bottom)
-        float innerPad   = scaled(3.05f);
-        float barHeight  = scaled(3.25F);
+        float innerPad = scaled(2.7f);
+        float bottomPad = scaled(3.0f);
         float barRadius  = scaled(1.5F);
-        float nameY  = posY + innerPad;
-        float hpTextSize = scaled(5.8F);
-        float hpTextY = nameY + nameScale + scaled(0.1f);
-        float barY   = posY + height - innerPad - barHeight;
+        float barHeight2 = scaled(4.55F);
+        float contentHeight = height - innerPad - bottomPad;
+        float contentUsed = nameScale + hpTextSize + barHeight2;
+        float gapBetween = Math.max(scaled(0.6f), (contentHeight - contentUsed) / 2f);
+        float nameY = posY + innerPad;
+        float hpTextY = nameY + nameScale + gapBetween;
+        float barY2 = hpTextY + hpTextSize + gapBetween;
         float barX   = contentX;
         float barWidth = contentW;
 
@@ -138,18 +142,9 @@ public final class TargetInfoWidget extends Widget {
                 nameScale, UIColors.textColor((int)(anim * 255.0F)));
 
         // HP Text
-        String hpText = String.format("%.1f", hp).replace(",", ".") + " HP";
-        if (target.getAbsorptionAmount() > 0) {
-            hpText += " §6+" + String.format("%.1f", target.getAbsorptionAmount()).replace(",", ".");
-        }
         Fonts.PS_BOLD.drawText(matrixStack, hpText, contentX, hpTextY,
                 hpTextSize, UIColors.textColor((int)(anim * 255.0F)));
 
-        // Health Bar
-        float barHeight2  = scaled(3.5F);
-        float barY2       = Math.max(hpTextY + hpTextSize + scaled(0.55f), posY + height - innerPad - barHeight2);
-
-        // Bar Background
         RenderUtil.RECT.draw(matrixStack, barX, barY2, barWidth, barHeight2, barRadius,
                 new Color(30, 30, 35, (int)(anim * 180)));
 

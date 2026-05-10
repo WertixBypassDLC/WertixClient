@@ -9,12 +9,12 @@ public class BlueTheme extends ADefaultTheme {
 
     @Override
     public Color setPrimary() {
-        return new Color(173, 176, 255, 255);
+        return new Color(150, 155, 255, 255);
     }
 
     @Override
     public Color setSecondary() {
-        return new Color(136, 135, 202, 255);
+        return new Color(115, 110, 220, 255);
     }
 
     @Override
@@ -44,7 +44,7 @@ public class BlueTheme extends ADefaultTheme {
 
     @Override
     public Color setKnob() {
-        return new Color(180, 186, 232, 255);
+        return new Color(170, 175, 255, 255);
     }
 
     @Override

@@ -13,16 +13,22 @@ import sweetie.nezi.client.ui.clickgui.module.ExpandableComponent;
 import sweetie.nezi.client.ui.theme.Theme;
 
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
 
 import static sweetie.nezi.api.system.interfaces.QuickImports.mc;
 
 public class ColorComponent extends ExpandableComponent.ExpandableSettingComponent {
+    private static final int MAX_RECENT = 6;
+    private static final List<Color> recentColors = new ArrayList<>();
+
     private final Theme.ElementColor elementColor;
     private final ColorSetting setting;
 
     private boolean draggingHue = false;
     private boolean draggingSatBright = false;
     private boolean draggingAlpha = false;
+    private boolean wasDragging = false;
 
     private float hueCache = 0f;
     private boolean inited;
@@ -79,15 +85,13 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         int fullAlpha = (int) (getAlpha() * 255f);
 
         if (setting != null) {
-            RenderUtil.BLUR_RECT.draw(ms, getX(), getY(), getWidth(), baseHeight, baseHeight * 0.22f, UIColors.cardSecondary(Math.min(fullAlpha, 206)));
-            RenderUtil.RECT.draw(ms, getX(), getY(), getWidth(), baseHeight, baseHeight * 0.22f, UIColors.stroke(Math.min(fullAlpha, 124)));
-            Fonts.PS_MEDIUM.drawText(ms, setting.getName(), getX() + scaled(4f), getY() + baseHeight / 2f - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
+            Fonts.PS_MEDIUM.drawText(ms, setting.getName(), getX() + scaled(2f), getY() + baseHeight / 2f - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
 
-            float previewSize = baseHeight * 0.7f;
-            float previewX = getX() + getWidth() - previewSize - scaled(4f);
+            float previewSize = baseHeight * 0.55f;
+            float previewX = getX() + getWidth() - previewSize - scaled(3f);
             float previewY = getY() + baseHeight / 2f - previewSize / 2f;
-            float previewRound = previewSize * 0.2f;
-            RenderUtil.BLUR_RECT.draw(ms, previewX - scaled(1f), previewY - scaled(1f), previewSize + scaled(2f), previewSize + scaled(2f), previewRound + scaled(0.6f), UIColors.panelSoft(Math.min(fullAlpha, 188)));
+            float previewRound = previewSize * 0.22f;
+            RenderUtil.RECT.draw(ms, previewX - scaled(0.6f), previewY - scaled(0.6f), previewSize + scaled(1.2f), previewSize + scaled(1.2f), previewRound + scaled(0.4f), UIColors.stroke(Math.min(fullAlpha, 140)));
             RenderUtil.RECT.draw(ms, previewX, previewY, previewSize, previewSize, previewRound, ColorUtil.setAlpha(getCurrentColor(), (int) (getCurrentColor().getAlpha() / 255f * fullAlpha)));
             updateHeight(getDefaultHeight());
         }
@@ -99,7 +103,7 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
             float hueY = getHueY() + getAnimY();
             float alphaY = getAlphaY() + getAnimY();
             float totalPickerHeight = (pickerHeight + getHueHeight() + getAlphaHeight() + gap() * 2f) * animValue;
-            RenderUtil.BLUR_RECT.draw(ms, getPickerX(), pickerY, getPickerWidth(), totalPickerHeight, scaled(3.0f), UIColors.panelSoft(Math.min(fullAlpha, 198)));
+            RenderUtil.BLUR_RECT.draw(ms, getPickerX(), pickerY, getPickerWidth(), totalPickerHeight, scaled(3.0f), UIColors.panelSoft(Math.min(fullAlpha, 192)));
             RenderUtil.RECT.draw(ms, getPickerX(), pickerY, getPickerWidth(), totalPickerHeight, scaled(3.0f), UIColors.stroke(Math.min(fullAlpha, 120)));
             Color[] colors = getGradientColors(animValue);
             float colorPickerRound = getWidth() * 0.02f;
@@ -107,10 +111,12 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
 
             drawHueBar(ms, animValue);
             drawAlphaBar(ms, animValue);
+            drawRecentColors(ms, animValue);
             drawSelectors(ms);
 
             float alphaHeight = (getAlphaHeight() + gap());
-            float extraHeight = (getHueHeight() + getColorPickerHeight() + alphaHeight + gap()) * animValue;
+            float recentH = getRecentRowHeight() > 0 ? (getRecentRowHeight() + gap()) : 0f;
+            float extraHeight = (getHueHeight() + getColorPickerHeight() + alphaHeight + recentH + gap()) * animValue;
             float baseHeightFinal = setting != null ? baseHeight : 0f;
             setHeight(baseHeightFinal + extraHeight);
         }
@@ -127,18 +133,40 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
 
         if (MouseUtil.isHovered(mouseX, mouseY, getPickerX(), getColorPickerY(), getPickerWidth(), getColorPickerHeight())) {
             draggingSatBright = true;
+            wasDragging = true;
             updateSatBright(mouseX, mouseY);
         } else if (MouseUtil.isHovered(mouseX, mouseY, getPickerX(), getHueY(), getPickerWidth(), getHueHeight())) {
             draggingHue = true;
+            wasDragging = true;
             updateHue(mouseX);
         } else if (MouseUtil.isHovered(mouseX, mouseY, getPickerX(), getAlphaY(), getPickerWidth(), getAlphaHeight())) {
             draggingAlpha = true;
+            wasDragging = true;
             updateAlpha(mouseX);
+        } else if (!recentColors.isEmpty() && getAnimValue() > 0.8f) {
+            float ry = getRecentY();
+            float size = getRecentRowHeight();
+            float slotGap = scaled(2f);
+            float sx = getPickerX() + scaled(2f);
+            for (int i = 0; i < recentColors.size() && i < MAX_RECENT; i++) {
+                float slotX = sx + i * (size + slotGap);
+                if (MouseUtil.isHovered(mouseX, mouseY, slotX, ry, size, size)) {
+                    Color picked = recentColors.get(i);
+                    setCurrentColor(picked);
+                    float[] hsb = Color.RGBtoHSB(picked.getRed(), picked.getGreen(), picked.getBlue(), null);
+                    hueCache = hsb[0];
+                    return;
+                }
+            }
         }
     }
 
     @Override
     public void mouseReleased(double mouseX, double mouseY, int button) {
+        if (wasDragging) {
+            addRecentColor(getCurrentColor());
+            wasDragging = false;
+        }
         draggingHue = false;
         draggingSatBright = false;
         draggingAlpha = false;
@@ -226,6 +254,33 @@ public class ColorComponent extends ExpandableComponent.ExpandableSettingCompone
         float alphaRel = currentColor.getAlpha() / 255f;
         float alphaX = getPickerX() + scaled(2f) + alphaRel * usableWidth;
         RenderUtil.RECT.draw(ms, alphaX - lineOffset, getAlphaY() + getAnimY() + lineYOffset, lineWidth, lineHeight, lineRound, cursorColor);
+    }
+
+    private void drawRecentColors(MatrixStack ms, float animValue) {
+        if (recentColors.isEmpty()) return;
+        int alpha = (int) (animValue * getAlpha() * 255f);
+        float y = getRecentY() + getAnimY();
+        float size = getRecentRowHeight();
+        float slotGap = scaled(2f);
+        float startX = getPickerX() + scaled(2f);
+
+        for (int i = 0; i < recentColors.size() && i < MAX_RECENT; i++) {
+            float sx = startX + i * (size + slotGap);
+            Color c = recentColors.get(i);
+            RenderUtil.RECT.draw(ms, sx - scaled(0.4f), y - scaled(0.4f), size + scaled(0.8f), size + scaled(0.8f), size * 0.22f + scaled(0.3f), UIColors.stroke(Math.min(alpha, 120)));
+            RenderUtil.RECT.draw(ms, sx, y, size, size, size * 0.22f, ColorUtil.setAlpha(c, (int) (c.getAlpha() / 255f * alpha)));
+        }
+    }
+
+    private float getRecentY() { return getAlphaY() + getAlphaHeight() + gap(); }
+    private float getRecentRowHeight() { return recentColors.isEmpty() ? 0f : scaled(5f) * getAnimValue(); }
+
+    private static void addRecentColor(Color color) {
+        recentColors.removeIf(c -> c.getRGB() == color.getRGB() && c.getAlpha() == color.getAlpha());
+        recentColors.add(0, color);
+        while (recentColors.size() > MAX_RECENT) {
+            recentColors.remove(recentColors.size() - 1);
+        }
     }
 
     @Override public void keyPressed(int keyCode, int scanCode, int modifiers) {}

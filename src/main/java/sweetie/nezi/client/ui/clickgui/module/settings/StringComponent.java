@@ -46,7 +46,8 @@ public class StringComponent extends SettingComponent {
 
         RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), scaled(22f), scaled(3.2f), UIColors.cardSecondary(Math.min(fullAlpha, 206)));
         RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), scaled(22f), scaled(3.2f), UIColors.stroke(Math.min(fullAlpha, 124)));
-        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + scaled(4f), getY() + scaled(3.2f), fontSize, UIColors.textColor(fullAlpha));
+        RenderUtil.RECT.draw(matrixStack, getX() + scaled(1.9f), getY() + scaled(2.6f), scaled(1.45f), scaled(16.8f), scaled(0.9f), typing ? UIColors.primary(Math.min(fullAlpha, 192)) : UIColors.inactiveTextColor(Math.min(fullAlpha, 110)));
+        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + scaled(5.1f), getY() + scaled(3.2f), fontSize, UIColors.textColor(fullAlpha));
 
         float boxHeight = scaled(12f);
         float boxY = getY() + scaled(7.3f);
@@ -54,9 +55,9 @@ public class StringComponent extends SettingComponent {
         float boxWidth = getWidth() - scaled(6f);
         float round = boxHeight * 0.25f;
 
-        Color idleColor = UIColors.panelSoft(Math.min(fullAlpha, 196));
+        Color idleColor = UIColors.panelSoft(Math.min(fullAlpha, 190));
         Color focusColor = new Color(UIColors.primary().getRed(), UIColors.primary().getGreen(), UIColors.primary().getBlue(), Math.min(255, fullAlpha));
-        Color boxColor = ColorUtil.interpolate(idleColor, focusColor, focusAnimation.getValue() * 0.3f);
+        Color boxColor = ColorUtil.interpolate(idleColor, focusColor, focusAnimation.getValue() * 0.22f);
 
         RenderUtil.BLUR_RECT.draw(matrixStack, boxX, boxY, boxWidth, boxHeight, new Vector4f(round), boxColor);
         RenderUtil.RECT.draw(matrixStack, boxX, boxY, boxWidth, boxHeight, round, ColorUtil.interpolate(UIColors.stroke(Math.min(fullAlpha, 118)), UIColors.primary(Math.min(fullAlpha, 182)), focusAnimation.getValue() * 0.45f));

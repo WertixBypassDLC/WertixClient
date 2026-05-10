@@ -37,41 +37,38 @@ public class BooleanComponent extends SettingComponent {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        updateHeight(15f);
-
-        this.color = inMenu ? UIColors.panelSoft() : UIColors.cardSecondary();
+        updateHeight(13f);
 
         toggleAnimation.update();
         toggleAnimation.run(setting.getValue() ? 1.0 : 0.0, 170, Easing.EXPO_OUT);
 
         MatrixStack matrixStack = context.getMatrices();
-        float fontSize = getHeight() * 0.40f;
+        float fontSize = getHeight() * 0.44f;
         int fullAlpha = (int) (getAlpha() * 255f);
 
         float anim = (float) toggleAnimation.getValue();
 
-        float rowRound = getHeight() * 0.28f;
-        float checkSize = getHeight() * 0.72f;
-        float checkX = getX() + getWidth() - checkSize;
+        float checkSize = scaled(7f);
+        float checkX = getX() + scaled(2.5f);
         float checkY = getY() + getHeight() / 2f - checkSize / 2f;
-        float checkRound = checkSize * 0.24f;
+        float checkRound = scaled(1.5f);
+
+        float me = getModuleEnabled();
+        Color activeColor = ColorUtil.interpolate(new Color(130, 130, 140, Math.min(fullAlpha, 210)), UIColors.primary(Math.min(fullAlpha, 210)), me);
+        Color checkBg = ColorUtil.interpolate(UIColors.panelSoft(Math.min(fullAlpha, 130)), activeColor, anim);
+        Color activeStroke = ColorUtil.interpolate(new Color(110, 110, 120, Math.min(fullAlpha, 200)), UIColors.primary(Math.min(fullAlpha, 200)), me);
+        Color checkStroke = ColorUtil.interpolate(UIColors.stroke(Math.min(fullAlpha, 140)), activeStroke, anim);
+
+        RenderUtil.BLUR_RECT.draw(matrixStack, checkX, checkY, checkSize, checkSize, checkRound, checkBg);
+        RenderUtil.RECT.draw(matrixStack, checkX, checkY, checkSize, checkSize, checkRound, checkStroke);
+
+        if (anim > 0.1f) {
+            float checkmarkSize = checkSize * 0.72f;
+            Fonts.PS_BOLD.drawCenteredText(matrixStack, "\u2713", checkX + checkSize / 2f, checkY + checkSize / 2f - checkmarkSize / 2f, checkmarkSize, UIColors.textColor((int) (fullAlpha * anim)));
+        }
 
         Color labelColor = ColorUtil.interpolate(UIColors.mutedText(fullAlpha), UIColors.textColor(fullAlpha), anim);
-        Color rowColor = ColorUtil.interpolate(ColorUtil.setAlpha(color, Math.min(fullAlpha, inMenu ? 208 : 218)), ColorUtil.interpolate(UIColors.card(Math.min(fullAlpha, 232)), UIColors.primary(Math.min(fullAlpha, 196)), 0.14f), anim * 0.72f);
-        Color rowStroke = ColorUtil.interpolate(UIColors.stroke(Math.min(fullAlpha, 118)), UIColors.primary(Math.min(fullAlpha, 180)), anim * 0.42f);
-        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), rowRound, rowColor);
-        RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), rowRound, rowStroke);
-        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), getX() + scaled(4.2f), getY() + getHeight() / 2f - fontSize / 2f, getWidth() - checkSize - scaled(9f), fontSize, labelColor, scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
-
-        Color boxColor = ColorUtil.interpolate(UIColors.panelSoft(Math.min(fullAlpha, 212)), ColorUtil.interpolate(UIColors.primary(Math.min(fullAlpha, 232)), UIColors.card(Math.min(fullAlpha, 218)), 0.24f), anim);
-        Color boxStroke = ColorUtil.interpolate(UIColors.stroke(Math.min(fullAlpha, 126)), UIColors.primary(Math.min(fullAlpha, 206)), anim * 0.68f);
-        Color checkColor = ColorUtil.interpolate(UIColors.inactiveTextColor((int) (fullAlpha * 0.45f)), UIColors.textColor(fullAlpha), anim);
-
-        RenderUtil.BLUR_RECT.draw(matrixStack, checkX, checkY, checkSize, checkSize, checkRound, boxColor);
-        RenderUtil.RECT.draw(matrixStack, checkX, checkY, checkSize, checkSize, checkRound, boxStroke);
-        if (anim > 0.02f) {
-            Fonts.PS_BOLD.drawCenteredText(matrixStack, "✓", checkX + checkSize / 2f, checkY + checkSize / 2f - scaled(2.55f), scaled(5.15f), ColorUtil.setAlpha(checkColor, (int) (fullAlpha * anim)));
-        }
+        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), checkX + checkSize + scaled(3.5f), getY() + getHeight() / 2f - fontSize / 2f, getWidth() - checkSize - scaled(12f), fontSize, labelColor, scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
     }
 
     @Override

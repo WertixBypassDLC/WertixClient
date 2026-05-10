@@ -10,6 +10,7 @@ import net.minecraft.world.RaycastContext;
 import sweetie.nezi.api.event.EventListener;
 import sweetie.nezi.api.event.Listener;
 import sweetie.nezi.api.event.events.player.other.UpdateEvent;
+import sweetie.nezi.api.event.events.render.Render3DEvent;
 import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
@@ -24,9 +25,6 @@ import sweetie.nezi.api.utils.rotation.misc.PointFinder;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 @ModuleRegister(name = "LegitAura", category = Category.COMBAT)
 public class LegitAuraModule extends Module {
@@ -35,6 +33,7 @@ public class LegitAuraModule extends Module {
     private final TargetManager targetManager = new TargetManager();
     private final PointFinder pointFinder = new PointFinder();
     private final CombatExecutor combatExecutor = new CombatExecutor();
+    private final TargetManager.EntityFilter entityFilter;
 
     private final SliderSetting distance = new SliderSetting("Дистанция").value(3.2f).range(2.4f, 5.2f).step(0.05f);
     private final SliderSetting aimThreshold = new SliderSetting("Предел наводки").value(2.15f).range(0.5f, 8.0f).step(0.05f);
@@ -44,6 +43,7 @@ public class LegitAuraModule extends Module {
     private final BooleanSetting smartCrits = new BooleanSetting("Умные криты").value(true).setVisible(onlyCrits::getValue);
     private final BooleanSetting noAttackIfEat = new BooleanSetting("Не бить при еде").value(false);
     private final BooleanSetting allowSoftWalls = new BooleanSetting("Через мягкие стены").value(true);
+    private final BooleanSetting sprintReset = new BooleanSetting("Сброс спринта").value(true);
     private final BooleanSetting targetPlayers = new BooleanSetting("Игроки").value(true);
     private final BooleanSetting targetNaked = new BooleanSetting("Голые").value(true).setVisible(targetPlayers::getValue);
     private final MultiBooleanSetting targets = new MultiBooleanSetting("Цели").value(
@@ -61,34 +61,38 @@ public class LegitAuraModule extends Module {
     private Vec3d cachedAimPoint = Vec3d.ZERO;
     private Box cachedAimBox;
     private boolean cachedAimValid;
-    private volatile boolean running;
     private volatile long lastLoopTime = System.nanoTime();
     private volatile float smoothedYawVelocity;
     private volatile float smoothedPitchVelocity;
-    private ScheduledExecutorService scheduler;
+
+    private int attackCount = 0;
+    private long deflectStartTime = 0;
+    private int deflectDurationMs = 0;
+    private float deflectYawOffset = 0f;
+    private float deflectPitchOffset = 0f;
+    private final java.util.Random rng = new java.util.Random();
 
     public LegitAuraModule() {
-        addSettings(distance, aimThreshold, aimFov, rotationSpeed, onlyCrits, smartCrits, noAttackIfEat, allowSoftWalls, targets);
+        entityFilter = new TargetManager.EntityFilter(targets.getList());
+        addSettings(distance, aimThreshold, aimFov, rotationSpeed, onlyCrits, smartCrits, noAttackIfEat, allowSoftWalls, sprintReset, targets);
     }
 
     @Override
     public void onEnable() {
         resetState();
-        running = true;
-        startScheduler();
+        lastLoopTime = System.nanoTime();
     }
 
     @Override
     public void onDisable() {
-        running = false;
-        stopScheduler();
         resetState();
     }
 
     @Override
     public void onEvent() {
         EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> updateEventHandler()));
-        addEvents(updateEvent);
+        EventListener renderEvent = Render3DEvent.getInstance().subscribe(new Listener<>(event -> frameAimUpdate()));
+        addEvents(updateEvent, renderEvent);
     }
 
     public float getAttackDistance() {
@@ -106,6 +110,16 @@ public class LegitAuraModule extends Module {
     private void updateEventHandler() {
         if (mc.player == null || mc.world == null) {
             resetState();
+            return;
+        }
+
+        if (mc.currentScreen != null) {
+            targetManager.releaseTarget();
+            AuraModule.getInstance().target = null;
+            target = null;
+            resetAimCache();
+            resetAimAssistDynamics();
+            combatExecutor.combatManager().releaseSprintReset();
             return;
         }
 
@@ -140,64 +154,27 @@ public class LegitAuraModule extends Module {
             return;
         }
 
+        applyAim(target, aimData.point(), getAimDeltaTime());
         configureCombat(target, aimData.box());
         attackTarget(aimData.point());
     }
 
     private LivingEntity updateTarget() {
-        TargetManager.EntityFilter filter = new TargetManager.EntityFilter(targets.getList());
+        entityFilter.targetSettings = targets.getList();
         float maxDistance = getAttackDistance();
         boolean wideSearch = allowSoftWalls.getValue();
 
-        targetManager.searchTargets(mc.world.getEntities(), maxDistance, aimFov.getValue(), wideSearch);
-        targetManager.validateTarget(entity -> filter.isValid(entity) && hasAllowedAttackPath(entity, maxDistance));
+        targetManager.searchTargets(mc.world.getEntities(), maxDistance + 0.6f, aimFov.getValue(), wideSearch);
+        targetManager.validateTarget(entity -> entityFilter.isValid(entity)
+                && mc.player.squaredDistanceTo(entity) <= (maxDistance + 0.3f) * (maxDistance + 0.3f));
         return targetManager.getCurrentTarget();
     }
 
-    private synchronized void startScheduler() {
-        stopScheduler();
-        lastLoopTime = System.nanoTime();
-        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread thread = new Thread(r, "LegitAura-Thread");
-            thread.setDaemon(true);
-            return thread;
-        });
-        scheduler.scheduleAtFixedRate(this::aimLoop, 0L, 8L, TimeUnit.MILLISECONDS);
-    }
-
-    private synchronized void stopScheduler() {
-        if (scheduler != null) {
-            scheduler.shutdownNow();
-            scheduler = null;
-        }
-    }
-
-    private void aimLoop() {
-        try {
-            if (!running || mc.player == null || mc.world == null || mc.currentScreen != null) {
-                resetAimAssistDynamics();
-                return;
-            }
-
-            LivingEntity currentTarget = target;
-            if (currentTarget == null || !currentTarget.isAlive()) {
-                resetAimAssistDynamics();
-                return;
-            }
-
-            AimData aimData = getAimData(currentTarget);
-            if (aimData.point() == null) {
-                smoothedYawVelocity *= 0.58f;
-                smoothedPitchVelocity *= 0.58f;
-                return;
-            }
-
-            long now = System.nanoTime();
-            float dt = Math.min((now - lastLoopTime) / 1_000_000_000.0f, 0.05f);
-            lastLoopTime = now;
-            applyAim(currentTarget, aimData.point(), dt);
-        } catch (Exception ignored) {
-        }
+    private void frameAimUpdate() {
+        if (mc.player == null || target == null || mc.currentScreen != null) return;
+        AimData aimData = getAimData(target);
+        if (aimData.point() == null) return;
+        applyAim(target, aimData.point(), getAimDeltaTime());
     }
 
     private void applyAim(LivingEntity currentTarget, Vec3d point, float dt) {
@@ -235,10 +212,10 @@ public class LegitAuraModule extends Module {
         float pitchStep = smoothedPitchVelocity * dt;
 
         if (Math.abs(yawDiff) < assistWindowYaw) {
-            yawStep *= 0.48f;
+            yawStep *= 0.72f;
         }
         if (Math.abs(pitchDiff) < assistWindowPitch) {
-            pitchStep *= 0.44f;
+            pitchStep *= 0.68f;
         }
 
         yawStep = MathHelper.clamp(yawStep, -Math.abs(yawDiff), Math.abs(yawDiff));
@@ -247,22 +224,56 @@ public class LegitAuraModule extends Module {
         float nextYaw = mc.player.getYaw() + Math.copySign(yawStep, yawDiff);
         float nextPitch = mc.player.getPitch() + Math.copySign(pitchStep, pitchDiff);
 
-        mc.execute(() -> {
-            if (running && mc.player != null && mc.currentScreen == null && target == currentTarget) {
-                mc.player.setYaw(nextYaw);
-                mc.player.setPitch(MathHelper.clamp(nextPitch, -90.0f, 90.0f));
-            }
-        });
+        if (target != currentTarget) {
+            return;
+        }
+
+        if (Math.abs(nextYaw - mc.player.getYaw()) < 0.001f && Math.abs(nextPitch - mc.player.getPitch()) < 0.001f) {
+            return;
+        }
+
+        float finalYaw = nextYaw;
+        float finalPitch = nextPitch;
+
+        if (isDeflecting()) {
+            finalYaw += deflectYawOffset;
+            finalPitch += deflectPitchOffset;
+        }
+
+        mc.player.setYaw(finalYaw);
+        mc.player.setPitch(MathHelper.clamp(finalPitch, -90.0f, 90.0f));
+    }
+
+    private boolean isDeflecting() {
+        if (deflectDurationMs <= 0) return false;
+        return (System.currentTimeMillis() - deflectStartTime) < deflectDurationMs;
+    }
+
+    private void triggerDeflect() {
+        deflectStartTime = System.currentTimeMillis();
+        deflectDurationMs = 200 + rng.nextInt(101);
+        deflectYawOffset = (rng.nextFloat() - 0.5f) * 8f;
+        deflectPitchOffset = (rng.nextFloat() - 0.5f) * 4f;
+    }
+
+    private float getAimDeltaTime() {
+        long now = System.nanoTime();
+        float dt = Math.min((now - lastLoopTime) / 1_000_000_000.0f, 0.05f);
+        lastLoopTime = now;
+        if (dt <= 0.0f || Float.isNaN(dt) || Float.isInfinite(dt)) {
+            return 0.05f;
+        }
+        return dt;
     }
 
     private float reduceAssistNearCenter(float delta, float retainWindow) {
         float abs = Math.abs(delta);
         if (abs <= retainWindow) {
-            return delta * 0.22f;
+            return delta * 0.55f;
         }
 
         float excess = abs - retainWindow;
-        return Math.copySign(retainWindow * 0.22f + excess, delta);
+        return Math.copySign(retainWindow * 0.55f + excess, delta);
     }
 
     private void attackTarget(Vec3d point) {
@@ -280,20 +291,31 @@ public class LegitAuraModule extends Module {
             return;
         }
 
-        if (WTapModule.getInstance().isEnabled()) {
+        if (sprintReset.getValue() || WTapModule.getInstance().isEnabled()) {
             pendingWtapAttack = true;
             boolean accepted = WTapModule.getInstance().requestCritAttack(() -> {
                 pendingWtapAttack = false;
                 combatExecutor.performAttack();
+                onAttackPerformed();
             });
             if (!accepted) {
                 pendingWtapAttack = false;
                 combatExecutor.performAttack();
+                onAttackPerformed();
             }
             return;
         }
 
         combatExecutor.performAttack();
+        onAttackPerformed();
+    }
+
+    private void onAttackPerformed() {
+        attackCount++;
+        if (attackCount >= 5) {
+            attackCount = 0;
+            triggerDeflect();
+        }
     }
 
     private boolean isWithinAimThreshold(Vec3d point) {
@@ -305,7 +327,7 @@ public class LegitAuraModule extends Module {
         float yawDiff = Math.abs(MathHelper.wrapDegrees(wantedRotation.getYaw() - mc.player.getYaw()));
         float pitchDiff = Math.abs(MathHelper.wrapDegrees(wantedRotation.getPitch() - mc.player.getPitch()));
         float threshold = getAimThreshold();
-        return yawDiff <= threshold * 0.52f && pitchDiff <= Math.max(0.55f, threshold * 0.42f);
+        return yawDiff <= threshold * 1.6f && pitchDiff <= Math.max(1.8f, threshold * 1.3f);
     }
 
     private void configureCombat(LivingEntity target, Box hitBox) {
@@ -456,6 +478,8 @@ public class LegitAuraModule extends Module {
         AuraModule.getInstance().target = null;
         target = null;
         pendingWtapAttack = false;
+        attackCount = 0;
+        deflectDurationMs = 0;
         resetAimCache();
         resetAimAssistDynamics();
         combatExecutor.combatManager().resetState();

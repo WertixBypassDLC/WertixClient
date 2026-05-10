@@ -97,6 +97,7 @@ public class ModuleComponent extends ExpandableComponent {
         int colorSeed = module.getName().hashCode();
 
         float enabled = (float) enableAnimation.getValue();
+        float themedState = 1f - enabled;
 
         String bindText = (bind ? "Binding: " : "Bind: ") + KeyStorage.getBind(module.getBind());
         String defaultText = module.getName();
@@ -112,21 +113,22 @@ public class ModuleComponent extends ExpandableComponent {
         int bindAlpha1 = (int) (nameAnim * getAlpha() * 255f);
         int bindAlpha2 = (int) (bindAnim * getAlpha() * 255f);
 
-        Color idleBg = new Color(10, 10, 15, Math.min(fullAlpha, 172));
-        Color activeBg = ColorUtil.interpolate(UIColors.card(Math.min(fullAlpha, 236)), UIColors.themeFlow(colorSeed, Math.min(fullAlpha, 194)), 0.18f);
-        Color rectColor = ColorUtil.interpolate(idleBg, activeBg, enabled);
-        Color accentColor = ColorUtil.interpolate(new Color(46, 46, 58, Math.min(fullAlpha, 116)), ColorUtil.interpolate(UIColors.primary(Math.min(fullAlpha, 255)), UIColors.textColor(Math.min(fullAlpha, 220)), 0.14f), enabled);
-        Color glowColor = ColorUtil.interpolate(new Color(18, 18, 26, Math.min(fullAlpha, 16)), UIColors.themeFlowAlt(colorSeed, Math.min(fullAlpha, 96)), enabled);
+        Color idleBg = new Color(24, 24, 32, Math.min(fullAlpha, 188));
+        Color activeBg = ColorUtil.interpolate(UIColors.card(Math.min(fullAlpha, 238)), UIColors.themeFlow(colorSeed, Math.min(fullAlpha, 202)), 0.22f);
+        Color rectColor = ColorUtil.interpolate(idleBg, activeBg, themedState);
+        Color accentColor = ColorUtil.interpolate(new Color(72, 72, 84, Math.min(fullAlpha, 104)), ColorUtil.interpolate(UIColors.primary(Math.min(fullAlpha, 255)), UIColors.textColor(Math.min(fullAlpha, 226)), 0.16f), themedState);
+        Color glowColor = ColorUtil.interpolate(new Color(8, 8, 12, Math.min(fullAlpha, 10)), UIColors.themeFlowAlt(colorSeed, Math.min(fullAlpha, 104)), themedState);
 
-        Color inactiveTextColor = new Color(138, 138, 150, bindAlpha1);
-        Color textColor1 = ColorUtil.interpolate(inactiveTextColor, new Color(255, 255, 255, bindAlpha1), enabled);
-        Color textColor2 = ColorUtil.interpolate(new Color(255, 255, 255, bindAlpha2), new Color(188, 188, 198, bindAlpha2), 0.52f);
+        Color inactiveTextColor = new Color(198, 198, 208, bindAlpha1);
+        Color themedTextColor = new Color(255, 255, 255, bindAlpha1);
+        Color textColor1 = ColorUtil.interpolate(inactiveTextColor, themedTextColor, themedState);
+        Color textColor2 = ColorUtil.interpolate(new Color(202, 202, 214, bindAlpha2), new Color(255, 255, 255, bindAlpha2), themedState * 0.72f);
         boolean huesos = bindAnim > 0;
 
         if (openAnim > 0.0) moduleSetting(context, mouseX, mouseY, delta);
 
         RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getDefaultHeight(), round, glowColor, glowColor, glowColor, glowColor, 0.05f);
-        RenderUtil.RECT.draw(matrixStack, getX() - scaled(0.35f), getY() - scaled(0.35f), getWidth() + scaled(0.7f), getDefaultHeight() + scaled(0.7f), round, ColorUtil.setAlpha(accentColor, (int) (fullAlpha * (0.34f + enabled * 0.26f))));
+        RenderUtil.RECT.draw(matrixStack, getX() - scaled(0.35f), getY() - scaled(0.35f), getWidth() + scaled(0.7f), getDefaultHeight() + scaled(0.7f), round, ColorUtil.setAlpha(accentColor, (int) (fullAlpha * (0.34f + themedState * 0.26f))));
         RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getDefaultHeight(), round, rectColor, rectColor, rectColor, rectColor, 0.04f);
         RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getDefaultHeight(), round, rectColor);
         RenderUtil.RECT.draw(matrixStack, getX(), getY(), getWidth(), getDefaultHeight(), round, UIColors.stroke(Math.min(fullAlpha, 130)));
@@ -135,8 +137,8 @@ public class ModuleComponent extends ExpandableComponent {
         float badgeHeight = scaled(8.0f);
         float badgeX = getX() + getWidth() - badgeWidth - scaled(5.2f);
         float badgeY = getY() + getDefaultHeight() / 2f - badgeHeight / 2f;
-        Color badgeColor = ColorUtil.interpolate(new Color(24, 24, 34, Math.min(fullAlpha, 136)), ColorUtil.interpolate(UIColors.primary(Math.min(fullAlpha, 212)), UIColors.card(Math.min(fullAlpha, 224)), 0.22f), enabled);
-        Color badgeText = ColorUtil.interpolate(UIColors.mutedText(fullAlpha), new Color(255, 255, 255, fullAlpha), enabled);
+        Color badgeColor = ColorUtil.interpolate(new Color(38, 38, 48, Math.min(fullAlpha, 160)), ColorUtil.interpolate(UIColors.primary(Math.min(fullAlpha, 214)), UIColors.card(Math.min(fullAlpha, 228)), 0.20f), themedState);
+        Color badgeText = ColorUtil.interpolate(new Color(222, 222, 228, fullAlpha), new Color(255, 255, 255, fullAlpha), themedState);
         RenderUtil.BLUR_RECT.draw(matrixStack, badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2f, badgeColor);
         Fonts.PS_BOLD.drawCenteredText(matrixStack, module.isEnabled() ? "ON" : "OFF", badgeX + badgeWidth / 2f, badgeY + badgeHeight / 2f - scaled(2.15f), scaled(4.45f), badgeText);
 
@@ -225,15 +227,17 @@ public class ModuleComponent extends ExpandableComponent {
         Vector4f round = getSettingsRound(openAnim);
         float settingsBottomRound = round.z;
 
-        boolean modOn = module.isEnabled();
+        float enabled = (float) enableAnimation.getValue();
         int openAlpha = (int) (getAlpha() * openAnim * 255f);
-        Color settingsBg = modOn
-                ? ColorUtil.interpolate(UIColors.card(Math.min(openAlpha, 228)), UIColors.panel(Math.min(openAlpha, 236)), 0.40f)
-                : UIColors.panelSoft(Math.min(openAlpha, 214));
+        Color offBg = new Color(18, 18, 24, Math.min(openAlpha, 210));
+        Color onBg = ColorUtil.interpolate(UIColors.panelSoft(Math.min(openAlpha, 220)), UIColors.primary(Math.min(openAlpha, 18)), 0.12f);
+        Color settingsBg = ColorUtil.interpolate(offBg, onBg, enabled);
         RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY() + getDefaultHeight(), getWidth(), getHeight() - getDefaultHeight(), round,
                 settingsBg, settingsBg, settingsBg, settingsBg, 0.045f);
-        RenderUtil.RECT.draw(matrixStack, getX() + scaled(0.65f), getY() + getDefaultHeight(), getWidth() - scaled(1.3f), getHeight() - getDefaultHeight() - scaled(0.65f), new Vector4f(0f, 0f, Math.max(0f, settingsBottomRound - scaled(0.45f)), Math.max(0f, settingsBottomRound - scaled(0.45f))), UIColors.overlay(Math.min(openAlpha, 54)));
-        RenderUtil.RECT.draw(matrixStack, getX(), getY() + getDefaultHeight(), getWidth(), getHeight() - getDefaultHeight(), round, UIColors.stroke(Math.min(openAlpha, 132)));
+        Color innerOverlay = ColorUtil.interpolate(UIColors.overlay(Math.min(openAlpha, 36)), UIColors.primary(Math.min(openAlpha, 16)), enabled * 0.35f);
+        RenderUtil.RECT.draw(matrixStack, getX() + scaled(0.65f), getY() + getDefaultHeight(), getWidth() - scaled(1.3f), getHeight() - getDefaultHeight() - scaled(0.65f), new Vector4f(0f, 0f, Math.max(0f, settingsBottomRound - scaled(0.45f)), Math.max(0f, settingsBottomRound - scaled(0.45f))), innerOverlay);
+        Color borderColor = ColorUtil.interpolate(UIColors.stroke(Math.min(openAlpha, 100)), UIColors.primary(Math.min(openAlpha, 80)), enabled * 0.28f);
+        RenderUtil.RECT.draw(matrixStack, getX(), getY() + getDefaultHeight(), getWidth(), getHeight() - getDefaultHeight(), round, borderColor);
 
         float govnarik = offset() * (1f + 0.7f * reverseAnim);
 
@@ -249,6 +253,7 @@ public class ModuleComponent extends ExpandableComponent {
                 setting.setY(componentY);
                 setting.setWidth(getWidth() - govnarik * 2f);
                 setting.setAlpha(visibleAnim * openAnim * getAlpha());
+                setting.setModuleEnabled(enabled);
 
                 setting.render(context, mouseX, mouseY, delta);
                 componentY += ((setting.getHeight() + gap()) * visibleAnim) * openAnim;
