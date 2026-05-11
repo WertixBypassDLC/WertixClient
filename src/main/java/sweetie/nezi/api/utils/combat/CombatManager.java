@@ -223,12 +223,12 @@ public class CombatManager implements QuickImports {
 
     private boolean isCooldownNotComplete() {
         boolean dynamicCooldown = configurable != null && configurable.dynamicCooldown;
-        return !clickScheduler.isCooldownComplete(dynamicCooldown, 0);
+        return !clickScheduler.isCooldownComplete(dynamicCooldown, 0, getRequiredAttackCooldown());
     }
 
     private boolean canAttackPreviewAt(int ticksAhead) {
         boolean dynamicCooldown = configurable != null && configurable.dynamicCooldown;
-        if (!clickScheduler.isCooldownComplete(dynamicCooldown, ticksAhead)) {
+        if (!clickScheduler.isCooldownComplete(dynamicCooldown, ticksAhead, getRequiredAttackCooldown())) {
             return false;
         }
 
@@ -345,10 +345,20 @@ public class CombatManager implements QuickImports {
     private int getTicksUntilAttackWindow() {
         long timeToNext = configurable.dynamicCooldown ? Math.max(0L, clickScheduler.toNext()) : 0L;
         int delayTicks = msToTicksCeil(timeToNext);
-        float requiredCooldown = configurable.onlyCrits ? CRITICAL_ATTACK_COOLDOWN : FULL_ATTACK_COOLDOWN;
+        float requiredCooldown = getRequiredAttackCooldown();
         int cooldownTicks = getTicksUntilCooldownReady(requiredCooldown);
         int critTicks = getTicksUntilEarliestCritical();
         return Math.max(delayTicks, Math.max(cooldownTicks, critTicks));
+    }
+
+    private float getRequiredAttackCooldown() {
+        float defaultCooldown = configurable != null && configurable.onlyCrits
+                ? CRITICAL_ATTACK_COOLDOWN
+                : FULL_ATTACK_COOLDOWN;
+
+        AuraModule auraModule = AuraModule.getInstance();
+        boolean autoMaceEnabled = auraModule != null && auraModule.isEnabled() && auraModule.isAutoMaceEnabled();
+        return AutoMaceUtil.getRequiredAttackCooldown(autoMaceEnabled, defaultCooldown);
     }
 
     private int getConfiguredSprintResetTicks() {

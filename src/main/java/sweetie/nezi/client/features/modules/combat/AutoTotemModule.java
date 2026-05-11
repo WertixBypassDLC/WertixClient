@@ -22,6 +22,7 @@ import sweetie.nezi.api.module.setting.MultiBooleanSetting;
 import sweetie.nezi.api.utils.math.TimerUtil;
 import sweetie.nezi.api.utils.player.InventoryUtil;
 import sweetie.nezi.api.utils.other.SlownessManager;
+import sweetie.nezi.client.features.modules.movement.InventoryMoveModule;
 
 @ModuleRegister(name = "Auto Totem", category = Category.COMBAT)
 public class AutoTotemModule extends Module {
@@ -60,14 +61,14 @@ public class AutoTotemModule extends Module {
     @Override
     public void onEvent() {
         EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
-            if (SlownessManager.isEnabled()) return;
+            if (shouldHandleOnTick()) return;
 
             updateTotemCount();
             handleTotemSwapping();
         }));
 
         EventListener tickEvent = TickEvent.getInstance().subscribe(new Listener<>(event -> {
-            if (!SlownessManager.isEnabled()) return;
+            if (!shouldHandleOnTick()) return;
 
             updateTotemCount();
             handleTotemSwapping();
@@ -78,6 +79,14 @@ public class AutoTotemModule extends Module {
         }));
 
         addEvents(updateEvent, tickEvent, packetEvent);
+    }
+
+    private boolean shouldHandleOnTick() {
+        return InventoryMoveModule.getInstance().usesBypassFlow();
+    }
+
+    private boolean shouldUseLegitBypass() {
+        return InventoryMoveModule.getInstance().usesLegitItemBypass();
     }
 
     private void updateTotemCount() {
@@ -201,7 +210,7 @@ public class AutoTotemModule extends Module {
     }
 
     private void swapToOffhand(int slot) {
-        if (SlownessManager.isEnabled()) {
+        if (shouldUseLegitBypass()) {
             SlownessManager.applySlowness(10, () -> InventoryUtil.swapToOffhand(slot));
         } else InventoryUtil.swapToOffhand(slot);
     }

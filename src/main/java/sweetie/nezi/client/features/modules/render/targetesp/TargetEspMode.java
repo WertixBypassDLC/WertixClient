@@ -59,6 +59,44 @@ public abstract class TargetEspMode implements QuickImports {
         return transitionStartZ - lastTargetZ;
     }
 
+    public static void snapToTarget() {
+        transitionAnimation.setValue(0.0);
+        transitionAnimation.run(0.0, 1, Easing.LINEAR);
+
+        if (currentTarget == null) {
+            return;
+        }
+
+        double x = MathUtil.interpolate((float) currentTarget.prevX, (float) currentTarget.getX());
+        double y = MathUtil.interpolate((float) currentTarget.prevY, (float) currentTarget.getY());
+        double z = MathUtil.interpolate((float) currentTarget.prevZ, (float) currentTarget.getZ());
+
+        lastTargetX = x;
+        lastTargetY = y;
+        lastTargetZ = z;
+        smoothedTargetX = x;
+        smoothedTargetY = y;
+        smoothedTargetZ = z;
+        transitionStartX = x;
+        transitionStartY = y;
+        transitionStartZ = z;
+        targetX = x;
+        targetY = y;
+        targetZ = z;
+    }
+
+    public void syncAnimationSnapshot() {
+        prevShowAnimation = (float) showAnimation.getValue();
+        prevSizeAnimation = (float) sizeAnimation.getValue();
+    }
+
+    public void onModeSelected() {
+        syncAnimationSnapshot();
+    }
+
+    public void onModeDeselected() {
+    }
+
     public void updateTarget() {
         LivingEntity aimTarget = AimAssistModule.getInstance().isEnabled() ? AimAssistModule.getInstance().getTarget() : null;
         LivingEntity auraTarget = aura().target;

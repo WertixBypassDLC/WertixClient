@@ -15,6 +15,7 @@ import sweetie.nezi.api.module.setting.BindSetting;
 import sweetie.nezi.api.module.setting.ModeSetting;
 import sweetie.nezi.api.utils.player.InventoryUtil;
 import sweetie.nezi.api.utils.other.SlownessManager;
+import sweetie.nezi.client.features.modules.movement.InventoryMoveModule;
 
 @ModuleRegister(name = "Auto Swap", category = Category.COMBAT)
 public class ItemSwapModule extends Module {
@@ -39,16 +40,24 @@ public class ItemSwapModule extends Module {
         }));
 
         EventListener tickEvent = TickEvent.getInstance().subscribe(new Listener<>(event -> {
-            if (!SlownessManager.isEnabled()) return;
+            if (!shouldHandleOnTick()) return;
             performSwap();
         }));
 
         EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
-            if (SlownessManager.isEnabled()) return;
+            if (shouldHandleOnTick()) return;
             performSwap();
         }));
 
         addEvents(keyEvent, tickEvent, updateEvent);
+    }
+
+    private boolean shouldHandleOnTick() {
+        return InventoryMoveModule.getInstance().usesBypassFlow();
+    }
+
+    private boolean shouldUseLegitBypass() {
+        return InventoryMoveModule.getInstance().usesLegitItemBypass();
     }
 
     private void performSwap() {
@@ -69,7 +78,7 @@ public class ItemSwapModule extends Module {
             return;
         }
 
-        if (SlownessManager.isEnabled()) {
+        if (shouldUseLegitBypass()) {
             SlownessManager.applySlowness(10, () -> swap(slot));
         } else {
             swap(slot);
@@ -89,7 +98,7 @@ public class ItemSwapModule extends Module {
 
         print("Свапнула на \"" + getItem().getName().getString() + "\"");
 
-        if (SlownessManager.isEnabled()) {
+        if (shouldUseLegitBypass()) {
             SlownessManager.applySlowness(10, () -> InventoryUtil.swapToOffhand(slot));
         } else InventoryUtil.swapToOffhand(slot);
         swapping = false;

@@ -19,6 +19,8 @@ import java.awt.Color;
 @ModuleRegister(name = "Target Esp", category = Category.RENDER)
 public class TargetEspModule extends Module {
     @Getter private static final TargetEspModule instance = new TargetEspModule();
+    private String lastModeKey = "";
+    private TargetEspMode lastMode;
 
     private final TargetEspComets espComets = new TargetEspComets();
     private final TargetEspCrystals espCrystals = new TargetEspCrystals();
@@ -113,6 +115,12 @@ public class TargetEspModule extends Module {
     }
 
     @Override
+    public void onDisable() {
+        lastMode = null;
+        lastModeKey = "";
+    }
+
+    @Override
     public void onEvent() {
         EventListener render3DEvent = Render3DEvent.getInstance().subscribe(new Listener<>(event -> {
             TargetEspMode.updatePositions();
@@ -121,8 +129,21 @@ public class TargetEspModule extends Module {
 
         EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
             TargetEspMode activeMode = getActiveMode();
-            activeMode.updateAnimation(duration.getValue().longValue() * 50, animation.getValue(), size.getValue(), inSize.getValue(), outSize.getValue());
             activeMode.updateTarget();
+            String activeModeKey = getActiveModeKey();
+
+            if (lastMode != activeMode || !lastModeKey.equals(activeModeKey)) {
+                if (lastMode != null) {
+                    lastMode.onModeDeselected();
+                }
+
+                TargetEspMode.snapToTarget();
+                activeMode.onModeSelected();
+                lastMode = activeMode;
+                lastModeKey = activeModeKey;
+            }
+
+            activeMode.updateAnimation(duration.getValue().longValue() * 50, animation.getValue(), size.getValue(), inSize.getValue(), outSize.getValue());
             activeMode.onUpdate();
         }));
 
@@ -143,6 +164,16 @@ public class TargetEspModule extends Module {
             case "Круг" -> espCircle3D;
             default -> espGhost;
         };
+    }
+
+    private String getActiveModeKey() {
+        if (mode.is("2D")) {
+            return "2D:" + style2D.getValue();
+        }
+        if (mode.is("3D")) {
+            return "3D:" + style3D.getValue();
+        }
+        return mode.getValue();
     }
 
     public float getSpeed() { return speed.getValue(); }

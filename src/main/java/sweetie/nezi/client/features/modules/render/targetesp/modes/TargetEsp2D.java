@@ -36,6 +36,12 @@ public class TargetEsp2D extends TargetEspMode {
     private float prevAngle = 0f;
 
     @Override
+    public void onModeSelected() {
+        super.onModeSelected();
+        prevAngle = angle;
+    }
+
+    @Override
     public void onUpdate() {
         prevAngle = angle;
         angle += 3.2f * TargetEspModule.getInstance().getSpeed();

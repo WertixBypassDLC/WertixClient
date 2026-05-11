@@ -32,6 +32,12 @@ public class TargetEspCircle3D extends TargetEspMode {
     private final SmoothFloat smoothSpeed = new SmoothFloat(1.0f);
 
     @Override
+    public void onModeSelected() {
+        super.onModeSelected();
+        prevSpin = spin;
+    }
+
+    @Override
     public void onUpdate() {
         smoothLine.update(TargetEspModule.getInstance().getLineWidth(), 0.15f);
         smoothSpeed.update(TargetEspModule.getInstance().getSpeed(), 0.15f);

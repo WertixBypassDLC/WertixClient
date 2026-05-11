@@ -55,6 +55,12 @@ public class TargetEspFigure extends TargetEspMode {
     private final SmoothFloat smoothSpeed = new SmoothFloat(1.0f);
 
     @Override
+    public void onModeSelected() {
+        super.onModeSelected();
+        prevSpinAngle = spinAngle;
+    }
+
+    @Override
     public void onUpdate() {
         smoothSize.update(TargetEspModule.getInstance().getFigureSize(), 0.15f);
         smoothDepth.update(TargetEspModule.getInstance().getFigureDepth(), 0.15f);

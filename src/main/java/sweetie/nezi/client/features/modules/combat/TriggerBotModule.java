@@ -22,6 +22,7 @@ import sweetie.nezi.api.module.setting.BooleanSetting;
 import sweetie.nezi.api.module.setting.SliderSetting;
 import sweetie.nezi.api.module.setting.MultiBooleanSetting;
 import sweetie.nezi.api.system.configs.FriendManager;
+import sweetie.nezi.api.utils.combat.AutoMaceUtil;
 import sweetie.nezi.api.utils.player.PlayerUtil;
 import sweetie.nezi.api.utils.math.TimerUtil;
 
@@ -32,6 +33,7 @@ public class TriggerBotModule extends Module {
     @Getter private static final TriggerBotModule instance = new TriggerBotModule();
 
     private final SliderSetting distance       = new SliderSetting("Дистанция").value(2.9997f).range(2.0f, 5.0f).step(0.05f);
+    private final BooleanSetting autoMace     = new BooleanSetting("Auto Mace").value(false);
     private final BooleanSetting onlyCrits     = new BooleanSetting("Только криты").value(true);
     private final BooleanSetting smartCrits    = new BooleanSetting("Умные криты").value(true).setVisible(onlyCrits::getValue);
     private final BooleanSetting noAttackIfEat = new BooleanSetting("Не бить при еде").value(false);
@@ -52,7 +54,7 @@ public class TriggerBotModule extends Module {
     private volatile boolean pendingWtapAttack = false;
 
     public TriggerBotModule() {
-        addSettings(distance, onlyCrits, smartCrits, noAttackIfEat, targets);
+        addSettings(distance, autoMace, onlyCrits, smartCrits, noAttackIfEat, targets);
     }
 
     @Override
@@ -72,6 +74,10 @@ public class TriggerBotModule extends Module {
                 AuraModule.getInstance().target = livingTarget;
 
                 if (pendingWtapAttack) return;
+
+                if (autoMace.getValue()) {
+                    AutoMaceUtil.tryEquipForSmash();
+                }
 
                 if (shouldAttack(livingTarget)) {
                     initiateAttack(livingTarget);
@@ -135,7 +141,7 @@ public class TriggerBotModule extends Module {
         }
 
         // Полный кулдаун, без рандомной поддавки → не «съедает» серию критов
-        if (mc.player.getAttackCooldownProgress(0.5f) < 0.98f) return false;
+        if (mc.player.getAttackCooldownProgress(0.5f) < getRequiredAttackCooldown()) return false;
 
         if (!onlyCrits.getValue()) return true;
 
@@ -178,6 +184,10 @@ public class TriggerBotModule extends Module {
         // Лёгкая дрожь между ударами, не быстрее реального кулдауна
         nextDelay = 80L + ThreadLocalRandom.current().nextLong(0, 40);
         attackTimer.reset();
+    }
+
+    private float getRequiredAttackCooldown() {
+        return AutoMaceUtil.getRequiredAttackCooldown(autoMace.getValue(), 0.98F);
     }
 
     private boolean hasBlockingCollision(Vec3d start, Vec3d end, double targetDistanceSq) {

@@ -27,6 +27,14 @@ public class TargetEspComets extends TargetEspMode {
     private float prevGhostYRotationAngle = 0f;
 
     @Override
+    public void onModeSelected() {
+        super.onModeSelected();
+        previousPositions.clear();
+        prevGhostRotationAngle = ghostRotationAngle;
+        prevGhostYRotationAngle = ghostYRotationAngle;
+    }
+
+    @Override
     public void onUpdate() {
         prevGhostRotationAngle = ghostRotationAngle;
         prevGhostYRotationAngle = ghostYRotationAngle;

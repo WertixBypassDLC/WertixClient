@@ -31,6 +31,7 @@ import sweetie.nezi.api.module.setting.BooleanSetting;
 import sweetie.nezi.api.module.setting.ModeSetting;
 import sweetie.nezi.api.module.setting.MultiBooleanSetting;
 import sweetie.nezi.api.module.setting.SliderSetting;
+import sweetie.nezi.api.utils.combat.AutoMaceUtil;
 import sweetie.nezi.api.utils.combat.CombatExecutor;
 import sweetie.nezi.api.utils.combat.TargetManager;
 import sweetie.nezi.api.utils.notification.NotificationUtil;
@@ -67,6 +68,7 @@ public class AuraModule extends Module {
     private final SliderSetting preDistance = new SliderSetting("Предел дистанции").value(0.3f).range(0f, 3f).step(0.1f);
     private final SliderSetting legitFov    = new SliderSetting("Легитный FOV").value(50f).range(30f, 90f).step(1f)
             .setVisible(() -> aimMode.is("Legit Snap"));
+    private final BooleanSetting autoMace = new BooleanSetting("Auto Mace").value(false);
     private final BooleanSetting auraTargetPlayers = new BooleanSetting("Игроки").value(true);
     private final BooleanSetting auraTargetNaked   = new BooleanSetting("Голые").value(false).setVisible(auraTargetPlayers::getValue);
     private final MultiBooleanSetting targets = new MultiBooleanSetting("Цели").value(
@@ -86,7 +88,7 @@ public class AuraModule extends Module {
 
     public AuraModule() {
         addSettings(
-                aimMode, move, distance, preDistance, legitFov, targets, combatExecutor.options(), combatExecutor.sprintResetTicks()
+                aimMode, move, distance, preDistance, legitFov, autoMace, targets, combatExecutor.options(), combatExecutor.sprintResetTicks()
         );
     }
 
@@ -109,6 +111,10 @@ public class AuraModule extends Module {
 
     public float getAttackDistance() {
         return distance.getValue();
+    }
+
+    public boolean isAutoMaceEnabled() {
+        return autoMace.getValue();
     }
 
     @Override
@@ -165,6 +171,10 @@ public class AuraModule extends Module {
             return;
         }
 
+        if (autoMace.getValue()) {
+            AutoMaceUtil.tryEquipForSmash();
+        }
+
         AimData aimData = getAimData(target);
         if (aimData.point().distanceTo(mc.player.getEyePos()) > getAttackDistance() + getPreDistance()) {
             targetManager.releaseTarget();
@@ -215,6 +225,10 @@ public class AuraModule extends Module {
         if (aimMode.is("Legit Snap") && !isTargetInsideLegitCircle(target)) {
             combatExecutor.combatManager().releaseSprintReset();
             return;
+        }
+
+        if (autoMace.getValue()) {
+            AutoMaceUtil.tryEquipForSmash();
         }
 
         combatExecutor.performAttack();

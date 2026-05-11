@@ -86,6 +86,12 @@ public class TargetEspSkulls extends TargetEspMode {
     private final SmoothFloat sSpeed = new SmoothFloat(1.0f);
 
     @Override
+    public void onModeSelected() {
+        super.onModeSelected();
+        prevOrbitAngle = orbitAngle;
+    }
+
+    @Override
     public void onUpdate() {
         sSize.update(TargetEspModule.getInstance().getSkullSize(), 0.15f);
         sDist.update(TargetEspModule.getInstance().getSkullOrbitDistance(), 0.15f);

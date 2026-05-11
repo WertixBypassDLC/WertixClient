@@ -159,7 +159,7 @@ public class MixinClientPlayerEntity extends AbstractClientPlayerEntity {
 
     @ModifyExpressionValue(method = "canStartSprinting", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;isUsingItem()Z"))
     private boolean sprintAffectStartHook(boolean original) {
-        if (NoSlowModule.getInstance().isEnabled()) return false;
+        if (NoSlowModule.getInstance().doUseNoSlow()) return false;
 
         return original;
     }

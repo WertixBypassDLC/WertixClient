@@ -35,6 +35,7 @@ import sweetie.nezi.api.event.EventListener;
 import sweetie.nezi.api.event.Listener;
 import sweetie.nezi.api.event.events.client.PacketEvent;
 import sweetie.nezi.api.event.events.client.TickEvent;
+import sweetie.nezi.api.event.events.player.other.UpdateEvent;
 import sweetie.nezi.api.event.events.render.Render2DEvent;
 import sweetie.nezi.api.event.events.render.Render3DEvent;
 import sweetie.nezi.api.module.Category;
@@ -128,11 +129,20 @@ public class FuntimeHelperModule extends Module {
 
     @Override
     public void onEvent() {
-        EventListener tickEvent = TickEvent.getInstance().subscribe(new Listener<>(event -> handleTickEvent()));
+        EventListener tickEvent = TickEvent.getInstance().subscribe(new Listener<>(event -> {
+            if (shouldHandleOnTick()) {
+                handleItemUsage();
+            }
+        }));
+        EventListener updateEvent = UpdateEvent.getInstance().subscribe(new Listener<>(event -> {
+            if (!shouldHandleOnTick()) {
+                handleItemUsage();
+            }
+        }));
         EventListener render2DEvent = Render2DEvent.getInstance().subscribe(new Listener<>(this::handleRender2DEvent));
         EventListener render3DEvent = Render3DEvent.getInstance().subscribe(new Listener<>(this::handleRender3DEvent));
         EventListener packetEvent = PacketEvent.getInstance().subscribe(new Listener<>(this::handlePacketEvent));
-        addEvents(tickEvent, render2DEvent, render3DEvent, packetEvent);
+        addEvents(tickEvent, updateEvent, render2DEvent, render3DEvent, packetEvent);
     }
 
     private void handleRender2DEvent(Render2DEvent.Render2DEventData event) {
@@ -585,7 +595,11 @@ public class FuntimeHelperModule extends Module {
                 }), delay, TimeUnit.MILLISECONDS);
     }
 
-    private void handleTickEvent() {
+    private boolean shouldHandleOnTick() {
+        return InventoryMoveModule.getInstance().usesBypassFlow();
+    }
+
+    private void handleItemUsage() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) return;
         if (client.currentScreen != null && !InventoryMoveModule.getInstance().isEnabled()) return;

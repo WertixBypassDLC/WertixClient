@@ -20,12 +20,16 @@ public class ClickScheduler implements QuickImports {
     }
 
     public boolean isCooldownComplete(boolean dynamicCooldown, int ticks) {
+        return isCooldownComplete(dynamicCooldown, ticks, 0.9F);
+    }
+
+    public boolean isCooldownComplete(boolean dynamicCooldown, int ticks, float requiredCooldown) {
         if (mc.player == null) {
             return true;
         }
 
         boolean dynamicReady = !dynamicCooldown || hasTicksElapsedSinceLastClick(Math.max(0, tickCount() - ticks));
-        return dynamicReady && mc.player.getAttackCooldownProgress(ticks) > 0.9F;
+        return dynamicReady && mc.player.getAttackCooldownProgress(ticks) > requiredCooldown;
     }
 
     public boolean hasTicksElapsedSinceLastClick(int ticks) {
