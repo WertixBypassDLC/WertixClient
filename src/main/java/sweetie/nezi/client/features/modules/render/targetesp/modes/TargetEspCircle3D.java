@@ -67,7 +67,7 @@ public class TargetEspCircle3D extends TargetEspMode {
         float hurtBlend = MathHelper.clamp((currentTarget.hurtTime - partialTicks) / 10f, 0f, 1f);
         Color baseColor = TargetEspModule.getInstance().getCustomColor(hurtBlend);
         float spinAngle = MathUtil.interpolate(prevSpin, spin, partialTicks);
-        float time = System.currentTimeMillis() * 0.001f * smoothSpeed.get();
+        float time = getStableTime();
 
         float baseRadius = Math.max(0.45f, currentTarget.getWidth() * 0.84f);
         float pulse = 1.0f + (float) Math.sin(time * 2.5f) * 0.035f;

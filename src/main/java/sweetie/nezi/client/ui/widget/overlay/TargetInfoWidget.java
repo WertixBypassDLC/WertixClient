@@ -17,6 +17,7 @@ import sweetie.nezi.api.utils.math.MathUtil;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.fonts.Fonts;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
+import sweetie.nezi.client.features.modules.combat.LegitAuraModule;
 import sweetie.nezi.client.features.modules.combat.TriggerBotModule;
 import sweetie.nezi.client.ui.widget.Widget;
 
@@ -56,7 +57,7 @@ public final class TargetInfoWidget extends Widget {
         float posX = getDraggable().getX();
         float posY = getDraggable().getY();
         float width = scaled(95.0F);
-        float height = scaled(32.0F);
+        float height = scaled(32.6F);
 
         float hp = target.getHealth();
         float maxHp = target.getMaxHealth();
@@ -86,14 +87,20 @@ public final class TargetInfoWidget extends Widget {
         float headSize = height; // The square
         
         String playerName = target.getName().getString();
-        float nameScale = scaled(7.0F);
+        String hpText = String.format("%.1f", hp).replace(",", ".") + " HP";
+        if (target.getAbsorptionAmount() > 0) {
+            hpText += " §6+" + String.format("%.1f", target.getAbsorptionAmount()).replace(",", ".");
+        }
+        float nameScale = scaled(7.95F);
+        float hpTextSize = scaled(6.6F);
         float nameWidth = Fonts.PS_BOLD.getWidth(playerName, nameScale);
+        float hpWidth = Fonts.PS_BOLD.getWidth(hpText, hpTextSize);
         float minContentW = scaled(60.0F);
-        float contentW = Math.max(minContentW, nameWidth);
+        float contentW = Math.max(minContentW, Math.max(nameWidth, hpWidth));
         
-        float padding = scaled(6f); // gap between head square and text
+        float padding = scaled(4f); // gap between head square and text
         // Width: head + gap + content + right padding
-        width = headSize + padding + contentW + scaled(10f);
+        width = headSize + padding + contentW + scaled(9f);
         
         float headX = posX;
         float headY = posY;
@@ -118,21 +125,16 @@ public final class TargetInfoWidget extends Widget {
 
         float contentX = headX + headSize + padding;
 
-        // === Vertical layout inside content area ===
-        // Total inner height = height. Divide into 3 equal chunks:
-        //   chunk 0: name    (top)
-        //   chunk 1: HP text (middle)
-        //   chunk 2: HP bar  (bottom)
-        float innerPad   = scaled(4.5f);
-        float barHeight  = scaled(3.5F);
+        float innerPad = scaled(2.7f);
+        float bottomPad = scaled(3.0f);
         float barRadius  = scaled(1.5F);
-        // Name — top-aligned with a small top pad
-        float nameY  = posY + innerPad;
-        // HP text — centred vertically in the widget
-        float hpTextSize = scaled(5.8F);
-        float hpTextY = posY + height / 2f - hpTextSize / 2f;
-        // Bar — near bottom
-        float barY   = posY + height - innerPad - barHeight;
+        float barHeight2 = scaled(4.55F);
+        float contentHeight = height - innerPad - bottomPad;
+        float contentUsed = nameScale + hpTextSize + barHeight2;
+        float gapBetween = Math.max(scaled(0.6f), (contentHeight - contentUsed) / 2f);
+        float nameY = posY + innerPad;
+        float hpTextY = nameY + nameScale + gapBetween;
+        float barY2 = hpTextY + hpTextSize + gapBetween;
         float barX   = contentX;
         float barWidth = contentW;
 
@@ -140,18 +142,9 @@ public final class TargetInfoWidget extends Widget {
                 nameScale, UIColors.textColor((int)(anim * 255.0F)));
 
         // HP Text
-        String hpText = String.format("%.1f", hp).replace(",", ".") + " HP";
-        if (target.getAbsorptionAmount() > 0) {
-            hpText += " §6+" + String.format("%.1f", target.getAbsorptionAmount()).replace(",", ".");
-        }
         Fonts.PS_BOLD.drawText(matrixStack, hpText, contentX, hpTextY,
                 hpTextSize, UIColors.textColor((int)(anim * 255.0F)));
 
-        // Health Bar
-        float barHeight2  = scaled(4.5F);
-        float barY2       = posY + height - innerPad - barHeight2;
-
-        // Bar Background
         RenderUtil.RECT.draw(matrixStack, barX, barY2, barWidth, barHeight2, barRadius,
                 new Color(30, 30, 35, (int)(anim * 180)));
 
@@ -263,6 +256,9 @@ public final class TargetInfoWidget extends Widget {
     }
 
     private LivingEntity getAuraTarget() {
+        LegitAuraModule legitAura = LegitAuraModule.getInstance();
+        if (legitAura.target != null && legitAura.isEnabled()) return legitAura.target;
+
         AuraModule aura = AuraModule.getInstance();
         if (aura.target != null && (aura.isEnabled() || TriggerBotModule.getInstance().isEnabled())) return aura.target;
         return null;

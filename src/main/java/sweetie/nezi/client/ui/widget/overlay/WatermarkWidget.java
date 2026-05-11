@@ -126,13 +126,13 @@ public class WatermarkWidget extends Widget {
         // Leading logo block (pure icon square)
         drawHudSquare(ms, curX, y, cardH, cardH, scaled(5f), alpha);
         {
-            String logoText = "E";
+            String logoText = "W";
             float logoSize = scaled(8.6f);
             Color left  = UIColors.themeFlow(logoText.hashCode(), alpha);
             Color right = UIColors.themeFlowAlt(logoText.hashCode(), alpha);
             Fonts.PS_BOLD.drawGradientText(ms, logoText,
                     curX + cardH / 2f - Fonts.PS_BOLD.getWidth(logoText, logoSize) / 2f,
-                    y + cardH / 2f - logoSize / 2f + scaled(0.15f),
+                    y + cardH / 2f - logoSize / 2f + scaled(0.05f),
                     logoSize, left, right, Math.max(scaled(10f), cardH * 0.9f));
         }
         curX += cardH + gap;
@@ -175,7 +175,7 @@ public class WatermarkWidget extends Widget {
             Fonts.PS_BOLD.drawGradientText(ms,
                     text,
                     x + w / 2f - Fonts.PS_BOLD.getWidth(text, drawSize) / 2f,
-                    y + h / 2f - drawSize / 2f + scaled(0.15f),
+                    y + h / 2f - drawSize / 2f + scaled(0.05f),
                     drawSize,
                     left,
                     right,
@@ -183,8 +183,8 @@ public class WatermarkWidget extends Widget {
         } else {
             Fonts.getICONS().drawGradientText(ms,
                     text,
-                    x + w / 2f - scaled(4.2f),
-                    y + h / 2f - scaled(4.2f),
+                    x + w / 2f - scaled(4.0f),
+                    y + h / 2f - scaled(4.15f),
                     scaled(8.4f),
                     left,
                     right,

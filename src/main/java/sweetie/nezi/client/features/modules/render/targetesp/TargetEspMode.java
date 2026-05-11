@@ -10,6 +10,7 @@ import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.math.MathUtil;
 import sweetie.nezi.client.features.modules.combat.AimAssistModule;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
+import sweetie.nezi.client.features.modules.combat.LegitAuraModule;
 import sweetie.nezi.client.features.modules.combat.TriggerBotModule;
 
 public abstract class TargetEspMode implements QuickImports {
@@ -38,6 +39,8 @@ public abstract class TargetEspMode implements QuickImports {
     private static double transitionStartX = 0;
     private static double transitionStartY = 0;
     private static double transitionStartZ = 0;
+    private static long lastClockNs = -1L;
+    private static double stableTimeSeconds = 0.0;
 
     public AuraModule aura() {
         return AuraModule.getInstance();
@@ -97,14 +100,21 @@ public abstract class TargetEspMode implements QuickImports {
     public void onModeDeselected() {
     }
 
+    public static float getStableTime() {
+        return (float) stableTimeSeconds;
+    }
+
     public void updateTarget() {
         LivingEntity aimTarget = AimAssistModule.getInstance().isEnabled() ? AimAssistModule.getInstance().getTarget() : null;
+        LivingEntity legitAuraTarget = LegitAuraModule.getInstance().isEnabled() ? LegitAuraModule.getInstance().target : null;
         LivingEntity auraTarget = aura().target;
         LivingEntity triggerTarget = TriggerBotModule.getInstance().isEnabled() ? aura().target : null;
 
         LivingEntity previousTarget = currentTarget;
 
-        if (auraTarget != null) {
+        if (legitAuraTarget != null) {
+            currentTarget = legitAuraTarget;
+        } else if (auraTarget != null) {
             currentTarget = auraTarget;
         } else if (triggerTarget != null) {
             currentTarget = triggerTarget;
@@ -150,9 +160,10 @@ public abstract class TargetEspMode implements QuickImports {
     }
 
     public boolean reason() {
+        boolean legitAuraActive = LegitAuraModule.getInstance().isEnabled() && LegitAuraModule.getInstance().target != null;
         boolean auraActive = aura().target != null && (aura().isEnabled() || TriggerBotModule.getInstance().isEnabled());
         boolean aimAssistActive = AimAssistModule.getInstance().isEnabled() && AimAssistModule.getInstance().getTarget() != null;
-        return auraActive || aimAssistActive;
+        return legitAuraActive || auraActive || aimAssistActive;
     }
 
     public boolean canDraw() {
@@ -162,6 +173,7 @@ public abstract class TargetEspMode implements QuickImports {
 
     public static void updatePositions() {
         transitionAnimation.update();
+        updateStableClock();
 
         float animationValue = (float) showAnimation.getValue();
         float animationTarget = (float) showAnimation.getToValue();
@@ -198,6 +210,17 @@ public abstract class TargetEspMode implements QuickImports {
         targetX = smoothedTargetX;
         targetY = smoothedTargetY;
         targetZ = smoothedTargetZ;
+    }
+
+    private static void updateStableClock() {
+        long now = System.nanoTime();
+        if (lastClockNs < 0L) {
+            lastClockNs = now;
+            return;
+        }
+        float dt = MathHelper.clamp((now - lastClockNs) / 1_000_000_000.0f, 0f, 0.05f);
+        lastClockNs = now;
+        stableTimeSeconds += dt * Math.max(0.05f, TargetEspModule.getInstance().getSpeed());
     }
 
     public int setAlpha(int color, int alpha) {

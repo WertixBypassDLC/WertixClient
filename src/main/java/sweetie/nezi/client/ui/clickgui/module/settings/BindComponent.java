@@ -8,6 +8,7 @@ import sweetie.nezi.api.system.backend.KeyStorage;
 import sweetie.nezi.api.utils.animation.AnimationUtil;
 import sweetie.nezi.api.utils.animation.Easing;
 import sweetie.nezi.api.utils.color.UIColors;
+import java.awt.Color;
 import sweetie.nezi.api.utils.math.MouseUtil;
 import sweetie.nezi.api.utils.render.RenderUtil;
 import sweetie.nezi.api.utils.render.ScissorUtil;
@@ -43,8 +44,6 @@ public class BindComponent extends SettingComponent {
 
         Font mediumFont = Fonts.PS_MEDIUM;
 
-        mediumFont.drawText(matrixStack, setting.getName(), getX(), halfY - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
-
         float anim = (float) animation.getValue();
         float reverseAnim = (float) (1.0 - animation.getValue());
 
@@ -63,8 +62,12 @@ public class BindComponent extends SettingComponent {
         float bindY = valueY - offset();
         float bindWidth = totalWidth + offset() * 2f;
         float bindHeight = valueSize + offset() * 2f;
-        float bindRound = bindHeight * 0.1f;
-        RenderUtil.BLUR_RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, UIColors.cardSecondary(Math.min(fullAlpha, 120)));
+        float bindRound = bindHeight * 0.24f;
+        mediumFont.drawText(matrixStack, setting.getName(), getX() + scaled(2f), halfY - fontSize / 2f, fontSize, UIColors.textColor(fullAlpha));
+        Color badgeBg = bind ? UIColors.primary(Math.min(fullAlpha, 140)) : UIColors.panelSoft(Math.min(fullAlpha, 130));
+        Color badgeStroke = bind ? UIColors.primary(Math.min(fullAlpha, 180)) : UIColors.stroke(Math.min(fullAlpha, 100));
+        RenderUtil.BLUR_RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, badgeBg);
+        RenderUtil.RECT.draw(matrixStack, bindX, bindY, bindWidth, bindHeight, bindRound, badgeStroke);
 
         ScissorUtil.start(matrixStack, bindX, bindY, bindWidth, bindHeight);
 

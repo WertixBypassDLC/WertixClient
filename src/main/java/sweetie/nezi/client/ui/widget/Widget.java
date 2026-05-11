@@ -74,7 +74,7 @@ public abstract class Widget implements QuickImports, IRenderer {
 
     protected Color widgetSurface(int alpha) {
         int clamped = Math.max(0, Math.min(255, alpha));
-        return UIColors.card(Math.max(0, Math.min(255, (int) (clamped * 0.37f))));
+        return UIColors.card(Math.max(0, Math.min(255, (int) (clamped * 0.44f))));
     }
 
     protected Color widgetOverlaySurface(int alpha) {
@@ -117,10 +117,9 @@ public abstract class Widget implements QuickImports, IRenderer {
      */
     protected void drawHudCard(MatrixStack matrixStack, float x, float y, float width, float height, float round, int alpha) {
         alpha = animatedAlpha(alpha);
-        Color bg     = new Color(23, 23, 34, (int)(107 * (alpha / 255f)));
-        Color stroke = new Color(65, 65, 65, (int)(250 * (alpha / 255f))); // 98% opacity stroke
-        // Blur mix = 0.06 ≈ Figma "background blur strength 12"
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBlurColor(alpha), 0.06f);
+        Color bg     = new Color(15, 15, 23, (int)(96 * (alpha / 255f)));
+        Color stroke = new Color(58, 58, 68, (int)(150 * (alpha / 255f)));
+        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBlurColor((int) (alpha * 0.68f)), 0.045f);
         RenderUtil.RECT.draw(matrixStack, x - scaled(0.7f), y - scaled(0.7f),
                 width + scaled(1.4f), height + scaled(1.4f), round + scaled(0.7f), stroke);
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, bg);
@@ -133,9 +132,8 @@ public abstract class Widget implements QuickImports, IRenderer {
      */
     protected void drawHudSquare(MatrixStack matrixStack, float x, float y, float width, float height, float round, int alpha) {
         alpha = animatedAlpha(alpha);
-        Color bg     = new Color(23, 23, 34, (int)(107 * (alpha / 255f)));
-        Color stroke = new Color(65, 65, 65, (int)(250 * (alpha / 255f)));
-        // NO blur here — only card has blur. Square just draws fill+stroke on top.
+        Color bg     = new Color(15, 15, 23, (int)(96 * (alpha / 255f)));
+        Color stroke = new Color(58, 58, 68, (int)(150 * (alpha / 255f)));
         RenderUtil.RECT.draw(matrixStack, x - scaled(0.7f), y - scaled(0.7f),
                 width + scaled(1.4f), height + scaled(1.4f), round + scaled(0.7f), stroke);
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, bg);
@@ -177,8 +175,7 @@ public abstract class Widget implements QuickImports, IRenderer {
 
     protected void drawGlassCard(MatrixStack matrixStack, float x, float y, float width, float height, float round, int alpha, float mix) {
         alpha = animatedAlpha(alpha);
-        // Единый glass-стиль: 1 blur + surface/overlay + stroke
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBlurColor(alpha), Math.max(0.04f, mix * 0.6f));
+        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, widgetBlurColor((int) (alpha * 0.68f)), Math.max(0.035f, mix * 0.45f));
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetSurface(alpha));
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetOverlaySurface(alpha));
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, widgetStrokeColor(alpha));
@@ -400,7 +397,7 @@ public abstract class Widget implements QuickImports, IRenderer {
         // 2) Icon square ON TOP of rect – stacks, appears more opaque
         drawHudSquare(ms, x, y, squareSize, squareSize, round, alpha);
         // 3) Icon glyph
-        drawWatermarkIconBlock(ms, x, y + contentOffset * 0.35f, squareSize, squareSize, iconText, contentAlpha, iconSize);
+        drawWatermarkIconBlock(ms, x, y, squareSize, squareSize, iconText, contentAlpha, iconSize);
         // 4) Title text centred in the right portion
         Fonts.PS_BOLD.drawText(ms, title,
                 textX,
@@ -461,7 +458,7 @@ public abstract class Widget implements QuickImports, IRenderer {
             Fonts.PS_BOLD.drawGradientText(ms,
                     text,
                     x + width / 2f - Fonts.PS_BOLD.getWidth(text, iconSize) / 2f,
-                    y + height / 2f - iconSize / 2f + scaled(0.15f),
+                    y + height / 2f - iconSize / 2f + scaled(0.05f),
                     iconSize,
                     left,
                     right,
@@ -471,8 +468,8 @@ public abstract class Widget implements QuickImports, IRenderer {
 
         Fonts.getICONS().drawGradientText(ms,
                 text,
-                x + width / 2f - iconSize / 2f,
-                y + height / 2f - iconSize / 2f,
+                x + width / 2f - iconSize / 2f + scaled(0.25f),
+                y + height / 2f - iconSize / 2f + scaled(0.05f),
                 iconSize,
                 left,
                 right,
@@ -491,8 +488,7 @@ public abstract class Widget implements QuickImports, IRenderer {
 
     protected void drawStrokeCard(MatrixStack ms, float x, float y, float w, float h, float round, int alpha, float mix) {
         alpha = animatedAlpha(alpha);
-        // Единый glass-стиль
-        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, widgetBlurColor(alpha), Math.max(0.04f, mix * 0.6f));
+        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, round, widgetBlurColor((int) (alpha * 0.68f)), Math.max(0.035f, mix * 0.45f));
         RenderUtil.RECT.draw(ms, x, y, w, h, round, widgetSurface(alpha));
         RenderUtil.RECT.draw(ms, x, y, w, h, round, widgetOverlaySurface(alpha));
         RenderUtil.RECT.draw(ms, x, y, w, h, round, widgetStrokeColor(alpha));
@@ -507,11 +503,10 @@ public abstract class Widget implements QuickImports, IRenderer {
         float big = Math.max(1f, round);
         float small = Math.max(1f, round * 0.65f);
         Vector4f radii = new Vector4f(big, small, small, big);
-        Color base = UIColors.card(alpha);
-        Color overlay = UIColors.overlay(alpha);
+        Color base = UIColors.card((int) (alpha * 0.78f));
+        Color overlay = UIColors.overlay((int) (alpha * 0.78f));
 
-        // Единый glass-стиль: 1 blur вместо двух
-        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, radii, base, base, base, base, Math.max(0.04f, mix * 0.6f));
+        RenderUtil.BLUR_RECT.draw(ms, x, y, w, h, radii, base, base, base, base, Math.max(0.035f, mix * 0.45f));
         RenderUtil.RECT.draw(ms, x, y, w, h, radii, overlay);
         RenderUtil.STROKE(ms, x, y, w, h, radii, alpha);
     }

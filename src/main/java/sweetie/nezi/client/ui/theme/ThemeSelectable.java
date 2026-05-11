@@ -82,7 +82,7 @@ public class ThemeSelectable extends UIComponent {
             RenderUtil.RECT.draw(matrixStack,
                     getX() - scaled(0.5f), getY() - scaled(0.5f),
                     getWidth() + scaled(1f), getHeight() + scaled(1f),
-                    round + scaled(0.5f), UIColors.primary(Math.max(0, fullAlpha / 6)));
+                    round + scaled(0.5f), UIColors.secondary(Math.max(0, fullAlpha / 8)));
         }
 
         RenderUtil.GRADIENT_RECT.draw(matrixStack,
@@ -99,7 +99,7 @@ public class ThemeSelectable extends UIComponent {
         deleteY = custom ? getY() + getHeight() - pad - deleteSize - scaled(1f) : -1f;
 
         if (custom) {
-            Color deleteBase = ColorUtil.interpolate(UIColors.primary(Math.min(fullAlpha, 235)), Color.WHITE, 0.26f);
+            Color deleteBase = ColorUtil.interpolate(UIColors.panelSoft(Math.min(fullAlpha, 210)), UIColors.cardSecondary(Math.min(fullAlpha, 170)), 0.18f);
             RenderUtil.BLUR_RECT.draw(matrixStack, deleteX, deleteY, deleteSize, deleteSize, scaled(3.2f), deleteBase);
             RenderUtil.RECT.draw(matrixStack, deleteX, deleteY, deleteSize, deleteSize, scaled(3.2f), UIColors.stroke(fullAlpha));
             Fonts.getICONS().drawCenteredText(matrixStack, "\u00D7",

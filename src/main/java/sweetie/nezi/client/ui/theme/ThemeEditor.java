@@ -28,19 +28,44 @@ public class ThemeEditor extends UIComponent {
 
     private final List<ThemeSelectable> themeSelectables = new ArrayList<>();
     private final List<ThemeBound> themeBounds = new ArrayList<>();
-    private final Theme defaultTheme = new Theme("EvaWare");
+    private final Theme defaultTheme = new Theme("Wertix");
 
     private Theme currentTheme = defaultTheme;
     private Theme pendingTheme = null;
+    private boolean pendingTransitionStarted = false;
     private Theme renamingTheme;
     private String renameText = "";
 
     public boolean hasPendingTransition() { return pendingTheme != null; }
+    public Theme getPendingTheme() { return pendingTheme; }
+    public boolean shouldStartPendingTransition() { return pendingTheme != null && !pendingTransitionStarted; }
+    public void markPendingTransitionStarted() {
+        if (pendingTheme != null) {
+            pendingTransitionStarted = true;
+        }
+    }
+    public Theme beginPendingPreview() {
+        if (pendingTheme == null) {
+            return currentTheme;
+        }
+
+        Theme previousTheme = currentTheme;
+        currentTheme = pendingTheme;
+        return previousTheme;
+    }
+
+    public void restorePreviewTheme(Theme previousTheme) {
+        if (previousTheme != null) {
+            currentTheme = previousTheme;
+        }
+    }
+
     public void applyPendingTheme() {
         if (pendingTheme != null) {
             currentTheme = pendingTheme;
             ThemeManager.getInstance().saveLastSelected(currentTheme);
             pendingTheme = null;
+            pendingTransitionStarted = false;
         }
     }
 
@@ -62,7 +87,7 @@ public class ThemeEditor extends UIComponent {
     private ClickRegion settingsRegion = new ClickRegion(-1f, -1f, 0f, 0f);
     private ClickRegion gridRegion = new ClickRegion(-1f, -1f, 0f, 0f);
 
-    private final int defaultThemeCount = 4;
+    private final int defaultThemeCount = 13;
 
     private record ThemeBound(float x, float y, float width, float height, Theme.ElementColor elementColor) { }
     private record ClickRegion(float x, float y, float width, float height) { }
@@ -438,6 +463,7 @@ public class ThemeEditor extends UIComponent {
                 }
                 if (currentTheme != hoveredTheme) {
                     pendingTheme = hoveredTheme;
+                    pendingTransitionStarted = false;
                 }
                 return;
             }
@@ -591,13 +617,11 @@ public class ThemeEditor extends UIComponent {
 
     private void drawGlassSurface(MatrixStack matrixStack, float x, float y, float width, float height, float round,
                                   java.awt.Color surface, int alpha, boolean compact) {
-        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 1.02f) : (int) (alpha * 1.10f)));
-        int backgroundBlurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.94f) : (int) (alpha * 1.00f)));
-        int overlayAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.10f) : (int) (alpha * 0.13f)));
-        int strokeAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.22f) : (int) (alpha * 0.24f)));
+        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.62f) : (int) (alpha * 0.68f)));
+        int overlayAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.07f) : (int) (alpha * 0.09f)));
+        int strokeAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.15f) : (int) (alpha * 0.18f)));
 
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, UIColors.blur(blurAlpha), 0.08f);
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, UIColors.backgroundBlur(backgroundBlurAlpha), 0.06f);
+        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, UIColors.blur(blurAlpha), 0.045f);
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, surface);
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, UIColors.overlay(overlayAlpha));
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, UIColors.stroke(strokeAlpha));

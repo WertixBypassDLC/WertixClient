@@ -46,34 +46,33 @@ public class SliderComponent extends SettingComponent {
         float shownValue = getDisplayValue(bigPenis);
         String valueText = String.format("%.2f", shownValue).replaceAll("0+$", "").replaceAll("\\.$", "");
         float valueWidth = Fonts.PS_MEDIUM.getWidth(valueText, fontSize);
-        float piska = scaled(0.5f);
 
         int fullAlpha = (int) (getAlpha() * 255f);
 
-        float progress = (bigPenis - setting.getMin()) / (setting.getMax() - setting.getMin()) * sliderWidth();
-        currentWidth = MathHelper.clamp(MathUtil.interpolate(currentWidth, progress, 0.2f), 0f, sliderWidth());
+        float progress = (bigPenis - setting.getMin()) / (setting.getMax() - setting.getMin());
+        progress = MathHelper.clamp(progress, 0f, 1f);
+        float targetWidth = progress * getWidth();
+        currentWidth = MathUtil.interpolate(currentWidth, targetWidth, 0.2f);
 
-        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + piska, getY() + piska, fontSize, UIColors.mutedText(fullAlpha));
-        Fonts.PS_MEDIUM.drawText(matrixStack, valueText, getX() - piska + getWidth() - valueWidth, getY() + piska, fontSize, UIColors.textColor(fullAlpha));
+        Fonts.PS_MEDIUM.drawText(matrixStack, setting.getName(), getX() + scaled(2f), getY() + scaled(1.8f), fontSize, UIColors.textColor(fullAlpha));
 
-        float sliderRound = sliderHeight() / 2f;
-        float knobX = MathHelper.clamp(sliderX() + currentWidth - knobSize() / 2f, sliderX(), sliderX() + sliderWidth() - knobSize());
+        Color valueColor = ColorUtil.interpolate(UIColors.mutedText(fullAlpha), UIColors.textColor(fullAlpha), (float) dragAnimation.getValue());
+        Fonts.PS_MEDIUM.drawText(matrixStack, valueText, getX() + getWidth() - valueWidth - scaled(2f), getY() + scaled(1.8f), fontSize, valueColor);
 
-        Color knobColor = ColorUtil.setAlpha(ColorUtil.interpolate(UIColors.textColor(), UIColors.inactiveKnob(), 1f - (float) dragAnimation.getValue()), fullAlpha);
+        float lineY = getY() + scaled(9.8f);
+        float lineH = scaled(1.6f);
+        float lineRound = lineH / 2f;
+        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), lineY, getWidth(), lineH, lineRound, UIColors.panelSoft(Math.min(fullAlpha, 120)));
 
-        float hui = (knobSize() - sliderHeight()) / 2f;
-
-        Color color1 = UIColors.primary(fullAlpha);
-        Color color2 = UIColors.secondary(fullAlpha);
-
-        RenderUtil.BLUR_RECT.draw(matrixStack, sliderX(), sliderY(), sliderWidth(), sliderHeight(), sliderRound, UIColors.cardSecondary(Math.min(fullAlpha, 120)));
-        RenderUtil.GRADIENT_RECT.draw(matrixStack, sliderX(), sliderY(), currentWidth, sliderHeight(), sliderRound, color1, color2, color1, color2);
-        RenderUtil.BLUR_RECT.draw(matrixStack, knobX, sliderY() - hui, knobSize(), knobSize(), knobSize() / 2f, knobColor);
-
-        setHeight(sliderHeight() + (sliderY() - getY()) + knobSize() / 2f);
+        float me = getModuleEnabled();
+        Color color1 = ColorUtil.interpolate(new Color(120, 120, 130, fullAlpha), UIColors.primary(fullAlpha), me);
+        Color color2 = ColorUtil.interpolate(new Color(90, 90, 100, fullAlpha), UIColors.secondary(fullAlpha), me);
+        if (currentWidth > lineRound * 2f) {
+            RenderUtil.GRADIENT_RECT.draw(matrixStack, getX(), lineY, currentWidth, lineH, lineRound, color1, color2, color1, color2);
+        }
 
         if (dragging) {
-            float newValue = (mouseX - sliderX()) / sliderWidth();
+            float newValue = (mouseX - getX()) / getWidth();
             newValue = setting.getMin() + newValue * (setting.getMax() - setting.getMin());
             newValue = Math.round(newValue / setting.getStep()) * setting.getStep();
             previewValue = MathUtil.round(Math.max(setting.getMin(), Math.min(setting.getMax(), newValue)), setting.getStep());
@@ -87,9 +86,7 @@ public class SliderComponent extends SettingComponent {
 
     @Override
     public void mouseClicked(double mouseX, double mouseY, int button) {
-        float knobAreaY = sliderY() - knobSize() / 2f;
-        float knobAreaH = knobSize() + scaled(2f);
-        if (button == 0 && MouseUtil.isHovered(mouseX, mouseY, sliderX(), knobAreaY, sliderWidth(), knobAreaH)) {
+        if (button == 0 && MouseUtil.isHovered(mouseX, mouseY, getX(), getY(), getWidth(), getHeight())) {
             dragging = true;
         }
     }
@@ -103,12 +100,7 @@ public class SliderComponent extends SettingComponent {
     }
 
     private float fontSize() { return scaled(15f) * 0.45f; }
-    private float sliderWidth() { return getWidth(); }
-    private float sliderHeight() { return scaled(4f); }
-    private float knobSize() { return sliderHeight() * 1.85f; }
-    private float sliderY() { return getY() + fontSize() + knobSize() / 2f; }
-    private float sliderX() { return getX(); }
-    private float getDefaultHeight() { return fontSize() + gap() + knobSize(); }
+    private float getDefaultHeight() { return 13f; }
 
     private float getDisplayValue(float actualValue) {
         InterfaceModule interfaceModule = InterfaceModule.getInstance();

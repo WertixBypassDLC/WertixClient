@@ -50,68 +50,61 @@ public class ModeComponent extends ExpandableComponent.ExpandableSettingComponen
         String valueText = setting.getValue();
         String name = setting.getName();
         float valueWidth = Fonts.PS_MEDIUM.getWidth(valueText, fontSize);
-        float nameWidth = Fonts.PS_BOLD.getWidth(name, fontSize);
-
-        float nameX = (getWidth() / 2f - nameWidth / 2f) * anim + zavoz * (1f - anim);
         int fullAlpha = (int) (getAlpha() * 255f);
+        float arrowSize = scaled(5.0f);
+        String arrow = anim > 0.5f ? "⌃" : "⌄";
+        float arrowWidth = Fonts.PS_BOLD.getWidth(arrow, arrowSize);
+        float headerRound = getWidth() * 0.04f;
+        float badgeWidth = valueWidth + arrowWidth + scaled(8f);
 
-        RenderUtil.BLUR_RECT.draw(matrixStack, getX(), getY(), getWidth(), getHeight(), getWidth() * 0.04f, UIColors.card(Math.min(fullAlpha, 132)));
-        Fonts.PS_BOLD.drawWrap(matrixStack, name, getX() + nameX, getY() + scd / 2f - fontSize / 2f, getWidth() - zavoz * 2f - valueWidth * (1f - anim), fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
-
+        Fonts.PS_BOLD.drawWrap(matrixStack, name, getX() + scaled(2f), getY() + scd / 2f - fontSize / 2f, getWidth() - zavoz * 3f - badgeWidth, fontSize, UIColors.textColor(fullAlpha), scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
 
         ScissorUtil.start(matrixStack, getX(), getY(), getWidth(), getHeight());
-        Fonts.PS_MEDIUM.drawText(matrixStack, valueText, getX() + getWidth() - zavoz - valueWidth * (1f - anim), getY() + scd / 2f - fontSize / 2f, fontSize, UIColors.textColor((int) ((1f - anim) * getAlpha() * 255f)));
+        float badgeX = getX() + getWidth() - badgeWidth - scaled(3.4f);
+        float badgeY = getY() + scd / 2f - scaled(4.5f);
+        float badgeHeight = scaled(9.0f);
+        RenderUtil.BLUR_RECT.draw(matrixStack, badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight * 0.32f, UIColors.panelSoft(Math.min(fullAlpha, 194)));
+        RenderUtil.RECT.draw(matrixStack, badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight * 0.32f, UIColors.stroke(Math.min(fullAlpha, 112)));
+        Fonts.PS_MEDIUM.drawText(matrixStack, valueText, badgeX + scaled(3.3f), getY() + scd / 2f - fontSize / 2f, fontSize, UIColors.mutedText(fullAlpha));
+        Fonts.PS_BOLD.drawText(matrixStack, arrow, badgeX + badgeWidth - scaled(3.4f) - arrowWidth, getY() + scd / 2f - arrowSize / 2f - scaled(0.7f), arrowSize, UIColors.textColor((int) (fullAlpha * (0.75f + 0.25f * anim))));
 
         if (anim > 0.0) {
-            float bY = -scaled(2f) * (1f - anim);
             bounds.clear();
-            float defX = getX() + zavoz;
-            float currentX = defX;
-            float currentY = getY() + scd + bY;
-            float tileSize = fontSize * 0.9f;
-            float tileHeight = tileSize * 1.8f;
-            float tilePadding = gap();
-
-            fullAlpha = (int) (getAlpha() * anim * 255f);
-
-            RenderUtil.OTHER.scaleStart(matrixStack, getX() + getWidth() / 2f, getY() + getDefaultHeight() + getHeight() / 2f - bY, 0.95f + (0.05f * anim));
+            float chipHeight = scaled(10.8f);
+            float chipGapX = scaled(3.0f);
+            float chipGapY = scaled(2.4f);
+            float currentX = getX() + zavoz;
+            float currentY = getY() + scd + scaled(1.6f) - scaled(6f) * (1f - anim);
+            float maxX = getX() + getWidth() - zavoz;
+            int listAlpha = (int) (getAlpha() * anim * 255f);
 
             for (String mode : setting.getModes()) {
                 AnimationUtil modeAnim = modeAnimations.get(mode);
 
                 modeAnim.update();
-                modeAnim.run(setting.is(mode) ? 1.0 : 0.0, 500, Easing.EXPO_OUT);
+                modeAnim.run(setting.is(mode) ? 1.0 : 0.0, 220, Easing.EXPO_OUT);
 
-                float textWidth = Fonts.PS_MEDIUM.getWidth(mode, tileSize);
-                float tileWidth = textWidth + tileSize;
-
-                if (currentX + tileWidth + tilePadding > getX() + getWidth()) {
-                    currentX = defX;
-                    currentY += tileHeight + tilePadding;
+                float textWidth = Fonts.PS_MEDIUM.getWidth(mode, fontSize);
+                float chipWidth = Math.max(scaled(18f), textWidth + scaled(10f));
+                if (currentX + chipWidth > maxX) {
+                    currentX = getX() + zavoz;
+                    currentY += chipHeight + chipGapY;
                 }
 
-                bounds.add(new Bound(currentX, currentY, tileWidth, tileHeight, mode));
+                bounds.add(new Bound(currentX, currentY, chipWidth, chipHeight, mode));
 
                 float selected = (float) modeAnim.getValue();
-                Color inactiveColor = UIColors.card(Math.min(fullAlpha, 176));
-                Color activeColor = ColorUtil.interpolate(new Color(255, 255, 255, Math.min(fullAlpha, 146)), UIColors.cardSecondary(Math.min(fullAlpha, 220)), 0.22f);
-                Color rectColor = ColorUtil.setAlpha(ColorUtil.interpolate(activeColor, inactiveColor, selected), fullAlpha);
-                Color textColor = ColorUtil.interpolate(UIColors.textColor(fullAlpha), UIColors.mutedText(fullAlpha), selected);
-
-                RenderUtil.BLUR_RECT.draw(matrixStack, currentX, currentY, tileWidth, tileHeight, tileHeight * 0.2f, rectColor);
-                RenderUtil.RECT.draw(matrixStack, currentX, currentY, tileWidth, tileHeight, tileHeight * 0.2f,
-                        selected > 0.02f ? UIColors.stroke((int) (fullAlpha * (0.6f + selected * 0.4f))) : UIColors.stroke((int) (fullAlpha * 0.45f)));
-                Fonts.PS_MEDIUM.drawCenteredText(matrixStack, mode, currentX + tileWidth / 2f, currentY + tileHeight / 2f - tileSize / 2f, tileSize, textColor);
-
-                currentX += tileWidth + tilePadding;
+                Color rowColor = ColorUtil.interpolate(UIColors.panelSoft(Math.min(listAlpha, 190)), ColorUtil.interpolate(UIColors.primary(Math.min(listAlpha, 214)), UIColors.card(Math.min(listAlpha, 228)), 0.18f), selected);
+                Color rowStroke = ColorUtil.interpolate(UIColors.stroke(Math.min(listAlpha, 118)), UIColors.primary(Math.min(listAlpha, 196)), 0.20f + selected * 0.48f);
+                Color textColor = ColorUtil.interpolate(UIColors.mutedText(listAlpha), UIColors.textColor(listAlpha), selected);
+                RenderUtil.BLUR_RECT.draw(matrixStack, currentX, currentY, chipWidth, chipHeight, chipHeight * 0.42f, rowColor);
+                RenderUtil.RECT.draw(matrixStack, currentX, currentY, chipWidth, chipHeight, chipHeight * 0.42f, rowStroke);
+                Fonts.PS_MEDIUM.drawCenteredText(matrixStack, mode, currentX + chipWidth / 2f, currentY + chipHeight / 2f - fontSize / 2f, fontSize, textColor);
+                currentX += chipWidth + chipGapX;
             }
 
-            RenderUtil.OTHER.scaleStop(matrixStack);
-
-            float total = (currentY - getY() + tileHeight) * anim;
-            float impotentMan = Math.max(total, scd + tileHeight * anim);
-            float jopa = gap() * (anim * 2f);
-            setHeight(impotentMan + jopa);
+            float listHeight = currentY + chipHeight - (getY() + scd);
+            setHeight(scd + listHeight * anim + scaled(1.6f));
         } else {
             updateHeight(getDefaultHeight());
         }

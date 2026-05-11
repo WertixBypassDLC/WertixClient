@@ -14,6 +14,7 @@ import net.minecraft.util.Arm;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
 import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
@@ -22,16 +23,25 @@ import sweetie.nezi.api.module.setting.SliderSetting;
 import sweetie.nezi.api.module.setting.ModeSetting;
 import sweetie.nezi.client.features.modules.combat.AuraModule;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 @ModuleRegister(name = "Swing Animation", category = Category.RENDER)
 public class SwingAnimationModule extends Module {
     @Getter private static final SwingAnimationModule instance = new SwingAnimationModule();
 
-    public final ModeSetting mode = new ModeSetting("Режим").value("Режим 1").values("Режим 1", "Режим 2", "Режим 3", "Режим 4", "Режим 5");
+    public final ModeSetting mode = new ModeSetting("Режим").value("Режим 1").values("Режим 1", "Режим 2", "Режим 3", "Режим 4", "Режим 5", "Режим 6");
     private final BooleanSetting auraOnly = new BooleanSetting("Только с аурой").value(false);
-    public final SliderSetting strength = new SliderSetting("Сила").value(20f).range(20f,75f).step(0.1f).setVisible(() -> !mode.is("Режим 1") && !mode.is("Режим 5"));
+    public final SliderSetting strength = new SliderSetting("Сила").value(20f).range(20f,75f).step(0.1f).setVisible(() -> !mode.is("Режим 1") && !mode.is("Режим 5") && !mode.is("Режим 6"));
 
     public final BooleanSetting slow = new BooleanSetting("Замедление").value(false);
     public final SliderSetting speed = new SliderSetting("Скорость").value(12f).range(1f,50f).step(1f).setVisible(slow::getValue);
+    private LivingEntity hitTarget;
+    private long hitStartedAt;
+    private long lastHitAt;
+    private float hitOrbitSeed;
+    private float hitImpactHeight;
+    private float hitImpactSide;
+    private float hitOrbitDirection = 1f;
 
     public SwingAnimationModule() {
         addSettings(mode, auraOnly, strength, slow, speed);
@@ -75,7 +85,75 @@ public class SwingAnimationModule extends Module {
                 applyEquipOffset(matrices, arm, 0);
                 matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(rotation));
             }
+            case "Режим 6" -> {
+                if (!applyTargetHitAnim(matrices, arm)) {
+                    applyEquipOffset(matrices, arm, 0);
+                    applySwingOffset(matrices, arm, swingProgress);
+                }
+            }
         }
+    }
+
+    public void notifyHit(LivingEntity target) {
+        if (target == null) return;
+        hitTarget = target;
+        long now = System.currentTimeMillis();
+        if (now - lastHitAt > 220L) {
+            hitStartedAt = now;
+            hitOrbitSeed = ThreadLocalRandom.current().nextFloat() * 360f;
+            hitImpactHeight = ThreadLocalRandom.current().nextFloat(0.18f, 0.82f);
+            hitImpactSide = ThreadLocalRandom.current().nextFloat(-0.72f, 0.72f);
+            hitOrbitDirection = ThreadLocalRandom.current().nextBoolean() ? 1f : -1f;
+        }
+        lastHitAt = now;
+    }
+
+    private boolean applyTargetHitAnim(MatrixStack matrices, Arm arm) {
+        if (!isEnabled() || !mode.is("Режим 6") || hitTarget == null || mc.player == null || !hitTarget.isAlive()) {
+            return false;
+        }
+
+        long now = System.currentTimeMillis();
+        long age = now - hitStartedAt;
+        boolean sticky = now - lastHitAt < 120L;
+        if (!sticky && age > 620L) {
+            hitTarget = null;
+            return false;
+        }
+
+        float progress = sticky ? 0.64f : MathHelper.clamp(age / 620f, 0f, 1f);
+        float fly = progress < 0.60f
+                ? smooth(progress / 0.60f)
+                : 1f - smooth((progress - 0.60f) / 0.40f);
+        if (sticky) {
+            fly = Math.max(fly, 0.82f);
+        }
+
+        int handSide = arm == Arm.RIGHT ? 1 : -1;
+        Vec3d toTarget = hitTarget.getEyePos().subtract(mc.player.getEyePos());
+        float yawToTarget = (float) Math.toDegrees(Math.atan2(toTarget.z, toTarget.x)) - 90.0f;
+        float yawDiff = MathHelper.wrapDegrees(yawToTarget - mc.player.getYaw());
+        float side = MathHelper.clamp(yawDiff / 70f, -1.2f, 1.2f);
+        float distance = (float) MathHelper.clamp(toTarget.length(), 1.0, 5.0);
+        float orbit = (float) Math.sin(progress * Math.PI) * hitOrbitDirection;
+        float orbitAngle = hitOrbitSeed + progress * 300f * hitOrbitDirection;
+        float orbitX = (float) Math.cos(Math.toRadians(orbitAngle)) * 0.28f * orbit;
+        float orbitY = (float) Math.sin(Math.toRadians(orbitAngle * 1.35f)) * 0.18f * orbit;
+        float impactY = (hitImpactHeight - 0.5f) * 0.42f;
+        float impactSide = hitImpactSide * fly;
+
+        applyEquipOffset(matrices, arm, 0);
+        matrices.translate(handSide * 0.08f + side * 0.38f * fly + impactSide + orbitX, -0.08f - 0.24f * fly + impactY + orbitY, -0.28f - (0.50f + distance * 0.30f) * fly);
+        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(handSide * (18f + 82f * fly) + side * 22f * fly + orbit * 48f));
+        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-20f - 74f * fly));
+        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(handSide * (-10f - 62f * fly) + orbit * 38f));
+        matrices.scale(1.0f + fly * 0.10f, 1.0f + fly * 0.10f, 1.0f + fly * 0.20f);
+        return true;
+    }
+
+    private float smooth(float value) {
+        value = MathHelper.clamp(value, 0f, 1f);
+        return value * value * (3f - 2f * value);
     }
 
     public void handleRenderItem(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float swingProgress, ItemStack item, float equipProgress, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {

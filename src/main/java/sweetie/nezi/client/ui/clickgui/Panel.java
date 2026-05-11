@@ -239,8 +239,8 @@ public class Panel extends UIComponent {
         float measuredY = 0f;
         float moduleWidth = getWidth() - bodyPad * 2f;
         float clipBottom = contentTop + contentAreaHeight;
-        ModuleComponent firstVisible = null;
-        ModuleComponent lastVisible = null;
+        ModuleComponent firstMatching = null;
+        ModuleComponent lastMatching = null;
 
         for (ModuleComponent module : moduleComponents) {
             module.setTopRounded(false);
@@ -249,6 +249,11 @@ public class Panel extends UIComponent {
                 module.setHeight(0f);
                 continue;
             }
+
+            if (firstMatching == null) {
+                firstMatching = module;
+            }
+            lastMatching = module;
 
             float openAnim = module.getAnim();
             float moduleHeight = module.getDefaultHeight();
@@ -269,23 +274,13 @@ public class Panel extends UIComponent {
             module.setX(getX() + bodyPad);
             module.setY(contentTop + moduleY);
 
-            boolean visible = module.getHeight() > 0f
-                    && module.getY() + module.getHeight() > contentTop + scaled(0.5f)
-                    && module.getY() < clipBottom - scaled(0.5f);
-            if (visible) {
-                if (firstVisible == null) {
-                    firstVisible = module;
-                }
-                lastVisible = module;
-            }
-
             moduleY += moduleHeight + moduleGap;
             measuredY += moduleHeight + moduleGap;
         }
 
-        if (firstVisible != null) {
-            firstVisible.setTopRounded(true);
-            lastVisible.setBottomRounded(true);
+        if (firstMatching != null) {
+            firstMatching.setTopRounded(true);
+            lastMatching.setBottomRounded(true);
         }
 
         contentHeight = Math.max(0f, measuredY - moduleGap);
@@ -357,13 +352,12 @@ public class Panel extends UIComponent {
 
     private void drawGlassBlock(MatrixStack matrixStack, float x, float y, float width, float height, float round,
                                 java.awt.Color surface, int alpha, boolean compact) {
-        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 1.00f) : (int) (alpha * 1.04f)));
+        int blurAlpha = Math.max(0, Math.min(255, compact ? (int) (alpha * 0.62f) : (int) (alpha * 0.68f)));
 
-        // Единый стиль с HUD: bg(23,23,34,107) + stroke(65,65,65,250)
-        java.awt.Color hudBg = new java.awt.Color(23, 23, 34, (int) (107 * (alpha / 255f)));
-        java.awt.Color hudStroke = new java.awt.Color(65, 65, 65, (int) (250 * (alpha / 255f)));
+        java.awt.Color hudBg = new java.awt.Color(23, 23, 34, (int) (78 * (alpha / 255f)));
+        java.awt.Color hudStroke = new java.awt.Color(65, 65, 65, (int) (138 * (alpha / 255f)));
 
-        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, UIColors.blur(blurAlpha), 0.06f);
+        RenderUtil.BLUR_RECT.draw(matrixStack, x, y, width, height, round, UIColors.blur(blurAlpha), 0.045f);
         RenderUtil.RECT.draw(matrixStack, x - scaled(0.7f), y - scaled(0.7f),
                 width + scaled(1.4f), height + scaled(1.4f), round + scaled(0.7f), hudStroke);
         RenderUtil.RECT.draw(matrixStack, x, y, width, height, round, hudBg);

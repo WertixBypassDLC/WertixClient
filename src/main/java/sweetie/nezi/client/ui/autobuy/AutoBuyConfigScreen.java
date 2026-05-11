@@ -185,12 +185,12 @@ public class AutoBuyConfigScreen extends Screen {
         float round = scaled(5f);
 
         Color bg = selected
-                ? ColorUtil.interpolate(UIColors.cardSecondary(Math.min(208, alpha)), UIColors.primary(Math.min(92, alpha)), 0.18f)
+                ? ColorUtil.interpolate(UIColors.cardSecondary(Math.min(208, alpha)), UIColors.panelSoft(Math.min(154, alpha)), 0.18f)
                 : hovered
                 ? UIColors.panelSoft(Math.min(180, alpha))
                 : UIColors.panel(Math.min(150, alpha));
         Color stroke = rule.isEnabled()
-                ? UIColors.primary(Math.min(148, alpha))
+                ? UIColors.secondary(Math.min(108, alpha))
                 : selected
                 ? UIColors.secondary(Math.min(96, alpha))
                 : UIColors.stroke(Math.min(94, alpha));
@@ -200,12 +200,12 @@ public class AutoBuyConfigScreen extends Screen {
 
         float iconScale = scaled(0.80f);
         ms.push();
-        ms.translate(x + scaled(7f), y + scaled(7f), 0f);
+        ms.translate(x + scaled(8.8f), y + scaled(7f), 0f);
         ms.scale(iconScale, iconScale, 1f);
         context.drawItem(item.copyDisplayStack(), 0, 0);
         ms.pop();
 
-        float titleX = x + scaled(6f);
+        float titleX = x + scaled(8.6f);
         Fonts.PS_BOLD.drawText(ms, item.getTitle(), titleX, y + scaled(22f), scaled(4.65f), UIColors.textColor(alpha));
         Fonts.PS_MEDIUM.drawText(ms, item.getSubtitle(), titleX, y + scaled(29f), scaled(4.05f), UIColors.mutedText(Math.min(220, alpha)));
 
@@ -215,11 +215,11 @@ public class AutoBuyConfigScreen extends Screen {
         float pillX = x + w - pillW - scaled(5f);
         float pillY = y + scaled(5f);
         Color toggleBg = rule.isEnabled()
-                ? ColorUtil.interpolate(UIColors.cardSecondary(Math.min(196, alpha)), UIColors.primary(Math.min(108, alpha)), 0.26f)
+                ? ColorUtil.interpolate(UIColors.cardSecondary(Math.min(196, alpha)), UIColors.panelSoft(Math.min(128, alpha)), 0.22f)
                 : UIColors.panel(Math.min(154, alpha));
         drawGlassSurface(ms, pillX, pillY, pillW, pillH, scaled(3f), toggleBg, alpha, true);
         Fonts.PS_BOLD.drawCenteredText(ms, status, pillX + pillW / 2f, pillY + scaled(2.2f), scaled(3.9f),
-                rule.isEnabled() ? UIColors.primary(alpha) : UIColors.inactiveTextColor(alpha));
+                rule.isEnabled() ? UIColors.textColor(alpha) : UIColors.inactiveTextColor(alpha));
 
         String buyPrefix = "К";
         String sellPrefix = "П";
@@ -230,7 +230,7 @@ public class AutoBuyConfigScreen extends Screen {
         float leftStatX = titleX;
         float rightStatX = x + w - scaled(24f);
         drawGlassSurface(ms, leftStatX, statY, statW, scaled(7f), scaled(2f),
-                ColorUtil.interpolate(UIColors.panel(Math.min(116, alpha)), UIColors.primary(Math.min(72, alpha)), 0.14f), alpha, true);
+                ColorUtil.interpolate(UIColors.panel(Math.min(116, alpha)), UIColors.panelSoft(Math.min(74, alpha)), 0.12f), alpha, true);
         drawGlassSurface(ms, rightStatX, statY, statW, scaled(7f), scaled(2f),
                 ColorUtil.interpolate(UIColors.panel(Math.min(116, alpha)), UIColors.secondary(Math.min(68, alpha)), 0.12f), alpha, true);
         Fonts.PS_MEDIUM.drawCenteredText(ms, buy, leftStatX + statW / 2f, statY + scaled(1.0f), scaled(3.45f), UIColors.textColor(Math.min(225, alpha)));
@@ -248,10 +248,10 @@ public class AutoBuyConfigScreen extends Screen {
 
         drawGlassSurface(ms, x, y, w, h, round, UIColors.card(Math.min(118, alpha)), alpha, false);
         Fonts.PS_BOLD.drawText(ms, selectedItem.getTitle() + " " + selectedItem.getSubtitle(),
-                x + scaled(8f), y + scaled(8f), scaled(5.7f), UIColors.textColor(alpha));
+                x + scaled(10.5f), y + scaled(8f), scaled(5.7f), UIColors.textColor(alpha));
 
-        float rowX = x + scaled(10f);
-        float rowW = w - scaled(20f);
+        float rowX = x + scaled(10.5f);
+        float rowW = w - scaled(21f);
         buyField.render(ms, rowX, y + scaled(24f), rowW, scaled(24f), mouseX, mouseY, alpha);
         sellField.render(ms, rowX, y + scaled(53f), rowW, scaled(24f), mouseX, mouseY, alpha);
         countField.render(ms, rowX, y + scaled(82f), rowW, scaled(24f), mouseX, mouseY, alpha);
@@ -263,7 +263,7 @@ public class AutoBuyConfigScreen extends Screen {
         boolean hoveredSearch = MouseUtil.isHovered(mouseX, mouseY, searchButtonX, searchButtonY, searchButtonWidth, searchButtonHeight);
         drawGlassSurface(ms, searchButtonX, searchButtonY, searchButtonWidth, searchButtonHeight, scaled(5f),
                 hoveredSearch
-                        ? ColorUtil.interpolate(UIColors.cardSecondary(Math.min(196, alpha)), UIColors.primary(Math.min(86, alpha)), 0.18f)
+                        ? ColorUtil.interpolate(UIColors.cardSecondary(Math.min(196, alpha)), UIColors.panelSoft(Math.min(132, alpha)), 0.18f)
                         : UIColors.panel(Math.min(168, alpha)),
                 alpha, true);
         Fonts.PS_MEDIUM.drawCenteredText(ms, "Открыть поиск на /ah",
@@ -272,7 +272,7 @@ public class AutoBuyConfigScreen extends Screen {
 
         String enabledText = "Включено: " + (rule.isEnabled() ? "Да" : "Нет");
         Fonts.PS_MEDIUM.drawText(ms, enabledText, x + scaled(9f), y + h - scaled(10f), scaled(5.2f),
-                rule.isEnabled() ? UIColors.primary(alpha) : UIColors.inactiveTextColor(alpha));
+                rule.isEnabled() ? UIColors.textColor(alpha) : UIColors.inactiveTextColor(alpha));
     }
 
     private void drawFooter(MatrixStack ms, float anim) {
@@ -493,7 +493,7 @@ public class AutoBuyConfigScreen extends Screen {
                     ? UIColors.cardSecondary(Math.min(204, alpha))
                     : UIColors.panel(Math.min(hovered ? 192 : 166, alpha));
             Color stroke = focused
-                    ? UIColors.primary(Math.min(128, alpha))
+                    ? UIColors.secondary(Math.min(110, alpha))
                     : UIColors.stroke(Math.min(76, alpha));
 
             RenderUtil.BLUR_RECT.draw(ms, x, y, width, height, round, UIColors.blur(Math.min(255, (int) (alpha * 1.04f))), 0.08f);
@@ -502,12 +502,12 @@ public class AutoBuyConfigScreen extends Screen {
             RenderUtil.RECT.draw(ms, x, y, width, height, round, UIColors.overlay(Math.min(255, (int) (alpha * 0.10f))));
             RenderUtil.RECT.draw(ms, x, y, width, height, round, stroke);
 
-            Fonts.PS_MEDIUM.drawText(ms, displayLabel(), x + height / 2f, y + scaled(3.6f), scaled(4.6f), UIColors.mutedText(alpha));
+            Fonts.PS_MEDIUM.drawText(ms, displayLabel(), x + scaled(6.0f), y + scaled(3.6f), scaled(4.6f), UIColors.mutedText(alpha));
             String visible = text.isEmpty() ? "0" : text;
             if (focused && System.currentTimeMillis() % 900L > 420L) {
                 visible += "_";
             }
-            Fonts.PS_BOLD.drawText(ms, visible, x + height / 2f, y + height - scaled(9.1f), scaled(5.8f), UIColors.textColor(alpha));
+            Fonts.PS_BOLD.drawText(ms, visible, x + scaled(6.0f), y + height - scaled(9.1f), scaled(5.8f), UIColors.textColor(alpha));
         }
 
         private void mouseClicked(double mouseX, double mouseY, int button) {

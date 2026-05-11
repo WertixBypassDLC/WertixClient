@@ -37,41 +37,38 @@ public class BooleanComponent extends SettingComponent {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        updateHeight(15f);
-
-        this.color = inMenu ? UIColors.panelSoft() : UIColors.cardSecondary();
+        updateHeight(13f);
 
         toggleAnimation.update();
-        toggleAnimation.run(setting.getValue() ? 1.0 : 0.0, 100, Easing.SINE_OUT);
+        toggleAnimation.run(setting.getValue() ? 1.0 : 0.0, 170, Easing.EXPO_OUT);
 
         MatrixStack matrixStack = context.getMatrices();
-        float fontSize = getHeight() * 0.40f;
+        float fontSize = getHeight() * 0.44f;
         int fullAlpha = (int) (getAlpha() * 255f);
 
         float anim = (float) toggleAnimation.getValue();
 
-        float checkHeight = getHeight() * 0.7f;
-        float checkWidth = checkHeight * 1.95f;
-        float checkX = getX() + getWidth() - checkWidth;
-        float checkY = getY() + getHeight() / 2f - checkHeight / 2f;
-        float checkRound = checkHeight / 2f;
+        float checkSize = scaled(7f);
+        float checkX = getX() + scaled(2.5f);
+        float checkY = getY() + getHeight() / 2f - checkSize / 2f;
+        float checkRound = scaled(1.5f);
 
-        float knobSize = checkHeight - scaled(3f);
-        float knobInset = (checkHeight - knobSize) / 2f;
-        float knobY = checkY + knobInset;
-        float knobX = checkX + knobInset + ((checkWidth - knobSize - knobInset * 2f) * anim);
-        float knobRound = knobSize / 2f;
+        float me = getModuleEnabled();
+        Color activeColor = ColorUtil.interpolate(new Color(130, 130, 140, Math.min(fullAlpha, 210)), UIColors.primary(Math.min(fullAlpha, 210)), me);
+        Color checkBg = ColorUtil.interpolate(UIColors.panelSoft(Math.min(fullAlpha, 130)), activeColor, anim);
+        Color activeStroke = ColorUtil.interpolate(new Color(110, 110, 120, Math.min(fullAlpha, 200)), UIColors.primary(Math.min(fullAlpha, 200)), me);
+        Color checkStroke = ColorUtil.interpolate(UIColors.stroke(Math.min(fullAlpha, 140)), activeStroke, anim);
 
-        Color labelColor = ColorUtil.interpolate(UIColors.textColor(fullAlpha), UIColors.mutedText(fullAlpha), anim);
-        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), getX(), getY() + getHeight() / 2f - fontSize / 2f, getWidth() - checkWidth - scaled(6f), fontSize, labelColor, scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
+        RenderUtil.BLUR_RECT.draw(matrixStack, checkX, checkY, checkSize, checkSize, checkRound, checkBg);
+        RenderUtil.RECT.draw(matrixStack, checkX, checkY, checkSize, checkSize, checkRound, checkStroke);
 
-        Color inactiveTrack = ColorUtil.setAlpha(color, fullAlpha);
-        Color activeTrack = ColorUtil.interpolate(new Color(255, 255, 255, fullAlpha), UIColors.cardSecondary(fullAlpha), 0.24f);
-        Color trackColor = ColorUtil.interpolate(activeTrack, inactiveTrack, anim);
-        Color knobColor = ColorUtil.interpolate(UIColors.textColor(fullAlpha), UIColors.inactiveKnob(fullAlpha), anim);
+        if (anim > 0.1f) {
+            float checkmarkSize = checkSize * 0.72f;
+            Fonts.PS_BOLD.drawCenteredText(matrixStack, "\u2713", checkX + checkSize / 2f, checkY + checkSize / 2f - checkmarkSize / 2f, checkmarkSize, UIColors.textColor((int) (fullAlpha * anim)));
+        }
 
-        RenderUtil.BLUR_RECT.draw(matrixStack, checkX, checkY, checkWidth, checkHeight, checkRound, trackColor);
-        RenderUtil.BLUR_RECT.draw(matrixStack, knobX, knobY, knobSize, knobSize, knobRound, knobColor);
+        Color labelColor = ColorUtil.interpolate(UIColors.mutedText(fullAlpha), UIColors.textColor(fullAlpha), anim);
+        Fonts.PS_MEDIUM.drawWrap(matrixStack, setting.getName(), checkX + checkSize + scaled(3.5f), getY() + getHeight() / 2f - fontSize / 2f, getWidth() - checkSize - scaled(12f), fontSize, labelColor, scaled(16f), Duration.ofMillis(3000), Duration.ofMillis(500));
     }
 
     @Override

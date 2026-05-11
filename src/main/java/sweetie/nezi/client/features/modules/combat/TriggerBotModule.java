@@ -5,7 +5,6 @@ import net.minecraft.block.*;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -19,12 +18,14 @@ import sweetie.nezi.api.module.Category;
 import sweetie.nezi.api.module.Module;
 import sweetie.nezi.api.module.ModuleRegister;
 import sweetie.nezi.api.module.setting.BooleanSetting;
-import sweetie.nezi.api.module.setting.SliderSetting;
 import sweetie.nezi.api.module.setting.MultiBooleanSetting;
+import sweetie.nezi.api.module.setting.SliderSetting;
+import sweetie.nezi.api.utils.combat.CombatExecutor;
 import sweetie.nezi.api.system.configs.FriendManager;
 import sweetie.nezi.api.utils.combat.AutoMaceUtil;
-import sweetie.nezi.api.utils.player.PlayerUtil;
 import sweetie.nezi.api.utils.math.TimerUtil;
+import sweetie.nezi.api.utils.player.PlayerUtil;
+import sweetie.nezi.api.utils.rotation.manager.Rotation;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -37,6 +38,7 @@ public class TriggerBotModule extends Module {
     private final BooleanSetting onlyCrits     = new BooleanSetting("Только криты").value(true);
     private final BooleanSetting smartCrits    = new BooleanSetting("Умные криты").value(true).setVisible(onlyCrits::getValue);
     private final BooleanSetting noAttackIfEat = new BooleanSetting("Не бить при еде").value(false);
+    private final BooleanSetting ignoreWalls   = new BooleanSetting("Игнор стен").value(true);
 
     private final BooleanSetting targetPlayers = new BooleanSetting("Игроки").value(true);
     private final BooleanSetting targetNaked   = new BooleanSetting("Голые").value(true).setVisible(targetPlayers::getValue);
@@ -50,17 +52,19 @@ public class TriggerBotModule extends Module {
 
     private final TimerUtil attackTimer = new TimerUtil();
     private long nextDelay = 0L;
+    private final CombatExecutor combatExecutor = new CombatExecutor();
 
     private volatile boolean pendingWtapAttack = false;
 
     public TriggerBotModule() {
-        addSettings(distance, autoMace, onlyCrits, smartCrits, noAttackIfEat, targets);
+        addSettings(distance, autoMace, onlyCrits, smartCrits, noAttackIfEat, ignoreWalls, targets);
     }
 
     @Override
     public void onDisable() {
         AuraModule.getInstance().target = null;
         pendingWtapAttack = false;
+        combatExecutor.combatManager().resetState();
     }
 
     @Override
@@ -72,6 +76,7 @@ public class TriggerBotModule extends Module {
 
             if (target instanceof LivingEntity livingTarget) {
                 AuraModule.getInstance().target = livingTarget;
+                configureCombat(livingTarget);
 
                 if (pendingWtapAttack) return;
 
@@ -143,14 +148,16 @@ public class TriggerBotModule extends Module {
         // Полный кулдаун, без рандомной поддавки → не «съедает» серию критов
         if (mc.player.getAttackCooldownProgress(0.5f) < getRequiredAttackCooldown()) return false;
 
-        if (!onlyCrits.getValue()) return true;
+        if (!onlyCrits.getValue()) return combatExecutor.combatManager().canAttack();
 
         // Чёткий крит: только при падении
-        if (falling && !inLiquid && !inWeb && !climbing) return true;
+        if (falling && !inLiquid && !inWeb && !climbing) return combatExecutor.combatManager().canAttack();
 
         // Умные криты: разрешаем при невозможности крита (вода/паутина),
         // на земле НЕ бьём, чтобы не выдавать обычные удары между критами
-        if (smartCrits.getValue() && (inLiquid || inWeb || climbing)) return true;
+        if (smartCrits.getValue() && (inLiquid || inWeb || climbing)) return combatExecutor.combatManager().canAttack();
+
+        if (onlyCrits.getValue() && combatExecutor.combatManager().canAttackPreview(4)) return false;
 
         return false;
     }
@@ -177,17 +184,36 @@ public class TriggerBotModule extends Module {
     }
 
     private void doAttack(LivingEntity target) {
-        mc.interactionManager.attackEntity(mc.player, target);
-        // Use swingHand only once (no double-swing)
-        mc.player.swingHand(Hand.MAIN_HAND);
+        combatExecutor.performAttack();
 
-        // Лёгкая дрожь между ударами, не быстрее реального кулдауна
-        nextDelay = 80L + ThreadLocalRandom.current().nextLong(0, 40);
+        nextDelay = 20L + ThreadLocalRandom.current().nextLong(0, 30);
         attackTimer.reset();
     }
 
     private float getRequiredAttackCooldown() {
         return AutoMaceUtil.getRequiredAttackCooldown(autoMace.getValue(), 0.98F);
+    }
+
+    private void configureCombat(LivingEntity target) {
+        java.util.List<String> options = new java.util.ArrayList<>();
+        if (onlyCrits.getValue()) options.add("Only crits");
+        if (smartCrits.getValue()) options.add("Smart crits");
+        options.add("Dynamic cooldown");
+        options.add("Shield break");
+        options.add("UnPress shield");
+        if (ignoreWalls.getValue()) options.add("Ignore walls");
+        if (noAttackIfEat.getValue()) options.add("No attack if eat");
+
+        combatExecutor.combatManager().configurable(
+                new CombatExecutor.CombatConfigurable(
+                        target,
+                        new Rotation(mc.player.getYaw(), mc.player.getPitch()),
+                        distance.getValue(),
+                        null,
+                        options,
+                        1.0F
+                )
+        );
     }
 
     private boolean hasBlockingCollision(Vec3d start, Vec3d end, double targetDistanceSq) {
@@ -197,7 +223,7 @@ public class TriggerBotModule extends Module {
         Vec3d currentStart   = start;
         Vec3d stepDirection  = direction.normalize().multiply(0.05D);
 
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < 24; i++) {
             BlockHitResult blockHit = mc.world.raycast(new RaycastContext(
                     currentStart, end, RaycastContext.ShapeType.COLLIDER,
                     RaycastContext.FluidHandling.NONE, mc.player
@@ -218,11 +244,19 @@ public class TriggerBotModule extends Module {
     }
 
     private boolean canBypassTriggerBlock(BlockState state) {
+        if (ignoreWalls.getValue() && state.isAir()) {
+            return true;
+        }
+
         Block block = state.getBlock();
+        String translationKey = block.getTranslationKey();
         return block instanceof StairsBlock || block instanceof FenceBlock
                 || block instanceof FenceGateBlock || block instanceof WallBlock
                 || block instanceof TrapdoorBlock  || block instanceof DoorBlock
                 || block instanceof LeavesBlock    || block instanceof PistonBlock
-                || block instanceof PistonHeadBlock;
+                || block instanceof PistonHeadBlock || block instanceof SlabBlock
+                || block instanceof PaneBlock || translationKey.contains("glass")
+                || block instanceof TransparentBlock || block instanceof ChestBlock
+                || block instanceof EnderChestBlock || block instanceof CobwebBlock;
     }
 }

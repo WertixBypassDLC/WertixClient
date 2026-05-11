@@ -39,14 +39,12 @@ public class TargetEspGarland extends TargetEspMode {
         Camera camera = mc.gameRenderer.getCamera();
         Vec3d cameraPos = camera.getPos();
 
-        float sp = smoothSpeed.get();
         float anim = alpha * sizeVal;
         float appearance = alpha * alpha * (3.0f - 2.0f * alpha);
 
         float height = currentTarget.getHeight();
         float radius = currentTarget.getWidth() * 1.2f;
-        float period = 4000f / Math.max(0.05f, sp);
-        float time = (System.currentTimeMillis() % (long) period) / period;
+        float time = getStableTime() * 0.25f;
         float offset = time * 360f;
 
         float blend = getRetargetBlend();
@@ -115,7 +113,7 @@ public class TargetEspGarland extends TargetEspMode {
             }
 
             float size = 0.15f * anim;
-            float twinkle = (float) Math.sin(((System.currentTimeMillis() / 100.0) * sp) + i) * 0.2f + 0.8f;
+            float twinkle = (float) Math.sin(getStableTime() * 10.0f + i) * 0.2f + 0.8f;
             int festive = (i % 4 == 0) ? 0xFFFF0000 : (i % 4 == 1) ? 0xFFFFD700 : (i % 4 == 2) ? 0xFF00FF00 : 0xFF00BFFF;
             int color = setAlpha(festive, (int)(anim * twinkle * 255));
             drawBillboard(bulbs, ms, px, py, pz, size, camera.getYaw(), camera.getPitch(), color);

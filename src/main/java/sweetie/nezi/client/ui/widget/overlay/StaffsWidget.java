@@ -90,7 +90,7 @@ public class StaffsWidget extends ContainerWidget {
         float fTit = scaled(5.8f);
         float fRow = scaled(5.3f);
         float iS = scaled(7.9f);
-        float rowH = scaled(10f);
+        float rowH = scaled(11f);
         float rowG = scaled(1.5f);
         float dotSize = scaled(4f);
         float sqS = hdrH - scaled(3f);
@@ -108,7 +108,7 @@ public class StaffsWidget extends ContainerWidget {
 
         float totRows = 0f;
         for (Staff s : list) totRows += (rowH + rowG) * animMap.getOrDefault(s.name(), 0f);
-        float targetH = hdrH + totRows + (list.isEmpty() ? hGap * 2 : p);
+        float targetH = hdrH + scaled(4f) + totRows + (list.isEmpty() ? hGap * 2 : p);
         heightAnim += (targetH - heightAnim) * 0.15f;
         float cardH = heightAnim;
 

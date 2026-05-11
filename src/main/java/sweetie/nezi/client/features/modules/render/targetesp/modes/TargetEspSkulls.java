@@ -117,7 +117,7 @@ public class TargetEspSkulls extends TargetEspMode {
         float appearance = alpha * alpha * (3.0f - 2.0f * alpha);
         float orbit = MathUtil.interpolate(prevOrbitAngle, orbitAngle, event.partialTicks()) * preset.speedMultiplier;
         float baseScale = sSize.get() * (0.22f + appearance * 0.86f) * (0.84f + sizeVal * 0.26f);
-        float time = System.currentTimeMillis() * 0.001f * sSpeed.get();
+        float time = getStableTime();
 
         Vec3d center = new Vec3d(getTargetX(), getTargetY() + currentTarget.getHeight() * preset.centerHeight, getTargetZ());
         Vec3d renderPos = center.subtract(cameraPos);

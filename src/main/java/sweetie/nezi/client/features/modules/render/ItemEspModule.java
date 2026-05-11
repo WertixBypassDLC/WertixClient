@@ -21,7 +21,9 @@ import sweetie.nezi.api.utils.render.fonts.Fonts;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @ModuleRegister(name = "Item ESP", category = Category.RENDER)
 public class ItemEspModule extends Module {
@@ -29,11 +31,10 @@ public class ItemEspModule extends Module {
 
     private final SliderSetting scale = new SliderSetting("Scale").value(1.0f).range(0.5f, 2.0f).step(0.1f);
     private final SliderSetting maxDistance = new SliderSetting("Max distance").value(64f).range(16f, 128f).step(1f);
-
-    private final List<ItemLabel> labels = new ArrayList<>();
+    private final SliderSetting groupRadius = new SliderSetting("Радиус группировки").value(1.0f).range(0.5f, 3.0f).step(0.1f);
 
     public ItemEspModule() {
-        addSettings(scale, maxDistance);
+        addSettings(scale, maxDistance, groupRadius);
     }
 
     @Override
@@ -47,60 +48,87 @@ public class ItemEspModule extends Module {
             return;
         }
 
-        labels.clear();
         float maxDist = maxDistance.getValue();
         float partialTicks = event.partialTicks();
+        float groupDist = groupRadius.getValue();
+        float groupDistSq = groupDist * groupDist;
 
+        List<ItemEntry> entries = new ArrayList<>();
         for (Entity entity : mc.world.getEntities()) {
-            if (!(entity instanceof ItemEntity itemEntity)) {
-                continue;
-            }
-
-            if (mc.player.squaredDistanceTo(entity) > maxDist * maxDist) {
-                continue;
-            }
+            if (!(entity instanceof ItemEntity itemEntity)) continue;
+            if (mc.player.squaredDistanceTo(entity) > maxDist * maxDist) continue;
 
             double x = MathUtil.interpolate(entity.prevX, entity.getX(), partialTicks);
-            double y = MathUtil.interpolate(entity.prevY, entity.getY(), partialTicks) + entity.getHeight() + 0.25;
+            double y = MathUtil.interpolate(entity.prevY, entity.getY(), partialTicks);
             double z = MathUtil.interpolate(entity.prevZ, entity.getZ(), partialTicks);
-
-            if (!ProjectionUtil.isInFrontOfCamera(x, y, z)) {
-                continue;
-            }
-
-            Vector2f projected = ProjectionUtil.project(x, y, z);
-            if (!ProjectionUtil.isProjectedOnScreen(projected, 50f)) {
-                continue;
-            }
 
             String name = itemEntity.getStack().getName().getString();
             int count = itemEntity.getStack().getCount();
-            String label = count > 1 ? name + " x" + count : name;
-            float dist = (float) Math.sqrt(mc.player.squaredDistanceTo(entity));
+            entries.add(new ItemEntry(x, y, z, name, count));
+        }
 
-            labels.add(new ItemLabel(projected.x, projected.y, label, dist));
+        List<ItemGroup> groups = new ArrayList<>();
+        boolean[] used = new boolean[entries.size()];
+        for (int i = 0; i < entries.size(); i++) {
+            if (used[i]) continue;
+            ItemEntry base = entries.get(i);
+            double gx = base.x, gy = base.y, gz = base.z;
+            Map<String, Integer> items = new HashMap<>();
+            items.merge(base.name, base.count, Integer::sum);
+            used[i] = true;
+            int groupCount = 1;
+
+            for (int j = i + 1; j < entries.size(); j++) {
+                if (used[j]) continue;
+                ItemEntry other = entries.get(j);
+                double dx = base.x - other.x, dy = base.y - other.y, dz = base.z - other.z;
+                if (dx * dx + dy * dy + dz * dz <= groupDistSq) {
+                    items.merge(other.name, other.count, Integer::sum);
+                    gx += other.x; gy += other.y; gz += other.z;
+                    used[j] = true;
+                    groupCount++;
+                }
+            }
+            gx /= groupCount; gy /= groupCount; gz /= groupCount;
+            groups.add(new ItemGroup(gx, gy + 0.5, gz, items));
         }
 
         DrawContext context = event.context();
         MatrixStack ms = context.getMatrices();
         float s = scale.getValue();
-        float fontSize = 5.8f * s;
-        float padding = 2.5f * s;
-        float round = 3f * s;
+        float fontSize = 5.4f * s;
+        float padding = 2.8f * s;
+        float lineGap = 1.5f * s;
+        float round = 3.5f * s;
 
-        for (ItemLabel label : labels) {
-            float nameW = Fonts.PS_MEDIUM.getWidth(label.text, fontSize);
-            float totalW = nameW + padding * 2f;
-            float totalH = fontSize + padding * 2f;
+        for (ItemGroup group : groups) {
+            if (!ProjectionUtil.isInFrontOfCamera(group.x, group.y, group.z)) continue;
+            Vector2f projected = ProjectionUtil.project(group.x, group.y, group.z);
+            if (!ProjectionUtil.isProjectedOnScreen(projected, 50f)) continue;
 
-            float cardX = label.x - totalW / 2f;
-            float cardY = label.y;
+            List<String> lines = new ArrayList<>();
+            for (Map.Entry<String, Integer> e : group.items.entrySet()) {
+                lines.add(e.getValue() > 1 ? e.getKey() + " x" + e.getValue() : e.getKey());
+            }
+
+            float maxW = 0;
+            for (String line : lines) {
+                maxW = Math.max(maxW, Fonts.PS_MEDIUM.getWidth(line, fontSize));
+            }
+            float totalW = maxW + padding * 2f;
+            float totalH = padding * 2f + lines.size() * fontSize + Math.max(0, lines.size() - 1) * lineGap;
+
+            float cardX = projected.x - totalW / 2f;
+            float cardY = projected.y;
 
             drawGlassDark(ms, cardX, cardY, totalW, totalH, round);
 
-            Fonts.PS_MEDIUM.drawText(ms, label.text,
-                    cardX + padding, cardY + padding, fontSize,
-                    Color.WHITE);
+            float textY = cardY + padding;
+            for (int i = 0; i < lines.size(); i++) {
+                Color textCol = i == 0 ? UIColors.textColor() : UIColors.mutedText(220);
+                Fonts.PS_MEDIUM.drawText(ms, lines.get(i), cardX + padding, textY, fontSize, textCol);
+                textY += fontSize + lineGap;
+            }
         }
     }
 
@@ -120,5 +148,6 @@ public class ItemEspModule extends Module {
         RenderUtil.RECT.draw(ms, x, y, w, h, round, UIColors.stroke(255));
     }
 
-    private record ItemLabel(float x, float y, String text, float distance) {}
+    private record ItemEntry(double x, double y, double z, String name, int count) {}
+    private record ItemGroup(double x, double y, double z, Map<String, Integer> items) {}
 }

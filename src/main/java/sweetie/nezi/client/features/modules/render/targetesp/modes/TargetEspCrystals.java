@@ -103,7 +103,7 @@ public class TargetEspCrystals extends TargetEspMode {
 
         public void render(MatrixStack ms, float anim, int baseColor, Camera camera, float speedMul, float dynamicSize, float blend) {
             ms.push();
-            float t = (System.currentTimeMillis() / 500.0f) * speedMul;
+            float t = getStableTime() * 2.0f;
             float bobY = (float) Math.sin(t * 1.5f + bobbingOffset) * 0.15f;
 
             float scatterX = (float) Math.cos(t * 2.0f + rotation.x) * blend * 2.5f;
@@ -116,7 +116,7 @@ public class TargetEspCrystals extends TargetEspMode {
             float pulsation = 1.0f + (float) Math.sin(t * 2.0f + bobbingOffset) * 0.15f;
             ms.scale(pulsation, pulsation, pulsation);
 
-            float selfRotation = ((System.currentTimeMillis() % 36000) / 100.0f) * rotationSpeed * speedMul;
+            float selfRotation = getStableTime() * 3.6f * rotationSpeed;
             ms.multiply(RotationAxis.POSITIVE_X.rotationDegrees((float) rotation.x));
             ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float) rotation.y + selfRotation));
             ms.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) rotation.z));

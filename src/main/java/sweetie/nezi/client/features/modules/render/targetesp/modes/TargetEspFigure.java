@@ -110,7 +110,7 @@ public class TargetEspFigure extends TargetEspMode {
         RenderSystem.blendFunc(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE);
         for (int i = 0; i < points.size(); i++) {
             FigurePoint pt = points.get(i);
-            float pulse = 0.92f + (float) Math.sin(System.currentTimeMillis() * 0.01 + i * 0.55f) * 0.08f;
+            float pulse = 0.92f + (float) Math.sin(getStableTime() * 10.0f + i * 0.55f) * 0.08f;
             drawFlatGlow(matrices, pt.x * figureSize, pt.y * figureSize, figureDepth, figureSize * 0.28f * pulse, color(i * 57, 0.18f + alpha * 0.32f));
             drawFlatGlow(matrices, pt.x * figureSize, pt.y * figureSize, -figureDepth, figureSize * 0.18f * pulse, color(i * 57 + 90, 0.10f + alpha * 0.24f));
         }
